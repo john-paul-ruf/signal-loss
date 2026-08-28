@@ -629,14 +629,20 @@ export function createMatchStore(): StoreApi<MatchStore> {
       const { playback, engine } = get();
       if (playback.afterSnapshot === null) return;
       const next = playback.afterSnapshot;
-      const mode: MatchModeId =
-        next.phase === "COMPLETE"
-          ? "RESULT"
-          : next.phase === "MOVEMENT_PLOT"
-          ? "MOVEMENT_PLOT"
-          : next.phase === "ATTACK_PLOT"
-          ? "ATTACK_PLOT"
-          : "DEPLOYMENT";
+      // After movement resolution the engine state has phase=ATTACK_PLOT;
+      // after attack resolution it has phase=MOVEMENT_PLOT (next round)
+      // or COMPLETE. The mode simply follows the engine's phase, plus
+      // the result-screen handoff below.
+      let mode: MatchModeId;
+      if (next.phase === "COMPLETE") {
+        mode = "RESULT";
+      } else if (next.phase === "MOVEMENT_PLOT") {
+        mode = "MOVEMENT_PLOT";
+      } else if (next.phase === "ATTACK_PLOT") {
+        mode = "ATTACK_PLOT";
+      } else {
+        mode = "DEPLOYMENT";
+      }
       void engine;
       set((prior) => ({
         engine: next,
