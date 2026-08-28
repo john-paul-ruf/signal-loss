@@ -12,3 +12,5 @@ export { InspectorPanel } from "./InspectorPanel";
 export { RoundLog, describeEvent } from "./RoundLog";
 export { CommandBar } from "./CommandBar";
 export { RulesDrawer } from "./RulesDrawer";
+export { ExchangeCard } from "./ExchangeCard";
+export { AttackLedger } from "./AttackLedger";
