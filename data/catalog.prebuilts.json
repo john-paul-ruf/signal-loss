@@ -1,0 +1,275 @@
+{
+  "prebuilts": [
+    {
+      "id": "scout-patrol",
+      "name": "SCOUT PATROL",
+      "budget": 25,
+      "constructs": [
+        {
+          "chassisCode": 14,
+          "commanderCode": 1,
+          "mounts": [
+            { "hardpointIndex": 0, "mountCode": 24 }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "skirmish-line",
+      "name": "SKIRMISH LINE",
+      "budget": 50,
+      "constructs": [
+        {
+          "chassisCode": 11,
+          "commanderCode": 2,
+          "mounts": [
+            { "hardpointIndex": 0, "mountCode": 22 },
+            { "hardpointIndex": 2, "mountCode": 26 }
+          ]
+        },
+        {
+          "chassisCode": 14,
+          "commanderCode": null,
+          "mounts": [
+            { "hardpointIndex": 0, "mountCode": 25 }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "fire-team",
+      "name": "FIRE TEAM",
+      "budget": 75,
+      "constructs": [
+        {
+          "chassisCode": 10,
+          "commanderCode": 1,
+          "mounts": [
+            { "hardpointIndex": 0, "mountCode": 22 },
+            { "hardpointIndex": 1, "mountCode": 24 },
+            { "hardpointIndex": 2, "mountCode": 20 }
+          ]
+        },
+        {
+          "chassisCode": 11,
+          "commanderCode": null,
+          "mounts": [
+            { "hardpointIndex": 0, "mountCode": 23 },
+            { "hardpointIndex": 2, "mountCode": 26 }
+          ]
+        },
+        {
+          "chassisCode": 14,
+          "commanderCode": null,
+          "mounts": [
+            { "hardpointIndex": 0, "mountCode": 24 }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "strike-force",
+      "name": "STRIKE FORCE",
+      "budget": 100,
+      "constructs": [
+        {
+          "chassisCode": 12,
+          "commanderCode": 3,
+          "mounts": [
+            { "hardpointIndex": 0, "mountCode": 22 },
+            { "hardpointIndex": 1, "mountCode": 28 },
+            { "hardpointIndex": 2, "mountCode": 20 }
+          ]
+        },
+        {
+          "chassisCode": 10,
+          "commanderCode": null,
+          "mounts": [
+            { "hardpointIndex": 0, "mountCode": 24 },
+            { "hardpointIndex": 1, "mountCode": 25 }
+          ]
+        },
+        {
+          "chassisCode": 11,
+          "commanderCode": null,
+          "mounts": [
+            { "hardpointIndex": 0, "mountCode": 22 },
+            { "hardpointIndex": 2, "mountCode": 26 }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "combined-arms",
+      "name": "COMBINED ARMS",
+      "budget": 125,
+      "constructs": [
+        {
+          "chassisCode": 13,
+          "commanderCode": 4,
+          "mounts": [
+            { "hardpointIndex": 0, "mountCode": 22 },
+            { "hardpointIndex": 1, "mountCode": 20 },
+            { "hardpointIndex": 2, "mountCode": 21 },
+            { "hardpointIndex": 3, "mountCode": 27 }
+          ]
+        },
+        {
+          "chassisCode": 15,
+          "commanderCode": null,
+          "mounts": [
+            { "hardpointIndex": 0, "mountCode": 25 },
+            { "hardpointIndex": 1, "mountCode": 23 },
+            { "hardpointIndex": 2, "mountCode": 29 },
+            { "hardpointIndex": 3, "mountCode": 20 }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "phalanx",
+      "name": "PHALANX",
+      "budget": 150,
+      "constructs": [
+        {
+          "chassisCode": 15,
+          "commanderCode": 2,
+          "mounts": [
+            { "hardpointIndex": 0, "mountCode": 25 },
+            { "hardpointIndex": 1, "mountCode": 24 },
+            { "hardpointIndex": 2, "mountCode": 28 },
+            { "hardpointIndex": 3, "mountCode": 20 }
+          ]
+        },
+        {
+          "chassisCode": 16,
+          "commanderCode": null,
+          "mounts": [
+            { "hardpointIndex": 0, "mountCode": 26 },
+            { "hardpointIndex": 1, "mountCode": 27 },
+            { "hardpointIndex": 2, "mountCode": 30 }
+          ]
+        },
+        {
+          "chassisCode": 13,
+          "commanderCode": null,
+          "mounts": [
+            { "hardpointIndex": 0, "mountCode": 22 },
+            { "hardpointIndex": 1, "mountCode": 20 }
+          ]
+        },
+        {
+          "chassisCode": 14,
+          "commanderCode": null,
+          "mounts": [
+            { "hardpointIndex": 0, "mountCode": 24 }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "coalition",
+      "name": "COALITION",
+      "budget": 175,
+      "constructs": [
+        {
+          "chassisCode": 15,
+          "commanderCode": 3,
+          "mounts": [
+            { "hardpointIndex": 0, "mountCode": 25 },
+            { "hardpointIndex": 1, "mountCode": 23 },
+            { "hardpointIndex": 2, "mountCode": 29 },
+            { "hardpointIndex": 3, "mountCode": 21 }
+          ]
+        },
+        {
+          "chassisCode": 13,
+          "commanderCode": null,
+          "mounts": [
+            { "hardpointIndex": 0, "mountCode": 22 },
+            { "hardpointIndex": 1, "mountCode": 20 },
+            { "hardpointIndex": 2, "mountCode": 21 },
+            { "hardpointIndex": 3, "mountCode": 27 }
+          ]
+        },
+        {
+          "chassisCode": 11,
+          "commanderCode": null,
+          "mounts": [
+            { "hardpointIndex": 0, "mountCode": 24 },
+            { "hardpointIndex": 1, "mountCode": 22 },
+            { "hardpointIndex": 2, "mountCode": 26 }
+          ]
+        },
+        {
+          "chassisCode": 10,
+          "commanderCode": null,
+          "mounts": [
+            { "hardpointIndex": 0, "mountCode": 25 },
+            { "hardpointIndex": 1, "mountCode": 22 },
+            { "hardpointIndex": 2, "mountCode": 20 }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "full-spectrum",
+      "name": "FULL SPECTRUM",
+      "budget": 200,
+      "constructs": [
+        {
+          "chassisCode": 15,
+          "commanderCode": 4,
+          "mounts": [
+            { "hardpointIndex": 0, "mountCode": 25 },
+            { "hardpointIndex": 1, "mountCode": 23 },
+            { "hardpointIndex": 2, "mountCode": 29 },
+            { "hardpointIndex": 3, "mountCode": 21 }
+          ]
+        },
+        {
+          "chassisCode": 12,
+          "commanderCode": null,
+          "mounts": [
+            { "hardpointIndex": 0, "mountCode": 22 },
+            { "hardpointIndex": 1, "mountCode": 28 },
+            { "hardpointIndex": 2, "mountCode": 20 }
+          ]
+        },
+        {
+          "chassisCode": 16,
+          "commanderCode": null,
+          "mounts": [
+            { "hardpointIndex": 0, "mountCode": 27 },
+            { "hardpointIndex": 1, "mountCode": 26 },
+            { "hardpointIndex": 2, "mountCode": 30 }
+          ]
+        },
+        {
+          "chassisCode": 10,
+          "commanderCode": null,
+          "mounts": [
+            { "hardpointIndex": 0, "mountCode": 22 },
+            { "hardpointIndex": 1, "mountCode": 24 },
+            { "hardpointIndex": 2, "mountCode": 20 }
+          ]
+        },
+        {
+          "chassisCode": 14,
+          "commanderCode": null,
+          "mounts": [
+            { "hardpointIndex": 0, "mountCode": 24 }
+          ]
+        },
+        {
+          "chassisCode": 11,
+          "commanderCode": null,
+          "mounts": [
+            { "hardpointIndex": 0, "mountCode": 22 },
+            { "hardpointIndex": 2, "mountCode": 26 }
+          ]
+        }
+      ]
+    }
+  ]
+}

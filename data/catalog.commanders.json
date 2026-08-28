@@ -1,0 +1,64 @@
+{
+  "commanders": [
+    {
+      "id": "cipher",
+      "code": 1,
+      "name": "CIPHER",
+      "cost": 5,
+      "commanderBase": 1,
+      "rLadder": [3, 4, 5, 6],
+      "modifications": {
+        "extraDialStates": 0,
+        "movementDelta": 1024,
+        "damageDelta": 0,
+        "rangeDelta": 0,
+        "defenseDelta": 0
+      }
+    },
+    {
+      "id": "sysop",
+      "code": 2,
+      "name": "SYSOP",
+      "cost": 6,
+      "commanderBase": 1,
+      "rLadder": [3, 4, 6, 8],
+      "modifications": {
+        "extraDialStates": 0,
+        "movementDelta": 0,
+        "damageDelta": 0,
+        "rangeDelta": 0,
+        "defenseDelta": 3
+      }
+    },
+    {
+      "id": "bulwark",
+      "code": 3,
+      "name": "BULWARK",
+      "cost": 8,
+      "commanderBase": 1,
+      "rLadder": [3, 4, 5, 7],
+      "modifications": {
+        "extraDialStates": 2,
+        "movementDelta": -1024,
+        "damageDelta": 0,
+        "rangeDelta": 0,
+        "defenseDelta": 2
+      }
+    },
+    {
+      "id": "overclock",
+      "code": 4,
+      "name": "OVERCLOCK",
+      "cost": 10,
+      "commanderBase": 2,
+      "rLadder": [3, 4, 5, 7, 9],
+      "modifications": {
+        "extraDialStates": 0,
+        "movementDelta": 1024,
+        "damageDelta": 2,
+        "rangeDelta": 0,
+        "defenseDelta": -2
+      }
+    }
+  ]
+}

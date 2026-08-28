@@ -1,0 +1,114 @@
+{
+  "mounts": [
+    {
+      "id": "ice-wall",
+      "code": 20,
+      "name": "ICE WALL",
+      "cost": 4,
+      "family": "ice",
+      "requiredHardpointType": "defensive",
+      "damageDelta": 0,
+      "rangeDelta": 0
+    },
+    {
+      "id": "ice-barrier",
+      "code": 21,
+      "name": "ICE BARRIER",
+      "cost": 6,
+      "family": "ice",
+      "requiredHardpointType": "defensive",
+      "damageDelta": 0,
+      "rangeDelta": 0
+    },
+    {
+      "id": "daemon-lash",
+      "code": 22,
+      "name": "DAEMON LASH",
+      "cost": 6,
+      "family": "daemon",
+      "requiredHardpointType": "primary",
+      "damageDelta": 3,
+      "rangeDelta": 1024
+    },
+    {
+      "id": "daemon-swarm",
+      "code": 23,
+      "name": "DAEMON SWARM",
+      "cost": 8,
+      "family": "daemon",
+      "requiredHardpointType": "primary",
+      "damageDelta": 5,
+      "rangeDelta": 0
+    },
+    {
+      "id": "spike-driver",
+      "code": 24,
+      "name": "SPIKE DRIVER",
+      "cost": 5,
+      "family": "spike",
+      "requiredHardpointType": "primary",
+      "damageDelta": 4,
+      "rangeDelta": 0
+    },
+    {
+      "id": "spike-maul",
+      "code": 25,
+      "name": "SPIKE MAUL",
+      "cost": 8,
+      "family": "spike",
+      "requiredHardpointType": "primary",
+      "damageDelta": 6,
+      "rangeDelta": -1024
+    },
+    {
+      "id": "spoofer-mesh",
+      "code": 26,
+      "name": "SPOOFER MESH",
+      "cost": 3,
+      "family": "spoofer",
+      "requiredHardpointType": "utility",
+      "damageDelta": 0,
+      "rangeDelta": 0
+    },
+    {
+      "id": "spoofer-echo",
+      "code": 27,
+      "name": "SPOOFER ECHO",
+      "cost": 5,
+      "family": "spoofer",
+      "requiredHardpointType": "utility",
+      "damageDelta": 0,
+      "rangeDelta": 2048
+    },
+    {
+      "id": "wipe-charge",
+      "code": 28,
+      "name": "WIPE CHARGE",
+      "cost": 7,
+      "family": "wipe",
+      "requiredHardpointType": "auxiliary",
+      "damageDelta": 6,
+      "rangeDelta": -2048
+    },
+    {
+      "id": "wipe-purge",
+      "code": 29,
+      "name": "WIPE PURGE",
+      "cost": 10,
+      "family": "wipe",
+      "requiredHardpointType": "auxiliary",
+      "damageDelta": 8,
+      "rangeDelta": -3072
+    },
+    {
+      "id": "wipe-strobe",
+      "code": 30,
+      "name": "WIPE STROBE",
+      "cost": 4,
+      "family": "wipe",
+      "requiredHardpointType": "auxiliary",
+      "damageDelta": 2,
+      "rangeDelta": 0
+    }
+  ]
+}

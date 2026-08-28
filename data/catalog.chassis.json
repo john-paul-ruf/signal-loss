@@ -1,0 +1,165 @@
+{
+  "hardpointTypes": [
+    { "id": "primary", "code": 1, "name": "Primary" },
+    { "id": "auxiliary", "code": 2, "name": "Auxiliary" },
+    { "id": "defensive", "code": 3, "name": "Defensive" },
+    { "id": "utility", "code": 4, "name": "Utility" }
+  ],
+  "chassis": [
+    {
+      "id": "hardline",
+      "code": 10,
+      "name": "HARDLINE",
+      "cost": 12,
+      "footprint": 1024,
+      "hardpoints": [
+        { "typeId": "primary" },
+        { "typeId": "primary" },
+        { "typeId": "defensive" }
+      ],
+      "baseRange": 12288,
+      "rangeClamp": { "min": 2048, "max": 20480 },
+      "resolutionRange": 14336,
+      "curveFamily": "degrade",
+      "dial": [
+        { "index": 0, "movementAllowance": 6144, "damage": 5, "rangeModifier": 0, "defenseModifier": 1 },
+        { "index": 1, "movementAllowance": 5120, "damage": 4, "rangeModifier": 0, "defenseModifier": 1 },
+        { "index": 2, "movementAllowance": 4096, "damage": 3, "rangeModifier": 0, "defenseModifier": 0 },
+        { "index": 3, "movementAllowance": 3072, "damage": 2, "rangeModifier": 0, "defenseModifier": 0 }
+      ]
+    },
+    {
+      "id": "surge",
+      "code": 11,
+      "name": "SURGE",
+      "cost": 14,
+      "footprint": 1024,
+      "hardpoints": [
+        { "typeId": "primary" },
+        { "typeId": "primary" },
+        { "typeId": "utility" }
+      ],
+      "baseRange": 10240,
+      "rangeClamp": { "min": 2048, "max": 16384 },
+      "resolutionRange": 12288,
+      "curveFamily": "spike",
+      "dial": [
+        { "index": 0, "movementAllowance": 5120, "damage": 3, "rangeModifier": 0, "defenseModifier": 0 },
+        { "index": 1, "movementAllowance": 6144, "damage": 5, "rangeModifier": 0, "defenseModifier": 0 },
+        { "index": 2, "movementAllowance": 7168, "damage": 7, "rangeModifier": 0, "defenseModifier": 0 }
+      ]
+    },
+    {
+      "id": "cascade",
+      "code": 12,
+      "name": "CASCADE",
+      "cost": 16,
+      "footprint": 1024,
+      "hardpoints": [
+        { "typeId": "primary" },
+        { "typeId": "auxiliary" },
+        { "typeId": "defensive" }
+      ],
+      "baseRange": 11264,
+      "rangeClamp": { "min": 2048, "max": 18432 },
+      "resolutionRange": 13312,
+      "curveFamily": "inversion",
+      "dial": [
+        { "index": 0, "movementAllowance": 6144, "damage": 3, "rangeModifier": 0, "defenseModifier": 0 },
+        { "index": 1, "movementAllowance": 5120, "damage": 5, "rangeModifier": 0, "defenseModifier": 0 },
+        { "index": 2, "movementAllowance": 4096, "damage": 7, "rangeModifier": 0, "defenseModifier": 0 },
+        { "index": 3, "movementAllowance": 3072, "damage": 9, "rangeModifier": 0, "defenseModifier": 0 }
+      ]
+    },
+    {
+      "id": "bastion",
+      "code": 13,
+      "name": "BASTION",
+      "cost": 20,
+      "footprint": 1024,
+      "hardpoints": [
+        { "typeId": "primary" },
+        { "typeId": "defensive" },
+        { "typeId": "defensive" },
+        { "typeId": "utility" }
+      ],
+      "baseRange": 8192,
+      "rangeClamp": { "min": 2048, "max": 14336 },
+      "resolutionRange": 10240,
+      "curveFamily": "degrade",
+      "dial": [
+        { "index": 0, "movementAllowance": 4096, "damage": 6, "rangeModifier": 0, "defenseModifier": 2 },
+        { "index": 1, "movementAllowance": 4096, "damage": 5, "rangeModifier": 0, "defenseModifier": 2 },
+        { "index": 2, "movementAllowance": 3072, "damage": 4, "rangeModifier": 0, "defenseModifier": 1 },
+        { "index": 3, "movementAllowance": 3072, "damage": 3, "rangeModifier": 0, "defenseModifier": 0 },
+        { "index": 4, "movementAllowance": 2048, "damage": 2, "rangeModifier": 0, "defenseModifier": 0 }
+      ]
+    },
+    {
+      "id": "phantom",
+      "code": 14,
+      "name": "PHANTOM",
+      "cost": 8,
+      "footprint": 1024,
+      "hardpoints": [
+        { "typeId": "primary" },
+        { "typeId": "utility" }
+      ],
+      "baseRange": 9216,
+      "rangeClamp": { "min": 2048, "max": 14336 },
+      "resolutionRange": 10240,
+      "curveFamily": "spike",
+      "dial": [
+        { "index": 0, "movementAllowance": 7168, "damage": 2, "rangeModifier": 0, "defenseModifier": 0 },
+        { "index": 1, "movementAllowance": 8192, "damage": 3, "rangeModifier": 0, "defenseModifier": 0 },
+        { "index": 2, "movementAllowance": 8192, "damage": 4, "rangeModifier": 0, "defenseModifier": 0 }
+      ]
+    },
+    {
+      "id": "juggernaut",
+      "code": 15,
+      "name": "JUGGERNAUT",
+      "cost": 24,
+      "footprint": 1024,
+      "hardpoints": [
+        { "typeId": "primary" },
+        { "typeId": "primary" },
+        { "typeId": "auxiliary" },
+        { "typeId": "defensive" }
+      ],
+      "baseRange": 10240,
+      "rangeClamp": { "min": 2048, "max": 16384 },
+      "resolutionRange": 12288,
+      "curveFamily": "degrade",
+      "dial": [
+        { "index": 0, "movementAllowance": 4096, "damage": 8, "rangeModifier": 0, "defenseModifier": 2 },
+        { "index": 1, "movementAllowance": 4096, "damage": 7, "rangeModifier": 0, "defenseModifier": 1 },
+        { "index": 2, "movementAllowance": 3072, "damage": 6, "rangeModifier": 0, "defenseModifier": 1 },
+        { "index": 3, "movementAllowance": 3072, "damage": 5, "rangeModifier": 0, "defenseModifier": 0 },
+        { "index": 4, "movementAllowance": 2048, "damage": 4, "rangeModifier": 0, "defenseModifier": 0 }
+      ]
+    },
+    {
+      "id": "mirage",
+      "code": 16,
+      "name": "MIRAGE",
+      "cost": 14,
+      "footprint": 1024,
+      "hardpoints": [
+        { "typeId": "utility" },
+        { "typeId": "utility" },
+        { "typeId": "auxiliary" }
+      ],
+      "baseRange": 10240,
+      "rangeClamp": { "min": 2048, "max": 18432 },
+      "resolutionRange": 12288,
+      "curveFamily": "inversion",
+      "dial": [
+        { "index": 0, "movementAllowance": 6144, "damage": 2, "rangeModifier": 0, "defenseModifier": 0 },
+        { "index": 1, "movementAllowance": 5120, "damage": 3, "rangeModifier": 0, "defenseModifier": 0 },
+        { "index": 2, "movementAllowance": 4096, "damage": 4, "rangeModifier": 0, "defenseModifier": 0 },
+        { "index": 3, "movementAllowance": 3072, "damage": 5, "rangeModifier": 0, "defenseModifier": 0 }
+      ]
+    }
+  ]
+}
