@@ -1,16 +1,23 @@
 import * as React from "react";
-import { useMatchStore } from "../../store/match";
+import { useMatchStore, countImplicitHolds } from "../../store/match";
 import type { MatchStoreError } from "../../store/match";
+import { ConfirmModal } from "../shared/ConfirmModal";
 
 /**
  * Command bar (design.md §5.4). Right-hand button is the phase's
  * primary action; the left area holds mode-specific hints. The
  * "NO TIMER — COMMIT WHEN READY" line sits below the button in every
  * plotting phase (design.md §5.4 invariants).
+ *
+ * Movement commit surfaces a confirm modal listing implicit HOLDs so
+ * the player never accidentally commits a partial plot (design.md §5.6).
  */
 export function CommandBar(): React.ReactElement {
   const mode = useMatchStore((s) => s.mode);
   const lastError = useMatchStore((s) => s.lastError);
+  const engine = useMatchStore((s) => s.engine);
+  const launch = useMatchStore((s) => s.launch);
+  const drafts = useMatchStore((s) => s.drafts);
   const applyDeployment = useMatchStore((s) => s.applyDeployment);
   const resolveMovement = useMatchStore((s) => s.resolveMovement);
   const resolveAttack = useMatchStore((s) => s.resolveAttack);
@@ -19,6 +26,44 @@ export function CommandBar(): React.ReactElement {
     (s) => s.playback.events.length > 0 && s.playback.cursor >= s.playback.events.length,
   );
   const clearError = useMatchStore((s) => s.clearError);
+  const [confirmOpen, setConfirmOpen] = React.useState<null | "MOVE" | "ATTACK">(null);
+
+  // Ctrl+Enter fires the mode's commit action.
+  React.useEffect(() => {
+    function onKey(e: KeyboardEvent): void {
+      if (!e.ctrlKey && !e.metaKey) return;
+      if (e.key !== "Enter") return;
+      const tag = (e.target as HTMLElement | null)?.tagName ?? "";
+      if (tag === "INPUT" || tag === "TEXTAREA") return;
+      if (mode === "MOVEMENT_PLOT") {
+        e.preventDefault();
+        openMoveConfirm();
+      } else if (mode === "ATTACK_PLOT") {
+        e.preventDefault();
+        setConfirmOpen("ATTACK");
+      } else if (mode === "DEPLOYMENT") {
+        e.preventDefault();
+        applyDeployment();
+      } else if (
+        (mode === "MOVEMENT_PLAYBACK" || mode === "ATTACK_PLAYBACK") &&
+        playbackDone
+      ) {
+        e.preventDefault();
+        playbackFinish();
+      }
+    }
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [mode, applyDeployment, playbackFinish, playbackDone]);
+
+  function openMoveConfirm(): void {
+    setConfirmOpen("MOVE");
+  }
+
+  const implicitHolds =
+    engine !== null && launch !== null
+      ? countImplicitHolds(engine, launch.humanSquadId, drafts)
+      : 0;
 
   let button: React.ReactElement | null = null;
   let hint: string | null = null;
@@ -41,7 +86,7 @@ export function CommandBar(): React.ReactElement {
         <button
           type="button"
           className="command-bar__commit"
-          onClick={resolveMovement}
+          onClick={openMoveConfirm}
           data-testid="commit-movement"
         >
           COMMIT MOVEMENT ⌃⏎
@@ -54,7 +99,7 @@ export function CommandBar(): React.ReactElement {
         <button
           type="button"
           className="command-bar__commit"
-          onClick={resolveAttack}
+          onClick={() => setConfirmOpen("ATTACK")}
           data-testid="commit-attack"
         >
           COMMIT ATTACK ⌃⏎
@@ -97,6 +142,39 @@ export function CommandBar(): React.ReactElement {
         </div>
       ) : null}
       <div className="command-bar__actions">{button}</div>
+      <ConfirmModal
+        open={confirmOpen === "MOVE"}
+        title="COMMIT MOVEMENT"
+        confirmLabel="COMMIT MOVEMENT"
+        cancelLabel="EDIT"
+        onCancel={() => setConfirmOpen(null)}
+        onConfirm={() => {
+          setConfirmOpen(null);
+          resolveMovement();
+        }}
+      >
+        {implicitHolds > 0 ? (
+          <p>
+            <strong data-testid="confirm-implicit-holds">{implicitHolds}</strong>{" "}
+            construct{implicitHolds === 1 ? "" : "s"} will HOLD.
+          </p>
+        ) : (
+          <p>All constructs plotted.</p>
+        )}
+      </ConfirmModal>
+      <ConfirmModal
+        open={confirmOpen === "ATTACK"}
+        title="COMMIT ATTACK"
+        confirmLabel="COMMIT ATTACK"
+        cancelLabel="EDIT"
+        onCancel={() => setConfirmOpen(null)}
+        onConfirm={() => {
+          setConfirmOpen(null);
+          resolveAttack();
+        }}
+      >
+        <p>Commit your attack, postures, and called shots for this round.</p>
+      </ConfirmModal>
     </div>
   );
 }
