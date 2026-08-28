@@ -87,12 +87,12 @@ describe("eslint boundary — engine purity", () => {
 
   it("bans importing from ./src/app inside the engine (no-restricted-paths)", async () => {
     const source =
-      'import { registeredRoutes } from "../../../app/route-registry";\nexport const r = registeredRoutes;\n';
+      'import { registeredRoutes } from "../../app/route-registry";\nexport const r = registeredRoutes;\n';
     const result = await lint(
       source,
       resolve(REPO_ROOT, "src/engine/fx/forbidden-app-import.ts"),
     );
-    // Either the path-boundary rule or the npm-ban rule may fire first; the
+    // Either the path-boundary rule or the npm-ban rule may fire; the
     // guarantee is that at least one engine-boundary rule flags this file.
     const ids = ruleIds(result);
     const flagged =

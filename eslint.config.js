@@ -125,10 +125,47 @@ export default tseslint.config(
         "error",
         {
           patterns: [
-            { group: ["*"], message: "Engine has zero runtime dependencies (§2.1)." },
-            { group: ["*/**"], message: "Engine has zero runtime dependencies (§2.1)." },
-            { group: ["@*/*"], message: "Engine has zero runtime dependencies (§2.1)." },
-            { group: ["@*/*/**"], message: "Engine has zero runtime dependencies (§2.1)." },
+            {
+              // Every npm dependency currently declared in package.json is
+              // explicitly banned inside the engine. Relative imports pass
+              // through untouched. When a new npm dep lands, add it here (or
+              // fail the build via lint) — the deliberate friction is the
+              // point.
+              group: [
+                "react",
+                "react/*",
+                "react-dom",
+                "react-dom/*",
+                "zustand",
+                "zustand/*",
+                "tailwindcss",
+                "tailwindcss/*",
+                "@fontsource/*",
+                "@fontsource/**",
+                "@tailwindcss/*",
+                "@vitejs/*",
+                "vite",
+                "vite/*",
+                "vite-plugin-pwa",
+                "vite-plugin-pwa/*",
+                "workbox-window",
+                "workbox-window/*",
+                "@playwright/*",
+                "@axe-core/*",
+                "eslint",
+                "eslint/*",
+                "typescript-eslint",
+                "typescript-eslint/*",
+                "eslint-plugin-*",
+                "vitest",
+                "vitest/*",
+                "@vitest/*",
+                "tsx",
+                "tsx/*",
+                "globals",
+              ],
+              message: "Engine has zero runtime dependencies (§2.1).",
+            },
           ],
         },
       ],
