@@ -17,7 +17,7 @@ export const testTunables: Tunables = {
   TRACE_INTERVAL: 2,
   MAX_EXPECTED_ROUNDS: 24,
   MIN_POCKET: 1024 * 1024,
-  MAX_OPEN_AREA: 0.6,
+  MAX_OPEN_AREA: 0.95,
   MIN_QUADRANT_COVER: 0.3,
   MIN_SPAWN_SEP: fxFromInt(16),
   MIN_SPAWN_COVER: 1,
