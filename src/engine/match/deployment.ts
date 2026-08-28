@@ -20,8 +20,10 @@ import type { Fx, Vec2 } from "../fx/index";
 import { circleOverlap, pointInPoly } from "../fx/index";
 import type { Catalog } from "../catalog/index";
 import type { Violation } from "../build/index";
+import type { DeploymentRevealEvent, Event, PoolRefillEvent } from "./events";
 import { SQUAD_COUNT, type MatchState, type Placement, type SquadId } from "./state";
 import { constructsOfSquad } from "./state";
+import { poolFor } from "./pool";
 
 /**
  * Return the FR-12 violations for one squad's set of placements.
@@ -311,7 +313,7 @@ export function applyDeployments(
     return a.subject - b.subject;
   });
 
-  const nextState: MatchState = {
+  const revealed: MatchState = {
     ...state,
     phase: "MOVEMENT_PLOT",
     round: 1,
@@ -323,7 +325,68 @@ export function applyDeployments(
       confirmedRound: kp.confirmedRound,
     })),
   };
-  return { ok: true, value: nextState };
+
+  // Round 1 refill (FR-13 begins with refill).
+  const refilledSquads = revealed.squads.map((s) => {
+    const breakdown = poolFor(revealed, s.id, catalog);
+    return {
+      ...s,
+      poolTotal: breakdown.total,
+      poolSpent: 0,
+      totalPoolGranted: s.totalPoolGranted + breakdown.total,
+    };
+  }) as unknown as MatchState["squads"];
+  const withRefill: MatchState = { ...revealed, squads: refilledSquads };
+  return { ok: true, value: withRefill };
+}
+
+/**
+ * Overload that also returns the DEPLOYMENT_REVEAL and POOL_REFILL
+ * events for callers that need the full round-1 event log. Preferred for
+ * replay-fold consumers; the plain `applyDeployments` remains for callers
+ * that only need the state transition.
+ */
+export function applyDeploymentsWithEvents(
+  state: MatchState,
+  placementsPerSquad: readonly [
+    readonly Placement[],
+    readonly Placement[],
+    readonly Placement[],
+    readonly Placement[],
+    readonly Placement[],
+  ],
+  catalog: Catalog,
+):
+  | { readonly ok: true; readonly value: { readonly state: MatchState; readonly events: readonly Event[] } }
+  | { readonly ok: false; readonly error: readonly Violation[] } {
+  const applied = applyDeployments(state, placementsPerSquad, catalog);
+  if (!applied.ok) return applied;
+  const events: Event[] = [];
+  events.push({
+    kind: "DEPLOYMENT_REVEAL",
+    round: 1,
+    placements: applied.value.constructs.map((c) => ({
+      constructId: c.id,
+      squadId: c.squadId,
+      position: c.position,
+    })),
+  } as DeploymentRevealEvent);
+  for (const s of applied.value.squads) {
+    const breakdown = poolFor(applied.value, s.id, catalog);
+    events.push({
+      kind: "POOL_REFILL",
+      round: 1,
+      squadId: s.id,
+      total: breakdown.total,
+      base: 1,
+      commanderBase: breakdown.terms[1].value,
+      aliveCount: breakdown.terms[2].alive,
+      rDivisor: breakdown.terms[2].divisor,
+      unitTerm: breakdown.terms[2].value,
+      commanderLost: breakdown.commanderLost,
+    } as PoolRefillEvent);
+  }
+  return { ok: true, value: { state: applied.value, events } };
 }
 
 /* ------------------------------------------------------------------------- */

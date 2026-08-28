@@ -37,6 +37,7 @@ export {
 export {
   legalDeployment,
   applyDeployments,
+  applyDeploymentsWithEvents,
 } from "./deployment";
 
 export type {
@@ -96,6 +97,23 @@ export {
   type MatrixCell,
   type ShotOutcome,
 } from "./attack";
+
+export {
+  advanceRoundAndRefill,
+  applyDestruction,
+  applyTrace,
+  checkElimination,
+  currentTraceStep,
+  snapshotStartOfRound,
+  type StartOfRoundSnapshot,
+} from "./end-round";
+
+export {
+  resolveAttackPhase,
+  resolveRound,
+  type ResolveResult,
+  type RoundResult,
+} from "./resolve-round";
 
 export {
   canonicalize,
