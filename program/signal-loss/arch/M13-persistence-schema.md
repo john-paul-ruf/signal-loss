@@ -25,3 +25,22 @@
 | Date | Change |
 |---|---|
 | 2026-08-28 | Genesis/Forge contract recorded; implementation pending. |
+
+<!-- SESSION-02 -->
+
+## M13 — Persistence schema
+
+**Consumer note (not a schema change):** Session 02 imports migration values
+through `./src/platform/storage/migration-runtime.ts`, which uses a dynamic
+`import()` specifier. This is the workaround for a Session-01 × DB
+coordination issue documented in the SESSION-02 handoff — DB is asked to
+issue a follow-up that rewrites `./src/migrations/001_initial.ts`'s internal
+validator to use bracket-notation on `Record<string, unknown>`, so
+`tsconfig.app.json`'s `noPropertyAccessFromIndexSignature: true` (Session 01)
+stops rejecting the file when it is statically imported. Types are declared
+via ambient module `signal-loss/db/migration-v1` in
+`./src/platform/storage/migration-shim.d.ts` and mirror the DB contract
+exactly; DB remains the single source of truth for the schema types.
+
+No schema change is proposed by this session.
+

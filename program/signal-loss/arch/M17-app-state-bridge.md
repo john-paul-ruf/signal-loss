@@ -28,3 +28,28 @@
 | Date | Change |
 |---|---|
 | 2026-08-28 | Genesis/Forge contract recorded; implementation pending. |
+
+<!-- SESSION-02 -->
+
+## M17 — App state and bridge
+
+Core stores (`./src/app/store/core/index.ts`):
+
+- `createCollectionStore(repository)` — a Zustand vanilla store carrying
+  loaded PersistedStateV1, lastError, boot flag, persistenceUnavailable,
+  corrupt+corruptRaw. Actions: `boot`, `refresh`, `saveConstructCreate`,
+  `saveConstructUpdate`, `saveRosterCreate`, `saveRosterUpdate`,
+  `renameEntity`, `duplicateEntity`, `deleteEntity`, `savePreferences`,
+  `resetCorruptStore`, `markExternallyChanged`. Every action returns a
+  boolean success value; a failed write leaves state prior-version intact.
+- `createNavigationStore({initialPath?, requestNavigation?})` — currentPath +
+  navigationCount; `navigate(path)` publishes via the callback and
+  `hashChanged(path)` accepts inbound hash events.
+- `createPreferencesStore()` — mirror of `PersistedStateV1.preferences` +
+  a `resolvedReducedMotion` derived value that resolves persisted preference
+  over the OS media query.
+- `createFlowStore()` — non-persisted `pendingLaunch: MatchLaunchConfig`,
+  `lastResult: MatchResultPayload`, `requestedEntity`. Flow types are the
+  handoff CONTRACT between setup (Session 07) and match (Session 08); those
+  sessions extend the union under their own store subpaths.
+
