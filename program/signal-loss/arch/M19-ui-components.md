@@ -49,3 +49,16 @@ Shared surface (`./src/app/components/shared/index.ts`, shipped in SESSION-02):
 |---|---|
 | 2026-08-28 | Genesis/Forge contract recorded; implementation pending. |
 | 2026-08-28 | SESSION-02 shipped 13 shared semantic components with server-rendered role/ARIA/disabled-state/label coverage. Build, setup, result, and match subtrees remain pending. |
+
+<!-- SESSION-07 -->
+
+### SESSION-07 arch delta — build-zone surfaces (checkpoints 1–2 of 5 landed)
+
+Session 07 is partially delivered: checkpoints 1 (boot + codex) and 2 (collection
+#### M19 (UI components) — `src/app/components/build/`
+
+- `CurveChart`, `DialPips`, `DialStatGrid`, `HardpointBadges` — shared build-zone
+  display primitives (curve meaning/dial position never colour-only, NFR-5).
+- `format.ts` — `fxUnits` (fixed-point → decimal display), `signed`,
+  `dialStateRange`, `baseMovement`.
+

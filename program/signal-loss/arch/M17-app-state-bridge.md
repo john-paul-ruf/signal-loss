@@ -38,3 +38,36 @@ Core store surface (`./src/app/store/core/index.ts`, shipped in SESSION-02):
 |---|---|
 | 2026-08-28 | Genesis/Forge contract recorded; implementation pending. |
 | 2026-08-28 | SESSION-02 shipped `./src/app/store/core/**` (collection, navigation, preferences, and non-persisted flow store) with the `MatchLaunchConfig`/`MatchResultPayload` handoff contracts. Build stores, match store, and bridge remain pending. |
+
+<!-- SESSION-07 -->
+
+### SESSION-07 arch delta — build-zone surfaces (checkpoints 1–2 of 5 landed)
+
+Session 07 is partially delivered: checkpoints 1 (boot + codex) and 2 (collection
++ persistence + share) are committed and verified; checkpoints 3–5 (composer,
+setup+mapgen, result+e2e) remain. The modules below are the public surface added
+so far.
+
+#### M17 (app state / bridge) — `src/app/store/build/`
+
+- `catalog.ts` — `resolveCatalog(): Catalog` (memoized): assembles the six release
+  `./data/*.json` docs into a `RawCatalogBundle` and validates via the engine's
+  `loadCatalog`. Fail-loud (all-or-nothing, FR-30). This is the single app-side
+  catalog source; **Session 08's match surfaces should consume `resolveCatalog()`
+  rather than re-resolving.**
+- `app-info.ts` — `APP_VERSION` (from `package.json`).
+- `squad-identity.ts` — `SQUAD_LADDER` / `SquadIdentity` (design §1.4 constants).
+- `collection-model.ts` — persisted-snapshot ⇄ engine-construct bridge
+  (`snapshotToConstruct`, `constructToSnapshot`, `prebuiltToSnapshots`,
+  `rosterToEngineRoster`), legality/cost derivation (`rosterViolations`,
+  `rosterCostOf`, `constructCostOf`, `commanderOf`, `rosterSummary`), `asBudget`.
+  Engine `validateRoster` remains the sole legality authority (database.md §7).
+- `share.ts` — FR-7 import/export adapter over the codec: `importShareString`,
+  `outcomeFromDecode` (pure `DecodeResult → ImportOutcome` map covering the four
+  distinct MALFORMED/UNKNOWN_ENTRY/ILLEGAL/VERSION_UNSUPPORTED treatments; never
+  repairs), `exportRoster`, `exportConstructSnapshot`.
+- `collection-context.tsx` — async persistence wiring: `CollectionProvider`
+  (awaits `preloadMigrationModule()` once, then boots the core collection store
+  over browser `localStorage`, falling back to an in-memory adapter with a
+  persistence-unavailable flag), `useCollection` selector hook, `useCollectionBinding`.
+
