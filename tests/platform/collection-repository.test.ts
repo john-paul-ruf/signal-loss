@@ -4,6 +4,7 @@ import {
   getStorageKey,
   getStorageSchemaVersion,
   preloadMigrationModule,
+  type ConstructSnapshotV1,
   type PersistedStateV1,
 } from "../../src/platform/storage/migration-runtime";
 import {
@@ -342,3 +343,252 @@ describe("platform/storage / migration safety", () => {
     }
   });
 });
+
+const CONSTRUCT_SNAPSHOT: ConstructSnapshotV1 = {
+  chassisCode: 10,
+  commanderCode: 1,
+  mounts: [{ hardpointIndex: 0, mountCode: 22 }],
+};
+
+describe("platform/storage / atomic mutations", () => {
+  it("saveConstruct (create) allocates a fresh id and increments revision once", () => {
+    const storage = new MemoryStorage();
+    const repo = repoOver(storage);
+    const initial = repo.load();
+    if (!initial.ok) throw new Error("initial load failed");
+    const setSpy = vi.spyOn(storage, "setItem");
+    const result = repo.saveConstruct({
+      expectedRevision: 0,
+      name: "Alpha",
+      snapshot: CONSTRUCT_SNAPSHOT,
+    });
+    expect(result.ok).toBe(true);
+    if (result.ok) {
+      expect(result.value.revision).toBe(1);
+      expect(result.value.constructs.length).toBe(1);
+      expect(result.value.nextEntityId).toBe(2);
+    }
+    // Exactly one write to STORAGE_KEY per successful save.
+    const writes = setSpy.mock.calls.filter((c) => c[0] === STORAGE_KEY);
+    expect(writes.length).toBe(1);
+  });
+
+  it("saveConstruct returns STALE_REVISION when the expected revision drifts", () => {
+    const storage = new MemoryStorage();
+    const repo = repoOver(storage);
+    repo.load();
+    // Simulate a background write bumping the revision.
+    storage.seedRaw(
+      STORAGE_KEY,
+      JSON.stringify({
+        ...createInitialStateV1(),
+        revision: 3,
+      } satisfies PersistedStateV1),
+    );
+    const result = repo.saveConstruct({
+      expectedRevision: 0,
+      name: "Alpha",
+      snapshot: CONSTRUCT_SNAPSHOT,
+    });
+    expect(result.ok).toBe(false);
+    if (!result.ok && result.error.kind === "STALE_REVISION") {
+      expect(result.error.expected).toBe(0);
+      expect(result.error.actual).toBe(3);
+    } else {
+      expect.fail("expected STALE_REVISION");
+    }
+  });
+
+  it("saveConstruct returns WRITE_FAILED on blank name and leaves persisted state alone", () => {
+    const storage = new MemoryStorage();
+    const repo = repoOver(storage);
+    repo.load();
+    const before = storage.snapshot();
+    const setSpy = vi.spyOn(storage, "setItem");
+    const result = repo.saveConstruct({
+      expectedRevision: 0,
+      name: "   ",
+      snapshot: CONSTRUCT_SNAPSHOT,
+    });
+    expect(result.ok).toBe(false);
+    if (!result.ok) expect(result.error.kind).toBe("WRITE_FAILED");
+    // No STORAGE_KEY writes on failure.
+    const writes = setSpy.mock.calls.filter((c) => c[0] === STORAGE_KEY);
+    expect(writes.length).toBe(0);
+    expect(storage.snapshot()).toEqual(before);
+  });
+
+  it("saveConstruct (update) replaces by id and keeps revision monotonic", () => {
+    const storage = new MemoryStorage();
+    const repo = repoOver(storage);
+    repo.load();
+    const create = repo.saveConstruct({
+      expectedRevision: 0,
+      name: "Alpha",
+      snapshot: CONSTRUCT_SNAPSHOT,
+    });
+    if (!create.ok) throw new Error("create failed");
+    const id = create.value.constructs[0]?.id;
+    if (id === undefined) throw new Error("no id");
+    const update = repo.saveConstruct({
+      expectedRevision: 1,
+      name: "Alpha v2",
+      snapshot: CONSTRUCT_SNAPSHOT,
+      id,
+    });
+    expect(update.ok).toBe(true);
+    if (update.ok) {
+      expect(update.value.constructs.length).toBe(1);
+      expect(update.value.constructs[0]?.id).toBe(id);
+      expect(update.value.constructs[0]?.name).toBe("Alpha v2");
+      expect(update.value.revision).toBe(2);
+    }
+  });
+
+  it("delete of a missing id returns ENTITY_NOT_FOUND and does not write", () => {
+    const storage = new MemoryStorage();
+    const repo = repoOver(storage);
+    repo.load();
+    const setSpy = vi.spyOn(storage, "setItem");
+    const result = repo.deleteEntity({
+      expectedRevision: 0,
+      id: "construct:999",
+      confirmed: true,
+    });
+    expect(result.ok).toBe(false);
+    if (!result.ok) expect(result.error.kind).toBe("ENTITY_NOT_FOUND");
+    const writes = setSpy.mock.calls.filter((c) => c[0] === STORAGE_KEY);
+    expect(writes.length).toBe(0);
+  });
+
+  it("saveConstruct returns QUOTA_EXCEEDED and preserves prior state", () => {
+    const storage = new MemoryStorage();
+    const repo = repoOver(storage);
+    repo.load();
+    const before = storage.snapshot();
+    storage.failNextSet = Object.assign(new Error("quota"), { code: 22 });
+    const result = repo.saveConstruct({
+      expectedRevision: 0,
+      name: "Alpha",
+      snapshot: CONSTRUCT_SNAPSHOT,
+    });
+    expect(result.ok).toBe(false);
+    if (!result.ok) expect(result.error.kind).toBe("QUOTA_EXCEEDED");
+    // The persisted state is untouched by a failed write.
+    expect(storage.snapshot()).toEqual(before);
+  });
+
+  it("saveRoster canonicalizes mount order before writing", () => {
+    const storage = new MemoryStorage();
+    const repo = repoOver(storage);
+    repo.load();
+    const outOfOrder: ConstructSnapshotV1 = {
+      chassisCode: 10,
+      commanderCode: 1,
+      mounts: [
+        { hardpointIndex: 2, mountCode: 20 },
+        { hardpointIndex: 0, mountCode: 22 },
+      ],
+    };
+    const result = repo.saveRoster({
+      expectedRevision: 0,
+      name: "R1",
+      budget: 50,
+      snapshots: [outOfOrder],
+    });
+    expect(result.ok).toBe(true);
+    if (result.ok) {
+      const persisted = result.value.rosters[0]?.constructs[0]?.mounts;
+      expect(persisted?.map((m) => m.hardpointIndex)).toEqual([0, 2]);
+    }
+  });
+
+  it("rename mutates only the name field", () => {
+    const storage = new MemoryStorage();
+    const repo = repoOver(storage);
+    repo.load();
+    const create = repo.saveConstruct({
+      expectedRevision: 0,
+      name: "Alpha",
+      snapshot: CONSTRUCT_SNAPSHOT,
+    });
+    if (!create.ok) throw new Error("create failed");
+    const id = create.value.constructs[0]?.id;
+    if (id === undefined) throw new Error("no id");
+    const rename = repo.renameEntity({
+      expectedRevision: 1,
+      id,
+      newName: "Beta",
+    });
+    expect(rename.ok).toBe(true);
+    if (rename.ok) {
+      expect(rename.value.constructs[0]?.name).toBe("Beta");
+      expect(rename.value.constructs[0]?.construct).toEqual(CONSTRUCT_SNAPSHOT);
+    }
+  });
+
+  it("duplicate allocates a new id and increments nextEntityId", () => {
+    const storage = new MemoryStorage();
+    const repo = repoOver(storage);
+    repo.load();
+    const create = repo.saveConstruct({
+      expectedRevision: 0,
+      name: "Alpha",
+      snapshot: CONSTRUCT_SNAPSHOT,
+    });
+    if (!create.ok) throw new Error("create failed");
+    const id = create.value.constructs[0]?.id;
+    if (id === undefined) throw new Error("no id");
+    const dup = repo.duplicateEntity({
+      expectedRevision: 1,
+      id,
+      copyName: "Alpha Copy",
+    });
+    expect(dup.ok).toBe(true);
+    if (dup.ok) {
+      expect(dup.value.constructs.length).toBe(2);
+      expect(dup.value.constructs[1]?.id).not.toBe(id);
+      expect(dup.value.constructs[1]?.name).toBe("Alpha Copy");
+      expect(dup.value.nextEntityId).toBe(3);
+    }
+  });
+
+  it("savePreferences updates only preference fields and increments revision", () => {
+    const storage = new MemoryStorage();
+    const repo = repoOver(storage);
+    repo.load();
+    const result = repo.savePreferences({
+      expectedRevision: 0,
+      preferences: {
+        reducedMotion: "reduced",
+        highContrastSquads: true,
+      },
+    });
+    expect(result.ok).toBe(true);
+    if (result.ok) {
+      expect(result.value.preferences.reducedMotion).toBe("reduced");
+      expect(result.value.preferences.highContrastSquads).toBe(true);
+      expect(result.value.revision).toBe(1);
+    }
+  });
+});
+
+describe("platform/storage / mutations require probe success", () => {
+  it("returns STORAGE_UNAVAILABLE when the probe fails on first mutation", () => {
+    const storage = new MemoryStorage();
+    storage.failNextSet = Object.assign(new Error("blocked"), { name: "SecurityError" });
+    const repo = repoOver(storage);
+    const result = repo.saveConstruct({
+      expectedRevision: 0,
+      name: "Alpha",
+      snapshot: CONSTRUCT_SNAPSHOT,
+    });
+    expect(result.ok).toBe(false);
+    if (!result.ok) expect(result.error.kind).toBe("STORAGE_UNAVAILABLE");
+  });
+});
+
+// Reference to STORAGE_SCHEMA_VERSION to keep the linter happy — the value is
+// consumed indirectly through migration behavior above and pinned here for
+// documentation completeness.
+void (() => STORAGE_SCHEMA_VERSION);

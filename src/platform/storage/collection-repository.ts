@@ -4,22 +4,83 @@ import {
   getStorageKey,
   getStorageSchemaVersion,
   validatePersistedStateV1,
+  type ConstructSnapshotV1,
   type PersistedStateV1,
+  type PersistedEntityIdV1,
+  type PreferencesV1,
+  type SavedConstructIdV1,
+  type SavedConstructV1,
+  type SavedRosterIdV1,
+  type SavedRosterV1,
   type SchemaIssue,
 } from "./migration-runtime";
 import type { RepositoryError, RepositoryResult } from "./errors";
 
 /**
+ * Every mutation carries the caller's expected revision so an optimistic
+ * write can be rejected with `STALE_REVISION` if a background storage event
+ * bumped the persisted revision beneath us. The store surfaces this back to
+ * the UI as "reload required" per database.md §8.
+ */
+export interface SaveConstructInput {
+  readonly expectedRevision: number;
+  readonly name: string;
+  readonly snapshot: ConstructSnapshotV1;
+  readonly id?: SavedConstructIdV1;
+}
+
+export interface SaveRosterInput {
+  readonly expectedRevision: number;
+  readonly name: string;
+  readonly budget: number;
+  readonly snapshots: readonly ConstructSnapshotV1[];
+  readonly id?: SavedRosterIdV1;
+}
+
+export interface RenameInput {
+  readonly expectedRevision: number;
+  readonly id: PersistedEntityIdV1;
+  readonly newName: string;
+}
+
+export interface DuplicateInput {
+  readonly expectedRevision: number;
+  readonly id: PersistedEntityIdV1;
+  readonly copyName: string;
+}
+
+export interface DeleteInput {
+  readonly expectedRevision: number;
+  readonly id: PersistedEntityIdV1;
+  readonly confirmed: true;
+}
+
+export interface SavePreferencesInput {
+  readonly expectedRevision: number;
+  readonly preferences: PreferencesV1;
+}
+
+/**
  * The port every consumer uses. Adapters (localStorage + memory) satisfy this
  * exact shape so the app store never depends on a browser global.
  *
- * `load` is idempotent for a valid store. `resetCorruptStore` requires an
- * explicit `confirmed: true` witness — the type prevents accidental resets.
+ * Read: `load` is idempotent for a valid store.
+ * Writes: every mutation reads the current root, checks the expected revision,
+ *         canonicalizes mount order, validates, and performs a single atomic
+ *         `setItem`. Repository never repairs; it either succeeds and returns
+ *         the new state or fails with a distinct RepositoryError.
+ * Recovery: `resetCorruptStore` requires an explicit `confirmed: true` witness.
  */
 export interface CollectionRepository {
   load(): RepositoryResult<PersistedStateV1>;
   resetCorruptStore(confirmed: true): RepositoryResult<PersistedStateV1>;
   subscribeToExternalChange(listener: () => void): () => void;
+  saveConstruct(input: SaveConstructInput): RepositoryResult<PersistedStateV1>;
+  saveRoster(input: SaveRosterInput): RepositoryResult<PersistedStateV1>;
+  renameEntity(input: RenameInput): RepositoryResult<PersistedStateV1>;
+  duplicateEntity(input: DuplicateInput): RepositoryResult<PersistedStateV1>;
+  deleteEntity(input: DeleteInput): RepositoryResult<PersistedStateV1>;
+  savePreferences(input: SavePreferencesInput): RepositoryResult<PersistedStateV1>;
 }
 
 /**
@@ -224,6 +285,113 @@ export function writeCandidate(
  * `load` and the future mutation path so parsing/migration classification
  * flows through one code path.
  */
+/**
+ * Canonicalize mount order (ascending hardpoint index) — persistence.md
+ * requires stored records be in canonical form so every read compares equal.
+ */
+function canonicalizeSnapshot(snapshot: ConstructSnapshotV1): ConstructSnapshotV1 {
+  const mounts = snapshot.mounts.slice().sort((a, b) => a.hardpointIndex - b.hardpointIndex);
+  return {
+    chassisCode: snapshot.chassisCode,
+    commanderCode: snapshot.commanderCode,
+    mounts: mounts.map((m) => ({
+      hardpointIndex: m.hardpointIndex,
+      mountCode: m.mountCode,
+    })),
+  };
+}
+
+/**
+ * Allocate the next entity id and return the incremented nextEntityId. All
+ * id allocation flows through this function so the atomicity of the single
+ * setItem is preserved.
+ */
+function allocateConstructId(nextEntityId: number): { id: SavedConstructIdV1; nextEntityId: number } {
+  return { id: `construct:${nextEntityId}` as SavedConstructIdV1, nextEntityId: nextEntityId + 1 };
+}
+
+function allocateRosterId(nextEntityId: number): { id: SavedRosterIdV1; nextEntityId: number } {
+  return { id: `roster:${nextEntityId}` as SavedRosterIdV1, nextEntityId: nextEntityId + 1 };
+}
+
+function nextRevision(current: PersistedStateV1): number {
+  return current.revision + 1;
+}
+
+function trimmedName(raw: string): string | null {
+  if (typeof raw !== "string") return null;
+  const trimmed = raw.trim();
+  return trimmed.length === 0 ? null : raw;
+}
+
+function findConstructIndex(state: PersistedStateV1, id: SavedConstructIdV1): number {
+  return state.constructs.findIndex((c) => c.id === id);
+}
+function findRosterIndex(state: PersistedStateV1, id: SavedRosterIdV1): number {
+  return state.rosters.findIndex((r) => r.id === id);
+}
+
+function isConstructId(id: PersistedEntityIdV1): id is SavedConstructIdV1 {
+  return id.startsWith("construct:");
+}
+
+function isRosterId(id: PersistedEntityIdV1): id is SavedRosterIdV1 {
+  return id.startsWith("roster:");
+}
+
+function withValidation(
+  candidate: PersistedStateV1,
+): RepositoryResult<PersistedStateV1> {
+  const validation = validatePersistedStateV1(candidate);
+  if (!validation.ok) {
+    // A validation failure at this point is a programming bug, not user input.
+    return {
+      ok: false,
+      error: {
+        kind: "WRITE_FAILED",
+        cause: new Error(
+          `Candidate rejected by persistence validator: ${JSON.stringify(validation.issues.slice(0, 3))}`,
+        ),
+      },
+    };
+  }
+  return { ok: true, value: validation.value };
+}
+
+interface MutationContext {
+  readonly storage: StorageLike;
+  readonly key: string;
+  readonly expectedRevision: number;
+}
+
+function beginMutation(
+  ctx: MutationContext,
+): RepositoryResult<PersistedStateV1> {
+  const load = readStoredState(ctx.storage, ctx.key);
+  if (!load.ok) return load;
+  const current = load.value;
+  if (current.revision !== ctx.expectedRevision) {
+    return {
+      ok: false,
+      error: {
+        kind: "STALE_REVISION",
+        expected: ctx.expectedRevision,
+        actual: current.revision,
+      },
+    };
+  }
+  return { ok: true, value: current };
+}
+
+function commitMutation(
+  ctx: MutationContext,
+  candidate: PersistedStateV1,
+): RepositoryResult<PersistedStateV1> {
+  const checked = withValidation(candidate);
+  if (!checked.ok) return checked;
+  return writeCandidate(ctx.storage, ctx.key, checked.value);
+}
+
 export function readStoredState(
   storage: StorageLike,
   key: string,
@@ -308,6 +476,281 @@ export function createCollectionRepository(
       }
       source.addEventListener("storage", onStorage);
       return () => source.removeEventListener("storage", onStorage);
+    },
+    saveConstruct(input): RepositoryResult<PersistedStateV1> {
+      const probeError = ensureProbe(state);
+      if (probeError !== null) return { ok: false, error: probeError };
+      if (trimmedName(input.name) === null) {
+        return blankNameError();
+      }
+      const ctx: MutationContext = {
+        storage: state.storage,
+        key: state.storageKey,
+        expectedRevision: input.expectedRevision,
+      };
+      const start = beginMutation(ctx);
+      if (!start.ok) return start;
+      const current = start.value;
+      let candidate = current;
+      const snapshot = canonicalizeSnapshot(input.snapshot);
+      if (input.id !== undefined) {
+        const index = findConstructIndex(current, input.id);
+        if (index < 0) {
+          return { ok: false, error: { kind: "ENTITY_NOT_FOUND", id: input.id } };
+        }
+        const replaced: SavedConstructV1 = {
+          id: input.id,
+          name: input.name,
+          construct: snapshot,
+        };
+        const constructs = current.constructs.slice();
+        constructs[index] = replaced;
+        candidate = { ...current, constructs, revision: nextRevision(current) };
+      } else {
+        const allocation = allocateConstructId(current.nextEntityId);
+        const inserted: SavedConstructV1 = {
+          id: allocation.id,
+          name: input.name,
+          construct: snapshot,
+        };
+        candidate = {
+          ...current,
+          constructs: [...current.constructs, inserted],
+          nextEntityId: allocation.nextEntityId,
+          revision: nextRevision(current),
+        };
+      }
+      return commitMutation(ctx, candidate);
+    },
+    saveRoster(input): RepositoryResult<PersistedStateV1> {
+      const probeError = ensureProbe(state);
+      if (probeError !== null) return { ok: false, error: probeError };
+      if (trimmedName(input.name) === null) return blankNameError();
+      const ctx: MutationContext = {
+        storage: state.storage,
+        key: state.storageKey,
+        expectedRevision: input.expectedRevision,
+      };
+      const start = beginMutation(ctx);
+      if (!start.ok) return start;
+      const current = start.value;
+      const constructs = input.snapshots.map((s) => canonicalizeSnapshot(s));
+      let candidate = current;
+      if (input.id !== undefined) {
+        const index = findRosterIndex(current, input.id);
+        if (index < 0) {
+          return { ok: false, error: { kind: "ENTITY_NOT_FOUND", id: input.id } };
+        }
+        const replaced: SavedRosterV1 = {
+          id: input.id,
+          name: input.name,
+          budget: input.budget,
+          constructs,
+        };
+        const rosters = current.rosters.slice();
+        rosters[index] = replaced;
+        candidate = { ...current, rosters, revision: nextRevision(current) };
+      } else {
+        const allocation = allocateRosterId(current.nextEntityId);
+        const inserted: SavedRosterV1 = {
+          id: allocation.id,
+          name: input.name,
+          budget: input.budget,
+          constructs,
+        };
+        candidate = {
+          ...current,
+          rosters: [...current.rosters, inserted],
+          nextEntityId: allocation.nextEntityId,
+          revision: nextRevision(current),
+        };
+      }
+      return commitMutation(ctx, candidate);
+    },
+    renameEntity(input): RepositoryResult<PersistedStateV1> {
+      const probeError = ensureProbe(state);
+      if (probeError !== null) return { ok: false, error: probeError };
+      if (trimmedName(input.newName) === null) return blankNameError();
+      const ctx: MutationContext = {
+        storage: state.storage,
+        key: state.storageKey,
+        expectedRevision: input.expectedRevision,
+      };
+      const start = beginMutation(ctx);
+      if (!start.ok) return start;
+      const current = start.value;
+      if (isConstructId(input.id)) {
+        const index = findConstructIndex(current, input.id);
+        if (index < 0) {
+          return { ok: false, error: { kind: "ENTITY_NOT_FOUND", id: input.id } };
+        }
+        const existing = current.constructs[index];
+        if (existing === undefined) {
+          return { ok: false, error: { kind: "ENTITY_NOT_FOUND", id: input.id } };
+        }
+        const constructs = current.constructs.slice();
+        constructs[index] = { ...existing, name: input.newName };
+        return commitMutation(ctx, {
+          ...current,
+          constructs,
+          revision: nextRevision(current),
+        });
+      }
+      if (isRosterId(input.id)) {
+        const index = findRosterIndex(current, input.id);
+        if (index < 0) {
+          return { ok: false, error: { kind: "ENTITY_NOT_FOUND", id: input.id } };
+        }
+        const existing = current.rosters[index];
+        if (existing === undefined) {
+          return { ok: false, error: { kind: "ENTITY_NOT_FOUND", id: input.id } };
+        }
+        const rosters = current.rosters.slice();
+        rosters[index] = { ...existing, name: input.newName };
+        return commitMutation(ctx, {
+          ...current,
+          rosters,
+          revision: nextRevision(current),
+        });
+      }
+      return { ok: false, error: { kind: "ENTITY_NOT_FOUND", id: input.id } };
+    },
+    duplicateEntity(input): RepositoryResult<PersistedStateV1> {
+      const probeError = ensureProbe(state);
+      if (probeError !== null) return { ok: false, error: probeError };
+      if (trimmedName(input.copyName) === null) return blankNameError();
+      const ctx: MutationContext = {
+        storage: state.storage,
+        key: state.storageKey,
+        expectedRevision: input.expectedRevision,
+      };
+      const start = beginMutation(ctx);
+      if (!start.ok) return start;
+      const current = start.value;
+      if (isConstructId(input.id)) {
+        const index = findConstructIndex(current, input.id);
+        if (index < 0) {
+          return { ok: false, error: { kind: "ENTITY_NOT_FOUND", id: input.id } };
+        }
+        const source = current.constructs[index];
+        if (source === undefined) {
+          return { ok: false, error: { kind: "ENTITY_NOT_FOUND", id: input.id } };
+        }
+        const allocation = allocateConstructId(current.nextEntityId);
+        const clone: SavedConstructV1 = {
+          id: allocation.id,
+          name: input.copyName,
+          construct: canonicalizeSnapshot(source.construct),
+        };
+        return commitMutation(ctx, {
+          ...current,
+          constructs: [...current.constructs, clone],
+          nextEntityId: allocation.nextEntityId,
+          revision: nextRevision(current),
+        });
+      }
+      if (isRosterId(input.id)) {
+        const index = findRosterIndex(current, input.id);
+        if (index < 0) {
+          return { ok: false, error: { kind: "ENTITY_NOT_FOUND", id: input.id } };
+        }
+        const source = current.rosters[index];
+        if (source === undefined) {
+          return { ok: false, error: { kind: "ENTITY_NOT_FOUND", id: input.id } };
+        }
+        const allocation = allocateRosterId(current.nextEntityId);
+        const clone: SavedRosterV1 = {
+          id: allocation.id,
+          name: input.copyName,
+          budget: source.budget,
+          constructs: source.constructs.map((s) => canonicalizeSnapshot(s)),
+        };
+        return commitMutation(ctx, {
+          ...current,
+          rosters: [...current.rosters, clone],
+          nextEntityId: allocation.nextEntityId,
+          revision: nextRevision(current),
+        });
+      }
+      return { ok: false, error: { kind: "ENTITY_NOT_FOUND", id: input.id } };
+    },
+    deleteEntity(input): RepositoryResult<PersistedStateV1> {
+      if (input.confirmed !== true) {
+        return {
+          ok: false,
+          error: {
+            kind: "WRITE_FAILED",
+            cause: new Error("deleteEntity requires confirmed === true"),
+          },
+        };
+      }
+      const probeError = ensureProbe(state);
+      if (probeError !== null) return { ok: false, error: probeError };
+      const ctx: MutationContext = {
+        storage: state.storage,
+        key: state.storageKey,
+        expectedRevision: input.expectedRevision,
+      };
+      const start = beginMutation(ctx);
+      if (!start.ok) return start;
+      const current = start.value;
+      if (isConstructId(input.id)) {
+        const index = findConstructIndex(current, input.id);
+        if (index < 0) {
+          return { ok: false, error: { kind: "ENTITY_NOT_FOUND", id: input.id } };
+        }
+        const constructs = current.constructs.slice();
+        constructs.splice(index, 1);
+        return commitMutation(ctx, {
+          ...current,
+          constructs,
+          revision: nextRevision(current),
+        });
+      }
+      if (isRosterId(input.id)) {
+        const index = findRosterIndex(current, input.id);
+        if (index < 0) {
+          return { ok: false, error: { kind: "ENTITY_NOT_FOUND", id: input.id } };
+        }
+        const rosters = current.rosters.slice();
+        rosters.splice(index, 1);
+        return commitMutation(ctx, {
+          ...current,
+          rosters,
+          revision: nextRevision(current),
+        });
+      }
+      return { ok: false, error: { kind: "ENTITY_NOT_FOUND", id: input.id } };
+    },
+    savePreferences(input): RepositoryResult<PersistedStateV1> {
+      const probeError = ensureProbe(state);
+      if (probeError !== null) return { ok: false, error: probeError };
+      const ctx: MutationContext = {
+        storage: state.storage,
+        key: state.storageKey,
+        expectedRevision: input.expectedRevision,
+      };
+      const start = beginMutation(ctx);
+      if (!start.ok) return start;
+      const current = start.value;
+      return commitMutation(ctx, {
+        ...current,
+        preferences: {
+          reducedMotion: input.preferences.reducedMotion,
+          highContrastSquads: input.preferences.highContrastSquads,
+        },
+        revision: nextRevision(current),
+      });
+    },
+  };
+}
+
+function blankNameError(): RepositoryResult<PersistedStateV1> {
+  return {
+    ok: false,
+    error: {
+      kind: "WRITE_FAILED",
+      cause: new Error("Name must contain a non-whitespace character."),
     },
   };
 }
