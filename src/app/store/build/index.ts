@@ -10,3 +10,30 @@ export {
   SQUAD_LADDER,
   type SquadIdentity,
 } from "./squad-identity";
+export {
+  asBudget,
+  commanderOf,
+  constructCostOf,
+  constructToSnapshot,
+  prebuiltToSnapshots,
+  rosterCostOf,
+  rosterSummary,
+  rosterToEngineRoster,
+  rosterViolations,
+  snapshotToConstruct,
+  type RosterSummary,
+} from "./collection-model";
+export {
+  exportConstructSnapshot,
+  exportRoster,
+  importShareString,
+  outcomeFromDecode,
+  type ImportOutcome,
+} from "./share";
+export {
+  CollectionProvider,
+  useCollection,
+  useCollectionBinding,
+  type CollectionBinding,
+  type CollectionProviderProps,
+} from "./collection-context";
