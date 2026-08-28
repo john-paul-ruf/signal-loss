@@ -288,18 +288,19 @@ export function applyDeployments(
     return { ...c, position: pos };
   });
 
-  // Own-squad known positions confirmed at round 1.
+  // Simultaneous public reveal: every squad sees every construct's
+  // deployed position at round 1 (FR-12). Resolution loss (FR-25) then
+  // takes effect for subsequent rounds via updateKnownPositions.
   const knownPositions: {
     observer: SquadId;
     subject: number;
     position: Vec2;
     confirmedRound: number;
   }[] = [];
-  for (let sq = 0; sq < SQUAD_COUNT; sq = sq + 1) {
+  for (let observer = 0; observer < SQUAD_COUNT; observer = observer + 1) {
     for (const c of newConstructs) {
-      if ((c.squadId as number) !== sq) continue;
       knownPositions.push({
-        observer: sq as SquadId,
+        observer: observer as SquadId,
         subject: c.id as number,
         position: { x: c.position.x as Fx, y: c.position.y as Fx },
         confirmedRound: 1,
