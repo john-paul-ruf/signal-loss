@@ -50,3 +50,14 @@ Additional public surfaces:
 |---|---|
 | 2026-08-28 | Genesis/Forge contract recorded; implementation pending. |
 | 2026-08-28 | SESSION-01 shipped root configs, locked npm scripts, and the ESLint engine-boundary/determinism rule set. `./.github/workflows/ci.yml` deferred to Session 06. |
+
+<!-- SESSION-06 -->
+
+## SESSION-06 arch delta — release content, headless batteries, and CI
+
+### M01 (.github/workflows/ci.yml) — blocking CI shipped
+
+Nine jobs: install → typecheck / lint / unit / determinism / playability / behavior / costing / cross-browser / build → release-baseline. Every battery uploads its JSON report as an artifact. The `build` job asserts no raster gameplay asset and no external URL landed in `dist/`. The `release-baseline` job runs `harness -- all --source-revision $GITHUB_SHA` and uploads the aggregated report.
+
+Cross-browser job installs Playwright browsers and produces a Node-side determinism reference; Sessions 07/08 will feed browser-side hashes into the same battery via `--cross-runtime-hashes` once they add their tests.
+
