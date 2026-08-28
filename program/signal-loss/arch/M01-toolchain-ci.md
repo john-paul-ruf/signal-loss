@@ -27,3 +27,42 @@
 | Date | Change |
 |---|---|
 | 2026-08-28 | Genesis/Forge contract recorded; implementation pending. |
+
+<!-- SESSION-01 -->
+
+## M01 — Toolchain and CI
+
+Locked npm scripts (must remain in `./package.json` for later sessions):
+
+- `dev`, `build`, `preview`
+- `typecheck`
+- `lint`
+- `test:unit`, `test:determinism`, `test:playability`, `test:behavior`,
+  `test:costing`
+- `test:e2e`
+- `harness`
+
+Battery scripts (`test:determinism`, `test:playability`, `test:behavior`,
+`test:costing`) run via `vitest run --dir tests/<battery> --passWithNoTests`
+until Session 06 adds their owned tests. `--passWithNoTests` is documented
+Vitest behavior — it prints "No test files found" rather than fabricating a
+pass count.
+
+ESLint config enforces (via `./eslint.config.js`):
+
+- Engine forbidden primitives (`no-restricted-properties`): every
+  implementation-defined Math primitive, `Date.now`, `performance.now`, and
+  `Number.toLocaleString`. `Math.sqrt` remains permitted for `isqrt`'s
+  seed.
+- Engine forbidden globals: `Date` (blocks `new Date()`).
+- Engine zero-dep boundary (`no-restricted-imports`): explicit deny list of
+  every npm package currently in `./package.json`. Later sessions must add
+  new npm deps to this list.
+- Engine path boundary (`import/no-restricted-paths`): engine cannot import
+  from `./src/app`, `./src/platform`, `./src/workers`, `./src/migrations`.
+- Match/map/AI paths ban float literals (`raw=/^-?[0-9]+\.[0-9]+$/`).
+- Repo-wide: `dangerouslySetInnerHTML` banned via `no-restricted-syntax`
+  and `react/no-danger`.
+- Explicit sort comparators required in the engine (bare `.sort()` /
+  `.toSorted()` calls fire an error).
+
