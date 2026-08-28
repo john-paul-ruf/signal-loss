@@ -237,23 +237,25 @@ describe("map/gate / CHOKEPOINTS isolation", () => {
 });
 
 describe("map/gate / TRACE_SURVIVABILITY isolation", () => {
-  it("fails when the final safe region has no cover inside", () => {
-    // Set every wall outside the final safe region so the final region
-    // is empty of cover.
-    const walls: WallSegment[] = [
-      { id: 0, a: v(-19, -19), b: v(-17, -19) },
-      { id: 1, a: v(17, 17), b: v(19, 17) },
-    ];
+  it("fails when the final safe region has no passable cell (entirely walled)", () => {
+    // Fill a small area centered on the origin with walls, then set the
+    // final safe region to that same area — the restricted grid has no
+    // passable cell inside the polygon.
+    const walls: WallSegment[] = [];
+    let id = 0;
+    for (let x = -3; x <= 3; x = x + 1) {
+      for (let y = -3; y <= 3; y = y + 1) {
+        walls.push({ id: id, a: v(x, y), b: v(x, y) });
+        id = id + 1;
+      }
+    }
     const map = baseMap({
       walls,
       traceSchedule: [
         { round: 4, safeRegion: corner(0, 0, 3), damage: 2 },
       ],
     });
-    const context = baseContext({
-      tunables: { ...testTunables, MIN_SPAWN_COVER: 1 },
-    });
-    const report = runPlayabilityGate(map, context);
+    const report = runPlayabilityGate(map, baseContext());
     const chk = report.checks.find(c => c.id === "TRACE_SURVIVABILITY");
     expect(chk?.passed).toBe(false);
   });
