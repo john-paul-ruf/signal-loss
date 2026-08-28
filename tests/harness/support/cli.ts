@@ -36,6 +36,7 @@ import type { HarnessIo } from "./io";
 import { runDeterminismBattery } from "./determinism";
 import { runPlayabilityBattery } from "./playability";
 import { runBehaviorBattery } from "./behavior";
+import { runCostingBattery } from "./costing";
 import { formatReport } from "./report-human";
 import type { AllReport, BatteryName, BatteryReport } from "./report-types";
 import { serializeReport } from "./report-json";
@@ -146,9 +147,15 @@ export async function runCli(
       });
       break;
     }
-    case "costing":
-      report = notYetImplementedReport(flags.battery, catalog.value, seeds, flags);
+    case "costing": {
+      report = runCostingBattery({
+        catalog: catalog.value,
+        seedCount: seeds.length,
+        baseSeed: flags.baseSeed,
+        partitions: flags.partitions,
+      });
       break;
+    }
     case "all":
       report = allNotYetImplementedReport(catalog.value, flags);
       break;
@@ -327,41 +334,6 @@ function resolveSeeds(flags: CliFlags): readonly string[] {
     : generateSeedSet(flags.baseSeed, flags.seedCount);
   if (flags.partitions === 1) return base;
   return partitionSeeds(base, flags.partition, flags.partitions).seeds;
-}
-
-/**
- * Placeholder report for batteries the later checkpoints will implement.
- * Kept passing so `sl determinism` (the checkpoint-2 gate) does not
- * incorrectly signal a downstream failure.
- */
-function notYetImplementedReport(
-  battery: Exclude<BatteryName, "all" | "determinism">,
-  catalog: Catalog,
-  seeds: readonly string[],
-  flags: CliFlags,
-): BatteryReport {
-  return {
-    formatVersion: 1,
-    battery,
-    passed: true,
-    catalogHash: catalog.hashes.catalog,
-    tunablesHash: catalog.hashes.tunables,
-    sample: {
-      baseSeed: flags.baseSeed,
-      seedCount: seeds.length,
-      partitions: flags.partitions,
-    },
-    checks: [
-      {
-        id: "NOT_YET_IMPLEMENTED",
-        passed: true,
-        observed: { battery },
-        threshold: { requiredBy: `Session 06 checkpoint that owns ${battery}` },
-        message: `${battery} battery is a stub in this checkpoint.`,
-      },
-    ],
-    evidence: {},
-  };
 }
 
 function allNotYetImplementedReport(
