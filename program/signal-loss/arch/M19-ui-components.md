@@ -2,7 +2,7 @@
 
 > **Path:** `./src/app/components/`
 > **Imports from:** M12, M17
-> **Status:** shared primitives shipped in SESSION-02; build-zone display primitives shipped in SESSION-07 checkpoints 1–2; match components shipped in SESSION-08. Composer / setup / result component subtrees remain pending a fresh SESSION-07 retry.
+> **Status:** shared primitives shipped and verified in SESSION-02; build-zone display primitives shipped and verified in SESSION-07 checkpoints 1–2; match components shipped and verified in SESSION-08. A SESSION-07 retry landed one unverified composer component (`CommanderDeltaGrid.tsx`) — see Build display primitives below. Setup / result component subtrees remain fully unstarted, pending a further SESSION-07 retry.
 
 ## Public API
 
@@ -27,6 +27,7 @@
 
 - `CurveChart`, `DialPips`, `DialStatGrid`, `HardpointBadges` — shared build-zone display primitives (curve meaning / dial position never colour-only, NFR-5).
 - `format.ts` — `fxUnits` (fixed-point → decimal display), `signed`, `dialStateRange`, `baseMovement`.
+- `CommanderDeltaGrid.tsx` — **residual, unverified.** A SESSION-07 retry aimed at checkpoint 3 (composer) added this before/after stat-delta grid for commander assignment, but the worker returned no parseable handoff before any checkpoint or verification result. Committed as in-lease residual `ed7b664`; treat as an unverified starting point for the next retry.
 
 ### Match components — `./src/app/components/match/` (SESSION-08)
 
@@ -71,3 +72,4 @@
 | 2026-08-28 | SESSION-02 shipped 13 shared semantic components with server-rendered role / ARIA / disabled-state / label coverage. |
 | 2026-08-28 | SESSION-07 checkpoints 1–2 shipped build display primitives (`CurveChart`, `DialPips`, `DialStatGrid`, `HardpointBadges`, `format.ts`). Setup / result / composer components remain pending checkpoints 3–5. |
 | 2026-08-28 | SESSION-08 shipped `./src/app/components/match/**` — the persistent match shell plus phase header, trace timeline, pool ledger, squad rail, inspector, round log, command bar, rules drawer, attack ledger, and exchange card. |
+| 2026-08-28 | SESSION-07 retry 1 (targeting checkpoint 3) returned no parseable handoff; residual `ed7b664` added `CommanderDeltaGrid.tsx` unverified. Setup / result component subtrees remain fully unstarted. |

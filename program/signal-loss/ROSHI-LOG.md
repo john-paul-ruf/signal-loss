@@ -104,3 +104,48 @@ None crossed the three-cycle threshold this cycle. All observations remain queue
 ### Roshi entry
 
 Reconciled 11 arch files against SESSION-04-through-08 shipping evidence; folded the SESSION-05 and SESSION-08 shared convention blocks so each invariant lives once in the module that owns it; documented the SESSION-07 partial-shipping split for M17 / M19 / M20; module registry still matches the on-disk layout so no change. Two-cycle observations queued for framework consideration; nothing crossed the three-cycle promote threshold.
+
+---
+
+## 2026-08-28 — Cycle 3 · SIGNAL LOSS / full-v1 (SESSION-07 retry 1)
+
+### What ran
+
+Jikijitsu ran a single-session retry, routing SESSION-07 directly to Enso from checkpoint 3 (correcting cycle 2's mid-flight Mu→Enso delegation). The worker returned only `Failed to parse tool arguments: JSON Parse error: Property name must be a string literal` — no parseable handoff JSON. Jikijitsu committed the worker's in-lease working tree as a session-end residual (`ed7b664`), covering 11 files under `./src/app/store/build/**`, `./src/app/components/build/**`, `./src/app/screens/build/composer/**`, `./tests/app/build/**`, and `./tests/e2e/build/**`. Program state at cycle close: still 7/8 sessions done, SESSION-07 still blocked at checkpoint 2/5 (the residual is explicitly not counted as checkpoint 3), 39 program checkpoint commits unchanged, 0 new worker checkpoint commits, working tree clean.
+
+### What I reconciled
+
+- Read: the Final Report's cycle-3 section (`./program/signal-loss/prompts/full-v1/FINAL-REPORT.md` lines 195–268), `STATE.md` in full including the new SESSION-07 retry-1 row, every file under `./program/signal-loss/arch/**`, `./program/signal-loss/FORGE-CONFIG.md`, and both prior `ROSHI-LOG.md` entries. Grounded every claim against `git show --stat` on `7e5f797`, `ed7b664`, and `5ab07f6`.
+- Updated four arch files to record the residual explicitly as **unverified, non-checkpoint** work — distinct from the shipped-and-verified SESSION-07 checkpoints 1–2 and SESSION-08 surfaces they sit beside, per Vow 2 (git is the source of truth) and the Verification discipline (never invent a checkpoint that wasn't declared):
+  - `./program/signal-loss/arch/M17-app-state-bridge.md` — added the residual `composer.ts` / `composer-context.ts` draft store as an unverified subsection; corrected the Internal Structure table to separate verified build stores from the residual composer store and the still-fully-unstarted `mapgen-client.ts`.
+  - `./program/signal-loss/arch/M19-ui-components.md` — added the residual `CommanderDeltaGrid.tsx` component with the same unverified framing.
+  - `./program/signal-loss/arch/M20-screens.md` — added the residual `Composer.tsx` / `ComposerView.tsx` / `route.tsx` and the `CollectionView` edit-button wiring; **corrected a path error inherited from cycle 2**: the arch previously said the pending composer screen would live at `./src/app/screens/composer/`, but the actual (unverified) files landed at `./src/app/screens/build/composer/` — resolved to what git shows, per Vow 2.
+  - `./program/signal-loss/arch/M22-verification-tests.md` — recorded `./tests/app/build/composer.test.tsx` and `./tests/e2e/build/composer.spec.ts` as authored-but-never-executed residual specs, since no verification result was reported for this retry.
+- **Module registry** (in `./program/signal-loss/FORGE-CONFIG.md`): no update needed. The residual paths all fall inside M17 / M19 / M20 / M22's existing `Owns` contracts; nothing shipped a new module boundary.
+
+### What I did NOT promote to a convention
+
+Seven observations now queued across three cycles; two cross the three-cycle mark this cycle but both target Robe files (`./JIKIJITSU.md`), which Roshi never edits per Vow 3 regardless of cycle count — they remain human-fold recommendations, now with higher confidence:
+
+- **Scope `git commit` pathspec, not only `git add`.** Now **3** cycles: cycle 1 failure (SESSION-02 `cab5120`), cycle 2 preventive success, cycle 3 preventive success again (`ed7b664` touched only SESSION-07 lease paths despite being a crash-recovery commit, not a normal Mu checkpoint). Still a `./JIKIJITSU.md` / `./MU.md` orchestration concern, not a `./FORGE-CONFIG.md` convention — no program-specific Forge/Mu authoring rule is implicated, so nothing was added to `./FORGE-CONFIG.md`.
+- **Distinguish "session crashed with no parseable handoff" from "session declared itself blocked."** Now **3** cycles: cycle 1 SESSION-04 (crash), cycle 2 SESSION-07 (declared block), cycle 3 SESSION-07 retry 1 (crash again, same failure signature — a subagent tool-argument JSON parse error). The record shows Jikijitsu is already handling this correctly in practice (checkpoint count held at 2/5, residual not miscounted as checkpoint 3), so this is now evidence the distinction is real and worth codifying explicitly in `./JIKIJITSU.md`'s result-classification section rather than relying on careful per-run judgment.
+- Five prior observations remain below threshold, cycle counts unchanged from cycle 2 (route UI-dominant sessions to Enso at spawn — **1**, though cycle 3's retry did apply this correction and it worked structurally, the worker still crashed for an unrelated transport reason, so this is not yet a repeat data point on the *routing* question itself; combined visual working set cap — **1**; shared-style owner — **1**; Zen await window — **1**).
+
+### New observation this cycle
+
+- **A second consecutive transport/parse failure on the same blocked session** (cycle 2 mid-flight delegation exhausted context; cycle 3's direct-Enso retry hit an unrelated tool-argument parse error) suggests checkpoint-3-class work on this lease may not be a purely stochastic retry target. Cycle count: **1**. Candidate home: `./JIKIJITSU.md`'s retry policy — consider whether two consecutive non-declarative failures on one session should escalate (e.g., smaller checkpoint scope, different worker configuration) rather than repeating the identical retry shape.
+
+### Proposed for the framework
+
+To be folded in by a human; Roshi does not edit `./FORGE.md`, `./MU.md`, `./ENSO.md`, or `./JIKIJITSU.md`.
+
+- **Scope `git commit` pathspec, not only `git add`.** Cycles observed: **3** (SIGNAL LOSS cycle 1 failure, cycle 2 and cycle 3 preventive successes). Candidate home: `./JIKIJITSU.md` orchestration envelope or `./MU.md` checkpoint-commit protocol.
+- **Distinguish "session crashed" from "session declared blocked," and preserve checkpoint counts across crash-recovery residual commits.** Cycles observed: **3** (SIGNAL LOSS cycle 1 crash-shaped SESSION-04, cycle 2 block-shaped SESSION-07, cycle 3 crash-shaped SESSION-07 retry 1). Candidate home: `./JIKIJITSU.md` spawn/await/result-classification.
+- **Route UI-dominant sessions to Enso at spawn time, not by mid-flight delegation.** Cycles observed: **1** (SESSION-07; cycle 3 applied the fix but the retry failed for an unrelated reason before the routing choice could be re-tested). Candidate home: `./JIKIJITSU.md` spawn-time routing heuristic or Forge's per-session worker-mix hint.
+- **Cap combined visual working set per session at what one context can hold.** Cycles observed: **1** (SESSION-07 blocked at 2/5). Candidate home: `./FORGE.md` decomposition heuristics — checkpoint granularity for UI-dominant leases.
+- **Carve a shared-style owner before concurrent UI leases.** Cycles observed: **1** (SESSION-07 + SESSION-08 both worked around missing shared CSS). Candidate home: `./FORGE.md` decomposition — when two concurrent leases both consume shared shell components, style ownership belongs to an earlier serial lease.
+- **Escalate retry strategy after two consecutive non-declarative failures on the same session.** Cycles observed: **1** (SESSION-07 retry 1, following cycle 2's mid-flight-delegation exhaustion). Candidate home: `./JIKIJITSU.md` retry policy.
+
+### Roshi entry
+
+Reconciled 4 arch files (M17, M19, M20, M22) to record SESSION-07 retry 1's residual composer files as explicitly unverified, non-checkpoint work distinct from the verified checkpoints 1–2 and SESSION-08 surfaces beside them; corrected an inherited path error in M20 (composer lands under `./src/app/screens/build/composer/`, not `./src/app/screens/composer/`) by resolving to what git actually shows. Module registry unchanged — no new module boundary shipped. Two framework observations (git-commit pathspec scoping; crash-vs-blocked classification) now cross the three-cycle mark but both target Robe files Roshi cannot edit, so nothing was folded into `./FORGE-CONFIG.md`; they are logged for a human to fold into `./JIKIJITSU.md` with higher confidence. One new observation queued at count-of-1: escalate retry strategy after two consecutive non-declarative failures on one session.

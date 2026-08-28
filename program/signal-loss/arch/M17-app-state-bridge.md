@@ -2,7 +2,7 @@
 
 > **Path:** `./src/app/store/`, `./src/app/bridge/`
 > **Imports from:** M12, M14, M15
-> **Status:** core stores shipped in SESSION-02; partial build stores in SESSION-07 (checkpoints 1–2 of 5); AI-client bridge + match store shipped in SESSION-08. The map-generation worker client (`./src/app/bridge/mapgen-client.ts`) and the build/setup/result stores from SESSION-07 checkpoints 3–5 remain pending a fresh SESSION-07 retry.
+> **Status:** core stores shipped and verified in SESSION-02; build stores shipped and verified through SESSION-07 checkpoints 1–2 of 5; AI-client bridge + match store shipped and verified in SESSION-08. A SESSION-07 retry landed an unverified composer draft store (`composer.ts`, `composer-context.ts`) — see Conventions below. The map-generation worker client (`./src/app/bridge/mapgen-client.ts`) and the setup/result stores remain fully unstarted, pending a further SESSION-07 retry.
 
 ## Public API
 
@@ -21,6 +21,10 @@
 - `collection-model.ts` — persisted-snapshot ⇄ engine-construct bridge (`snapshotToConstruct`, `constructToSnapshot`, `prebuiltToSnapshots`, `rosterToEngineRoster`), legality/cost derivation (`rosterViolations`, `rosterCostOf`, `constructCostOf`, `commanderOf`, `rosterSummary`), `asBudget`. Engine `validateRoster` remains the sole legality authority (database.md §7).
 - `share.ts` — FR-7 import/export adapter over the codec: `importShareString`, `outcomeFromDecode` (pure `DecodeResult → ImportOutcome` map covering the four distinct MALFORMED / UNKNOWN_ENTRY / ILLEGAL / VERSION_UNSUPPORTED treatments; never repairs), `exportRoster`, `exportConstructSnapshot`. `UNKNOWN_ENTRY` and `VERSION_UNSUPPORTED` cannot be produced through the public encoder (it validates codes) — they are unit-tested on the pure mapping, not via crafted strings.
 - `collection-context.tsx` — async persistence wiring: `CollectionProvider` (awaits `preloadMigrationModule()` once, then boots the core collection store over browser `localStorage`, falling back to an in-memory adapter with a persistence-unavailable flag), `useCollection` selector hook, `useCollectionBinding`.
+
+### Composer draft store — `./src/app/store/build/composer.ts`, `composer-context.ts` (residual, unverified)
+
+A SESSION-07 retry aimed at checkpoint 3 returned no parseable handoff; Jikijitsu committed its in-lease work as residual `ed7b664`. It adds a pure `ComposerDraft` model (`chassisCode` / `commanderCode` / `mounts`) with `draftFromConstruct`, `draftToConstruct`, `draftCost`, `draftViolations` (via the engine's `validateConstruct`), `setChassis` / `setCommander` / `setMount` / `removeMount` / `mountAt` / `mountMismatchReason` / `isComposable`, plus a `composer-context.ts` request channel (`requestComposerEdit({rosterId, constructIndex})` / `consumeComposerRequest()`) that `CollectionView`'s new edit button uses to hand off to `#/composer`. No typecheck, lint, or test result was reported for this retry — treat as an unverified starting point, not a shipped surface.
 
 ### AI-client bridge — `./src/app/bridge/ai-client.ts` (SESSION-08)
 
@@ -101,10 +105,11 @@ projectedPoolSpend(state, squad, drafts): { called, postures, total };
 | Area | Path |
 |---|---|
 | Core stores | `./src/app/store/core/` (`collection-store.ts`, `flow-store.ts`, `navigation-store.ts`, `preferences-store.ts`, `index.ts`) |
-| Build stores (partial) | `./src/app/store/build/` (`catalog.ts`, `app-info.ts`, `squad-identity.ts`, `collection-model.ts`, `share.ts`, `collection-context.tsx`) |
+| Build stores (verified) | `./src/app/store/build/` (`catalog.ts`, `app-info.ts`, `squad-identity.ts`, `collection-model.ts`, `share.ts`, `collection-context.tsx`) |
+| Composer store (residual, unverified) | `./src/app/store/build/composer.ts`, `./src/app/store/build/composer-context.ts` |
 | Match store | `./src/app/store/match/` |
 | AI-client bridge | `./src/app/bridge/ai-client.ts` |
-| Map-generation client (pending) | `./src/app/bridge/mapgen-client.ts` — SESSION-07 checkpoint 4 |
+| Map-generation client (pending) | `./src/app/bridge/mapgen-client.ts` — fully unstarted, pending a further SESSION-07 retry |
 
 ## Conventions and Invariants
 
@@ -128,3 +133,4 @@ projectedPoolSpend(state, squad, drafts): { called, postures, total };
 | 2026-08-28 | SESSION-02 shipped `./src/app/store/core/**` (collection, navigation, preferences, and non-persisted flow store) with the `MatchLaunchConfig` / `MatchResultPayload` handoff contracts. |
 | 2026-08-28 | SESSION-07 checkpoints 1–2 shipped the build-store bridge (`catalog`, `squad-identity`, `collection-model`, `share`, `collection-context`). Composer / setup+mapgen / result stores remain pending checkpoints 3–5. |
 | 2026-08-28 | SESSION-08 shipped `./src/app/bridge/ai-client.ts` (typed multiplexed AI worker client) and `./src/app/store/match/**` (partitioned match store with drafts asserted off of `MatchState`, event-only playback with no wall-clock, and DOM `CustomEvent` result handoff). |
+| 2026-08-28 | SESSION-07 retry 1 (targeting checkpoint 3) returned no parseable handoff; residual `ed7b664` added `composer.ts` / `composer-context.ts` unverified. `mapgen-client.ts` and the setup/result stores remain fully unstarted. |

@@ -2,7 +2,7 @@
 
 > **Path:** `./tests/`
 > **Imports from:** modules under test
-> **Status:** partial. Every session shipped its owned test subtree through SESSION-08. Battery `.test.ts` script directories under `./tests/{determinism,playability,behavior,costing}/` remain intentionally empty (real coverage lives under `./tests/harness/**`); build-zone e2e specs were authored in SESSION-07 but remain unrun pending a fresh SESSION-07 retry.
+> **Status:** partial. Every session shipped and verified its owned test subtree through SESSION-08. Battery `.test.ts` script directories under `./tests/{determinism,playability,behavior,costing}/` remain intentionally empty (real coverage lives under `./tests/harness/**`); build-zone e2e specs were authored in SESSION-07 but remain unrun. A SESSION-07 retry additionally landed unverified composer unit/e2e specs — see Internal Structure.
 
 ## Public API
 
@@ -31,9 +31,9 @@ Subtrees present after SESSION-08:
 | Verification reports | `./docs/verification/` | SESSION-06 |
 | Platform | `./tests/platform/` (capability, clipboard, collection-repository) | SESSION-02 |
 | App core | `./tests/app/core/` (collection-store, flow-store, navigation-store, preferences-store, shared-components) | SESSION-02 |
-| App build (partial) | `./tests/app/build/` (boot, codex, collection-view) | SESSION-07 checkpoints 1–2 |
+| App build (partial) | `./tests/app/build/` (boot, codex, collection-view — verified; `composer.test.tsx` — residual, unverified, authored but never executed against a green build) | SESSION-07 checkpoints 1–2 + retry 1 residual |
 | App match | `./tests/app/match/` (57 new tests; store partitioning, drafts-not-on-MatchState structural asserts) | SESSION-08 |
-| Browser e2e (partial) | `./tests/e2e/build/*.spec.ts` (authored, unrun pending SESSION-07 retry); `./tests/e2e/match/` | SESSION-07 / 08 |
+| Browser e2e (partial) | `./tests/e2e/build/*.spec.ts` (authored, unrun — includes residual `composer.spec.ts`); `./tests/e2e/match/` | SESSION-07 / 08 |
 | Fixtures | `./tests/fixtures/catalog/`, `./tests/fixtures/maps/`, `./tests/fixtures/matches/` | SESSION-01 / 03 / 04 |
 
 ## Conventions and Invariants
@@ -60,3 +60,4 @@ Subtrees present after SESSION-08:
 | 2026-08-28 | SESSION-06 shipped `./tests/harness/**` (55 harness self-tests over CLI / four batteries / all-aggregator) and `./docs/verification/**` baselines. |
 | 2026-08-28 | SESSION-07 checkpoints 1–2 shipped `./tests/app/build/` (boot / codex / collection-view) and authored (unrun) `./tests/e2e/build/*.spec.ts`. |
 | 2026-08-28 | SESSION-08 shipped `./tests/app/match/**` (57 new tests including structural asserts that human drafts never appear on `MatchState`). |
+| 2026-08-28 | SESSION-07 retry 1 (targeting checkpoint 3) returned no parseable handoff; residual `ed7b664` added `./tests/app/build/composer.test.tsx` and `./tests/e2e/build/composer.spec.ts` unverified — no run result was reported for this retry. |
