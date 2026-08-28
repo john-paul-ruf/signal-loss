@@ -34,6 +34,7 @@ import { BUDGETS } from "../../../src/engine/index";
 import type { Budget, Catalog } from "../../../src/engine/index";
 import type { HarnessIo } from "./io";
 import { runDeterminismBattery } from "./determinism";
+import { runPlayabilityBattery } from "./playability";
 import { formatReport } from "./report-human";
 import type { AllReport, BatteryName, BatteryReport } from "./report-types";
 import { serializeReport } from "./report-json";
@@ -125,7 +126,15 @@ export async function runCli(
       });
       break;
     }
-    case "playability":
+    case "playability": {
+      report = runPlayabilityBattery({
+        catalog: catalog.value,
+        seedCount: seeds.length,
+        baseSeed: flags.baseSeed,
+        partitions: flags.partitions,
+      });
+      break;
+    }
     case "behavior":
     case "costing":
       report = notYetImplementedReport(flags.battery, catalog.value, seeds, flags);
