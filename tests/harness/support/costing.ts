@@ -44,7 +44,11 @@ export interface CostingOptions {
   readonly baseSeed?: string;
   readonly budgets?: readonly Budget[];
   readonly weights?: AiWeights;
-  readonly enumerationTimeoutMs?: number;
+  /**
+   * Per-budget cap on enumerated candidates before recording `timedOut`.
+   * Deterministic — never a wall-clock value.
+   */
+  readonly enumerationIterationCap?: number;
   readonly failingSeedCap?: number;
   readonly partitions?: number;
   /**
@@ -67,7 +71,7 @@ export function runCostingBattery(options: CostingOptions): BatteryReport {
     baseSeed = "costing",
     budgets = BUDGETS as readonly Budget[],
     weights = releaseAiWeights,
-    enumerationTimeoutMs = 400,
+    enumerationIterationCap = 100_000,
     failingSeedCap = 8,
     partitions = 1,
     matchRunner = runMatch,
@@ -77,11 +81,10 @@ export function runCostingBattery(options: CostingOptions): BatteryReport {
   const evidence: Record<string, unknown> = {};
 
   // ENUMERATION — for each budget, count legal single-construct builds.
-  // Constants: we count "commander null" + "commander for every
-  // commander type" and sum.
-  const enumStart = performance.now();
-  const enumeration = enumerateBuildSpace(catalog, budgets, enumerationTimeoutMs);
-  const enumMs = performance.now() - enumStart;
+  // Bounded by a deterministic per-budget iteration cap so the report
+  // is byte-identical across two runs. Wall-clock timing is
+  // deliberately excluded from the report identity (§FR-29).
+  const enumeration = enumerateBuildSpace(catalog, budgets, enumerationIterationCap);
 
   // TOURNAMENT — run seed × budget matches and collect winners.
   const perBudget: Record<number, TournamentAggregate> = {};
@@ -158,8 +161,7 @@ export function runCostingBattery(options: CostingOptions): BatteryReport {
     id: "ENUMERATION_TRACTABILITY",
     passed: true, // information-only
     observed: {
-      timeoutMs: enumerationTimeoutMs,
-      wallClockMs: Math.trunc(enumMs),
+      iterationCap: enumerationIterationCap,
       tractableCeiling: enumeration.tractableCeiling,
       partialCounts: enumeration.partialCounts.map((p) => `${p.budget}:${p.count}${p.timedOut ? "(TIMEOUT)" : ""}`).join(","),
     },
@@ -260,28 +262,24 @@ export interface EnumerationResult {
 }
 
 /**
- * Deterministic enumeration wrapper. Counts constructs per budget with
- * a per-budget wall-clock timeout so the harness stays responsive on
- * large budgets (200 with the release catalog is fast; the timeout
- * would matter after Session 06 loads the full budget-200 space).
+ * Deterministic enumeration wrapper. Counts constructs per budget,
+ * capped at `iterationCap` items so the report stays byte-identical
+ * across runs and does not depend on wall-clock timing.
  */
 export function enumerateBuildSpace(
   catalog: Catalog,
   budgets: readonly Budget[],
-  timeoutMs: number,
+  iterationCap: number,
 ): EnumerationResult {
   const partialCounts: { budget: number; count: number; timedOut: boolean }[] = [];
   let tractableCeiling = 0;
   for (const budget of budgets) {
-    const start = performance.now();
     let count = 0;
     let timedOut = false;
     for (const _c of enumerateConstructsUnderCost(catalog, budget as number)) {
       count = count + 1;
-      // Non-null void of the yielded value keeps the loop body honest;
-      // the enumerator's iteration is what we measure.
       void _c;
-      if (performance.now() - start > timeoutMs) {
+      if (count >= iterationCap) {
         timedOut = true;
         break;
       }

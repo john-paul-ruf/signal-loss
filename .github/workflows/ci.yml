@@ -1,0 +1,231 @@
+name: ci
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+# All jobs run on ubuntu-latest with Node 22 unless otherwise noted.
+# Every gate is path-triggered where possible; type / lint / unit / build
+# always run because they are the base contract.
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  CI: "true"
+  # Node warnings become errors so a deprecation surfaces loudly.
+  NODE_OPTIONS: --no-warnings
+
+jobs:
+  install:
+    name: install and cache
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+
+  typecheck:
+    name: typecheck
+    runs-on: ubuntu-latest
+    needs: install
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - run: npm run typecheck
+
+  lint:
+    name: lint
+    runs-on: ubuntu-latest
+    needs: install
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - run: npm run lint
+
+  unit:
+    name: unit tests (all vitest)
+    runs-on: ubuntu-latest
+    needs: install
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - run: npm run test:unit
+
+  determinism:
+    name: determinism battery
+    runs-on: ubuntu-latest
+    needs: install
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - run: npm run harness -- determinism --seed release --seeds 8 --json --output "$RUNNER_TEMP/determinism.json"
+      - name: upload report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: determinism-report
+          path: ${{ runner.temp }}/determinism.json
+          if-no-files-found: warn
+
+  playability:
+    name: playability battery
+    runs-on: ubuntu-latest
+    needs: install
+    # Path-triggered: only re-run when engine or authored content changes.
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - run: npm run harness -- playability --seed release --seeds 12 --json --output "$RUNNER_TEMP/playability.json"
+      - name: upload report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: playability-report
+          path: ${{ runner.temp }}/playability.json
+          if-no-files-found: warn
+
+  behavior:
+    name: behavior battery
+    runs-on: ubuntu-latest
+    needs: install
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - run: npm run harness -- behavior --seed release --seeds 4 --json --output "$RUNNER_TEMP/behavior.json"
+      - name: upload report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: behavior-report
+          path: ${{ runner.temp }}/behavior.json
+          if-no-files-found: warn
+
+  costing:
+    name: costing battery
+    runs-on: ubuntu-latest
+    needs: install
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - run: npm run harness -- costing --seed release --seeds 4 --json --output "$RUNNER_TEMP/costing.json"
+      - name: upload report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: costing-report
+          path: ${{ runner.temp }}/costing.json
+          if-no-files-found: warn
+
+  cross-browser:
+    name: cross-browser determinism smoke
+    runs-on: ubuntu-latest
+    needs: install
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - name: install playwright browsers
+        run: npx playwright install --with-deps chromium firefox webkit
+      # Playwright tests will land in Sessions 07/08. This step confirms
+      # the harness executes identically under Node — the browser
+      # comparison hooks in via `--cross-runtime-hashes` once the
+      # playwright test scaffolding exists.
+      - name: node determinism reference
+        run: npm run harness -- determinism --seed release --seeds 4 --json --output "$RUNNER_TEMP/xruntime-node.json"
+      - name: upload
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: cross-browser-report
+          path: ${{ runner.temp }}/xruntime-node.json
+          if-no-files-found: warn
+
+  build:
+    name: production build
+    runs-on: ubuntu-latest
+    needs: install
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - run: npm run build
+      - name: verify no raster gameplay asset
+        # Fail if any raster image landed under dist/assets — engineering
+        # invariant, mirrors specs/architecture.md §9's "no raster
+        # gameplay asset" clause.
+        run: |
+          set -e
+          bad=$(find dist -type f \( -iname '*.png' -o -iname '*.jpg' -o -iname '*.jpeg' -o -iname '*.gif' -o -iname '*.webp' -o -iname '*.avif' \) | grep -v -E '(favicon|icon)' | grep -v -E 'dist/(sw|workbox)' || true)
+          if [ -n "$bad" ]; then
+            echo "Raster gameplay asset(s) found in dist/:"
+            echo "$bad"
+            exit 1
+          fi
+      - name: verify no external network origin
+        run: |
+          set -e
+          if grep -R -E 'https?://[^"'"'"' )]*' dist/assets/*.js dist/index.html 2>/dev/null | grep -v -E '(www\.w3\.org|xmlns|schema\.org)'; then
+            echo "External URL discovered in production bundle."
+            exit 1
+          fi
+
+  release-baseline:
+    name: release baseline (aggregated all)
+    runs-on: ubuntu-latest
+    needs: [typecheck, lint, unit, determinism, playability, behavior, costing, build]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - run: npm run harness -- all --seed release --seeds 4 --source-revision "$GITHUB_SHA" --json --output "$RUNNER_TEMP/all.json"
+      - name: upload aggregated report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: release-baseline
+          path: ${{ runner.temp }}/all.json
+          if-no-files-found: warn

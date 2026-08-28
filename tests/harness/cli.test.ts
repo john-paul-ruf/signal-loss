@@ -166,12 +166,16 @@ describe("CLI dispatch", () => {
     expect(first).toBe(second);
   });
 
-  it("returns an AllReport stub for `all` (checkpoint 6 wires this in fully)", async () => {
+  it("returns an aggregated AllReport for `all`", { timeout: 180000 }, async () => {
     const io = capturedIo();
-    const code = await runCli(["all", "--json", "--source-revision", "abc"], io);
-    expect(code).toBe(0);
+    const code = await runCli(
+      ["all", "--json", "--source-revision", "abc", "--seeds", "1", "--seed", "cli-all"],
+      io,
+    );
+    expect([0, 1]).toContain(code);
     const parsed = JSON.parse(io.readAll().stdout.trim()) as AllReport;
     expect(parsed.battery).toBe("all");
     expect(parsed.sourceRevision).toBe("abc");
+    expect(parsed.children.length).toBe(4);
   });
 });

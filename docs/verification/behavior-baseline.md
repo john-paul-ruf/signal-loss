@@ -52,10 +52,27 @@ npx vitest run tests/harness/behavior.test.ts
 
 ## Follow-ups
 
-1. Session 06 checkpoint 6 (CI) — Tier-ordering variance on small
-   samples means CI should use `--seeds 24` or more before the
+1. **Threshold tightening.** CALLED_SHOT_RATE, POSTURE_RATE,
+   NOT_NEAREST, and TRACE_DISCIPLINE currently report as
+   information-only. Observed rates at Session 06 release:
+   - Called-shot rate ~1.0 (every attack becomes a called shot
+     because rare attack opportunities are precious).
+   - Posture rate ~0.003 (AI almost never postures; called shots
+     dominate the pool allocator).
+   - Trace-death rate ~1.0 (chassis movement allowances 3–8 board
+     units per round vs. a 64-unit board make it hard to reach the
+     shrinking safe region within `MAX_EXPECTED_ROUNDS`).
+   Tightening these requires either (a) increasing chassis movement
+   allowances, (b) increasing `traceSafetyBonus` / `traceExposurePenalty`
+   weights, or (c) loosening the trace schedule
+   (`TRACE_FIRST_ROUND` and `TRACE_INTERVAL` in tunables). All three
+   levers are inside this session's lease; the choice depends on
+   the desired match feel and is a natural iteration during Session
+   07's playtest phase.
+2. **Session 06 CI (checkpoint 6)** — Tier-ordering variance on
+   small samples means CI should use `--seeds 24` or more before the
    TIER_ORDERING assertion is production-tight. The current unit-test
    sample of 2 is a smoke check.
-2. Session 05 (AI) — the `beamWidth` weight is not yet consumed;
+3. **Session 05 (AI)** — the `beamWidth` weight is not yet consumed;
    `releaseAiWeights.beamWidth` is set but a future Tier-3 beam-search
    over squad plots would use it.

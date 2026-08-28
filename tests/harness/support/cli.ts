@@ -31,12 +31,13 @@
  */
 
 import { BUDGETS } from "../../../src/engine/index";
-import type { Budget, Catalog } from "../../../src/engine/index";
+import type { Budget } from "../../../src/engine/index";
 import type { HarnessIo } from "./io";
 import { runDeterminismBattery } from "./determinism";
 import { runPlayabilityBattery } from "./playability";
 import { runBehaviorBattery } from "./behavior";
 import { runCostingBattery } from "./costing";
+import { runAllBattery } from "./all";
 import { formatReport } from "./report-human";
 import type { AllReport, BatteryName, BatteryReport } from "./report-types";
 import { serializeReport } from "./report-json";
@@ -156,9 +157,15 @@ export async function runCli(
       });
       break;
     }
-    case "all":
-      report = allNotYetImplementedReport(catalog.value, flags);
+    case "all": {
+      report = runAllBattery({
+        catalog: catalog.value,
+        sourceRevision: flags.sourceRevision,
+        seedCount: seeds.length,
+        baseSeed: flags.baseSeed,
+      });
       break;
+    }
     default: {
       io.writeStderr(`sl: unknown battery ${flags.battery satisfies never}\n`);
       return 2;
@@ -336,20 +343,6 @@ function resolveSeeds(flags: CliFlags): readonly string[] {
   return partitionSeeds(base, flags.partition, flags.partitions).seeds;
 }
 
-function allNotYetImplementedReport(
-  catalog: Catalog,
-  flags: CliFlags,
-): AllReport {
-  return {
-    formatVersion: 1,
-    battery: "all",
-    passed: true,
-    sourceRevision: flags.sourceRevision,
-    catalogHash: catalog.hashes.catalog,
-    tunablesHash: catalog.hashes.tunables,
-    children: [],
-  };
-}
 
 /* ------------------------------------------------------------------------- */
 /* Utility re-exports                                                        */

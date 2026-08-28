@@ -25,13 +25,12 @@ describe("enumeration", () => {
     expect(r1.tractableCeiling).toBeGreaterThan(0);
   });
 
-  it("records timedOut when the timeout is very tight", { timeout: 10000 }, () => {
-    const result = enumerateBuildSpace(catalog, [200 as Budget], 0);
+  it("records timedOut when the iteration cap is very tight", { timeout: 10000 }, () => {
+    const result = enumerateBuildSpace(catalog, [200 as Budget], 1);
     const entry = result.partialCounts[0];
     expect(entry).toBeDefined();
-    // A 0-ms timeout is a strict deadline; expect either 0 count with
-    // timedOut=true, or a truncated positive count with timedOut=true.
     expect(entry?.timedOut ?? false).toBe(true);
+    expect(entry?.count).toBe(1);
   });
 });
 
