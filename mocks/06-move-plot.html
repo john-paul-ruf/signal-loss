@@ -1,0 +1,601 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>MOVEMENT PLOT — SIGNAL LOSS</title>
+<script src="https://cdn.tailwindcss.com"></script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Chakra+Petch:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<script>
+tailwind.config = { theme: { extend: {
+  colors: {
+    void:'#04060A', panel:'#090D13', panel2:'#0E141C', panel3:'#141C27',
+    line:'#1C2733', line2:'#2A3946',
+    ink:'#E8F2FB', ink2:'#9CB0C4', ink3:'#6B8096', ink4:'#42566A',
+    sys:'#4DE1FF', ok:'#4BE8A4', warn:'#FFB43C', bad:'#FF4D6D', trace:'#FF3B6B',
+    vector:'#A8FBFF', axiom:'#FFB43C', kestrel:'#5AA8FF', hollow:'#F2569B', nullset:'#8C6BD6',
+  },
+  fontFamily: { display:['Chakra Petch','sans-serif'], mono:['IBM Plex Mono','monospace'] },
+}}}
+</script>
+<style>
+  html,body{height:100%}
+  .notch{clip-path:polygon(0 0, calc(100% - 10px) 0, 100% 10px, 100% 100%, 10px 100%, 0 calc(100% - 10px))}
+  .tnum{font-variant-numeric:tabular-nums}
+  .glow2{box-shadow:0 0 12px -2px rgba(77,225,255,.45)}
+  .kbd{font-family:'IBM Plex Mono',monospace;font-size:10px;border:1px solid #2A3946;padding:1px 4px;color:#6B8096}
+  .lbl{font-size:10px;letter-spacing:.16em;text-transform:uppercase}
+  ::-webkit-scrollbar{width:8px}
+  ::-webkit-scrollbar-track{background:#04060A}
+  ::-webkit-scrollbar-thumb{background:#1C2733}
+</style>
+</head>
+<body class="bg-void text-ink font-display antialiased overflow-hidden">
+
+<div class="h-screen min-h-[720px] flex flex-col">
+
+  <!-- ══════════ TOP BAR ══════════ -->
+  <header class="h-[78px] shrink-0 border-b border-line bg-panel flex items-stretch">
+    <div class="w-[280px] shrink-0 border-r border-line px-4 flex flex-col justify-center">
+      <div class="flex items-baseline gap-2">
+        <span class="lbl text-ink3">ROUND</span>
+        <span class="font-mono text-[22px] font-600 text-ink tnum leading-none">06</span>
+        <span class="font-mono text-[11px] text-ink4 tnum">/ 24 EXP</span>
+      </div>
+      <div class="lbl text-sys mt-1">PHASE · MOVEMENT PLOT</div>
+    </div>
+
+    <div class="flex-1 border-r border-line px-5 flex flex-col justify-center min-w-0">
+      <div class="flex items-center justify-between mb-1.5">
+        <span class="lbl text-ink3">TRACE SCHEDULE <span class="text-ink4">· PUBLIC FROM ROUND 1</span></span>
+        <span class="lbl text-trace">NEXT CONTRACTION · R08 · 6 INTEGRITY</span>
+      </div>
+      <div class="relative h-[22px]">
+        <div class="absolute left-0 right-0 top-[7px] h-px bg-line2"></div>
+        <div class="absolute left-0 top-[7px] h-px bg-sys" style="width:25%"></div>
+        <div class="absolute inset-0 flex justify-between items-start" id="ticks"></div>
+      </div>
+    </div>
+
+    <div class="w-[318px] shrink-0 px-4 flex flex-col justify-center bg-panel2 border-l border-line2 opacity-70">
+      <div class="flex items-center justify-between">
+        <span class="lbl text-ink3">POOL NEXT PHASE</span>
+        <span class="font-mono text-[15px] font-600 tnum text-ink2">4</span>
+      </div>
+      <div class="font-mono text-[10px] text-ink4 tnum mt-[3px]">1 BASE + 1 CMD(SYSOP) + ⌊6/3⌋=2</div>
+      <div class="lbl text-ink4 mt-[3px]">PLOT MOVEMENT KNOWING WHAT YOU CAN AFFORD</div>
+    </div>
+
+    <div class="w-[64px] shrink-0 border-l border-line flex items-center justify-center gap-1">
+      <button class="w-7 h-7 border border-line hover:border-line2 text-ink3 text-[13px] leading-none">⚙</button>
+      <button class="w-7 h-7 border border-line hover:border-sys text-ink3 hover:text-sys text-[13px] leading-none">?</button>
+    </div>
+  </header>
+
+  <div class="flex-1 flex min-h-0">
+
+    <!-- ───── SQUAD RAIL ───── -->
+    <aside class="w-[280px] shrink-0 border-r border-line bg-panel flex flex-col min-h-0">
+      <div class="h-9 shrink-0 px-3 flex items-center justify-between border-b border-line">
+        <div class="flex items-center gap-2">
+          <span class="text-vector text-[12px] leading-none">▲</span>
+          <span class="lbl text-ink">VECTOR</span><span class="font-mono text-[10px] text-ink4">VC</span>
+        </div>
+        <span class="font-mono text-[10px] text-ink3 tnum">4 / 6 PLOTTED</span>
+      </div>
+
+      <div class="flex-1 overflow-y-auto">
+
+        <!-- 1 selected, plotting -->
+        <div class="border-b border-line bg-panel3 border-l-2 border-l-sys px-3 py-2.5">
+          <div class="flex items-center gap-2">
+            <span class="kbd">1</span><span class="text-vector text-[11px] leading-none">▲</span>
+            <span class="text-[13px] font-600 tracking-wide">SPINE-01</span>
+            <span class="lbl text-sys ml-auto">PLOTTING</span>
+          </div>
+          <div class="mt-2 flex items-center gap-2">
+            <span class="lbl text-ink4 w-[46px]">PATH</span>
+            <div class="flex-1 h-[6px] bg-panel2 border border-line relative">
+              <div class="h-full bg-sys" style="width:82%"></div>
+            </div>
+            <span class="font-mono text-[11px] tnum"><span class="text-sys">7.4</span><span class="text-ink4">/9.0</span></span>
+          </div>
+          <div class="mt-1.5 flex items-center gap-3 font-mono text-[10px] text-ink3">
+            <span>3 WAYPOINTS</span><span class="text-ink4">·</span><span>1.6 REMAINING</span>
+          </div>
+        </div>
+
+        <!-- 2 plotted -->
+        <div class="border-b border-line px-3 py-2.5 hover:bg-panel2">
+          <div class="flex items-center gap-2">
+            <span class="kbd">2</span><span class="text-vector text-[11px] leading-none">▲</span>
+            <span class="text-[13px] font-600 tracking-wide">SPINE-02</span>
+            <span class="lbl text-ok ml-auto">✓ PLOTTED</span>
+          </div>
+          <div class="mt-2 flex items-center gap-2">
+            <span class="lbl text-ink4 w-[46px]">PATH</span>
+            <div class="flex-1 h-[6px] bg-panel2 border border-line"><div class="h-full bg-vector" style="width:52%"></div></div>
+            <span class="font-mono text-[11px] tnum"><span class="text-ink2">4.7</span><span class="text-ink4">/9.0</span></span>
+          </div>
+        </div>
+
+        <!-- 3 plotted -->
+        <div class="border-b border-line px-3 py-2.5 hover:bg-panel2">
+          <div class="flex items-center gap-2">
+            <span class="kbd">3</span><span class="text-vector text-[11px] leading-none">▲</span>
+            <span class="text-[13px] font-600 tracking-wide">RELAY-03</span>
+            <span class="lbl text-ok ml-auto">✓ PLOTTED</span>
+          </div>
+          <div class="mt-2 flex items-center gap-2">
+            <span class="lbl text-ink4 w-[46px]">PATH</span>
+            <div class="flex-1 h-[6px] bg-panel2 border border-line"><div class="h-full bg-vector" style="width:98%"></div></div>
+            <span class="font-mono text-[11px] tnum"><span class="text-ink2">10.8</span><span class="text-ink4">/11.0</span></span>
+          </div>
+        </div>
+
+        <!-- 4 clamped -->
+        <div class="border-b border-line px-3 py-2.5 hover:bg-panel2">
+          <div class="flex items-center gap-2">
+            <span class="kbd">4</span><span class="text-vector text-[11px] leading-none">▲</span>
+            <span class="text-[13px] font-600 tracking-wide">KILN-04</span>
+            <span class="lbl text-warn ml-auto">! CLAMPED</span>
+          </div>
+          <div class="mt-2 flex items-center gap-2">
+            <span class="lbl text-ink4 w-[46px]">PATH</span>
+            <div class="flex-1 h-[6px] bg-panel2 border border-warn relative">
+              <div class="h-full bg-warn" style="width:100%"></div>
+              <div class="absolute right-[-14px] top-0 h-full w-[13px] border border-warn border-dashed"></div>
+            </div>
+            <span class="font-mono text-[11px] tnum"><span class="text-warn">7.0</span><span class="text-ink4">/7.0</span></span>
+          </div>
+          <div class="mt-1.5 font-mono text-[10px] text-warn">! DRAWN 9.3 — CLAMPED TO ALLOWANCE 7.0</div>
+        </div>
+
+        <!-- 5 HOLD -->
+        <div class="border-b border-line px-3 py-2.5 hover:bg-panel2">
+          <div class="flex items-center gap-2">
+            <span class="kbd">5</span><span class="text-vector text-[11px] leading-none">▲</span>
+            <span class="text-[13px] font-600 tracking-wide">LATCH-05</span>
+            <span class="lbl text-sys border border-sys/50 px-1">◆CMD</span>
+            <span class="lbl text-ink2 ml-auto">HOLD</span>
+          </div>
+          <div class="mt-2 flex items-center gap-2">
+            <span class="lbl text-ink4 w-[46px]">PATH</span>
+            <div class="flex-1 h-[6px] bg-panel2 border border-line"></div>
+            <span class="font-mono text-[11px] tnum"><span class="text-ink4">0.0/6.5</span></span>
+          </div>
+          <div class="mt-1.5 font-mono text-[10px] text-ink3">EMPTY PATH IS LEGAL AND FREE <span class="kbd ml-1">H</span></div>
+        </div>
+
+        <!-- 6 unplotted -->
+        <div class="border-b border-line px-3 py-2.5 hover:bg-panel2">
+          <div class="flex items-center gap-2">
+            <span class="kbd">6</span><span class="text-vector text-[11px] leading-none">▲</span>
+            <span class="text-[13px] font-600 tracking-wide text-ink2">FERAL-06</span>
+            <span class="lbl text-ink4 ml-auto">UNPLOTTED</span>
+          </div>
+          <div class="mt-2 flex items-center gap-2">
+            <span class="lbl text-ink4 w-[46px]">PATH</span>
+            <div class="flex-1 h-[6px] bg-panel2 border border-line border-dashed"></div>
+            <span class="font-mono text-[11px] tnum text-ink4">—/12.0</span>
+          </div>
+          <div class="mt-1.5 font-mono text-[10px] text-ink3">WILL HOLD IF LEFT UNPLOTTED</div>
+        </div>
+
+        <!-- public info tool -->
+        <div class="px-3 py-3 border-b border-line bg-panel2">
+          <div class="lbl text-ink3 mb-2">PUBLIC INFORMATION</div>
+          <label class="flex items-center gap-2 mb-1.5 cursor-pointer">
+            <span class="w-3 h-3 border border-sys bg-sys flex items-center justify-center text-void text-[9px] leading-none">✓</span>
+            <span class="text-[11px] text-ink2">MY REACH ENVELOPE</span>
+          </label>
+          <label class="flex items-center gap-2 mb-1.5 cursor-pointer">
+            <span class="w-3 h-3 border border-line2"></span>
+            <span class="text-[11px] text-ink2">HOSTILE REACH ENVELOPES</span>
+          </label>
+          <label class="flex items-center gap-2 cursor-pointer">
+            <span class="w-3 h-3 border border-sys bg-sys flex items-center justify-center text-void text-[9px] leading-none">✓</span>
+            <span class="text-[11px] text-ink2">HOSTILE FIRE ARCS</span>
+          </label>
+          <div class="mt-2 font-mono text-[9.5px] text-ink4 leading-relaxed">
+            ALL DERIVED FROM PUBLIC STATS AND POSITIONS.<br>
+            NO SQUAD'S PLOT IS VISIBLE BEFORE COMMIT.
+          </div>
+        </div>
+      </div>
+    </aside>
+
+    <!-- ───── BOARD ───── -->
+    <main class="flex-1 relative min-w-0 bg-void">
+      <svg viewBox="0 0 900 700" preserveAspectRatio="xMidYMid meet" class="absolute inset-0 w-full h-full">
+        <defs>
+          <pattern id="grid" width="20" height="20" patternUnits="userSpaceOnUse">
+            <path d="M20 0 L0 0 0 20" fill="none" stroke="#1C2733" stroke-width="0.5" opacity="0.5"/>
+          </pattern>
+          <pattern id="gridMaj" width="100" height="100" patternUnits="userSpaceOnUse">
+            <path d="M100 0 L0 0 0 100" fill="none" stroke="#1C2733" stroke-width="1"/>
+          </pattern>
+          <pattern id="tracehatch" width="8" height="8" patternUnits="userSpaceOnUse" patternTransform="rotate(45)">
+            <line x1="0" y1="0" x2="0" y2="8" stroke="#FF3B6B" stroke-width="1.4" opacity="0.30"/>
+          </pattern>
+          <pattern id="dither" width="3" height="3" patternUnits="userSpaceOnUse">
+            <rect width="1" height="1" fill="#FFB43C" opacity="0.5"/>
+          </pattern>
+          <mask id="outside"><rect width="900" height="700" fill="#fff"/><circle cx="470" cy="360" r="300" fill="#000"/></mask>
+        </defs>
+
+        <rect width="900" height="700" fill="#04060A"/>
+        <rect width="900" height="700" fill="url(#grid)"/>
+        <rect width="900" height="700" fill="url(#gridMaj)" opacity="0.55"/>
+
+        <g>
+          <path fill-rule="evenodd" fill="url(#tracehatch)" d="M0 0 H900 V700 H0 Z M470 360 m-300 0 a300 300 0 1 0 600 0 a300 300 0 1 0 -600 0 Z"/>
+          <circle cx="470" cy="360" r="300" fill="none" stroke="#FF3B6B" stroke-width="1.5" stroke-dasharray="10 6" opacity="0.9"/>
+          <circle cx="470" cy="360" r="238" fill="none" stroke="#FF3B6B" stroke-width="1" stroke-dasharray="2 5" opacity="0.55"/>
+          <text x="470" y="132" fill="#FF3B6B" font-family="IBM Plex Mono" font-size="10" letter-spacing="1.6" text-anchor="middle" opacity="0.85">NEXT · R08 · 6 INTEGRITY</text>
+        </g>
+
+        <!-- REACH ENVELOPE for SPINE-01 (walls accounted for) -->
+        <g>
+          <path d="M240,430 m0,-96 C286,-96 318,-58 322,-8 L318,44 C300,84 258,102 214,96 L166,74 C138,44 132,-2 152,-44 L186,-82 Z"
+                transform="translate(0,0)"
+                fill="none" stroke="none"/>
+          <path d="M158 348 C196 328 262 330 300 352 L322 392 C324 432 306 470 272 492 L216 502 C172 494 146 462 144 424 Z"
+                fill="#4DE1FF" fill-opacity="0.05" stroke="#4DE1FF" stroke-width="1" stroke-dasharray="4 4" opacity="0.75"/>
+          <text x="150" y="516" fill="#4DE1FF" font-family="IBM Plex Mono" font-size="9" letter-spacing="1.4" opacity="0.8">REACH ENVELOPE · 9.0</text>
+        </g>
+
+        <!-- WALLS -->
+        <g fill="none" stroke="#2A3946" stroke-width="1">
+          <rect x="60" y="80" width="120" height="24"/>
+          <rect x="60" y="140" width="24" height="120"/>
+          <rect x="240" y="60" width="180" height="22"/>
+          <rect x="470" y="90" width="22" height="150"/>
+          <rect x="600" y="60" width="140" height="24"/>
+          <rect x="780" y="120" width="24" height="160"/>
+          <rect x="150" y="200" width="90" height="22"/>
+          <rect x="300" y="180" width="22" height="90"/>
+          <rect x="130" y="300" width="200" height="22"/>
+          <rect x="400" y="280" width="22" height="140"/>
+          <rect x="540" y="340" width="160" height="22"/>
+          <rect x="660" y="220" width="90" height="22"/>
+          <rect x="760" y="380" width="24" height="120"/>
+          <rect x="80" y="440" width="24" height="140"/>
+          <rect x="350" y="420" width="90" height="22"/>
+          <rect x="200" y="520" width="180" height="22"/>
+          <rect x="460" y="520" width="22" height="120"/>
+          <rect x="620" y="560" width="160" height="22"/>
+          <rect x="540" y="150" width="22" height="80"/>
+          <rect x="230" y="620" width="120" height="22"/>
+        </g>
+
+        <!-- HOSTILE FIRE ARCS (public) -->
+        <g stroke="#FF4D6D" stroke-width="0.7" stroke-dasharray="2 5" opacity="0.35" fill="none">
+          <circle cx="560" cy="300" r="120"/>
+          <circle cx="620" cy="420" r="96"/>
+        </g>
+        <text x="560" y="176" fill="#FF4D6D" font-family="IBM Plex Mono" font-size="8.5" letter-spacing="1.2" text-anchor="middle" opacity="0.6">HL·4 RANGE 9.0</text>
+
+        <!-- ═══ PATH: SPINE-01 (active, being drawn) ═══ -->
+        <g>
+          <polyline points="240,430 292,404 336,376" fill="none" stroke="#4DE1FF" stroke-width="1.8"/>
+          <!-- cursor segment -->
+          <line x1="336" y1="376" x2="372" y2="352" stroke="#4DE1FF" stroke-width="1.2" stroke-dasharray="4 3" opacity="0.8"/>
+          <g fill="#04060A" stroke="#4DE1FF" stroke-width="1.4">
+            <rect x="288" y="400" width="8" height="8"/>
+            <rect x="332" y="372" width="8" height="8"/>
+          </g>
+          <circle cx="372" cy="352" r="3.5" fill="#4DE1FF"/>
+          <!-- measuring rule -->
+          <g font-family="IBM Plex Mono">
+            <rect x="384" y="330" width="96" height="34" fill="#090D13" stroke="#4DE1FF"/>
+            <text x="392" y="345" fill="#4DE1FF" font-size="12" letter-spacing="0.5">7.4 / 9.0</text>
+            <text x="392" y="357" fill="#6B8096" font-size="8.5" letter-spacing="1.2">1.6 REMAINING</text>
+          </g>
+        </g>
+
+        <!-- ═══ PATH: SPINE-02 ═══ -->
+        <polyline points="215,330 240,314 258,296" fill="none" stroke="#A8FBFF" stroke-width="1.2" opacity="0.65"/>
+        <g fill="#04060A" stroke="#A8FBFF" stroke-width="1" opacity="0.65"><rect x="236" y="310" width="7" height="7"/></g>
+
+        <!-- ═══ PATH: RELAY-03 (long) ═══ -->
+        <polyline points="330,556 348,520 342,486 362,466" fill="none" stroke="#A8FBFF" stroke-width="1.2" opacity="0.65"/>
+        <g fill="#04060A" stroke="#A8FBFF" stroke-width="1" opacity="0.65">
+          <rect x="344" y="516" width="7" height="7"/><rect x="338" y="482" width="7" height="7"/>
+        </g>
+
+        <!-- ═══ PATH: KILN-04 CLAMPED ═══ -->
+        <g>
+          <polyline points="452,398 466,368 456,340" fill="none" stroke="#FFB43C" stroke-width="1.4"/>
+          <polyline points="456,340 446,306 452,282" fill="none" stroke="#FFB43C" stroke-width="1.2" stroke-dasharray="4 4" opacity="0.45"/>
+          <circle cx="456" cy="340" r="4.5" fill="none" stroke="#FFB43C" stroke-width="1.6"/>
+          <text x="466" y="316" fill="#FFB43C" font-family="IBM Plex Mono" font-size="9" letter-spacing="1.2">CLAMPED 7.0</text>
+          <text x="466" y="328" fill="#42566A" font-family="IBM Plex Mono" font-size="8.5" letter-spacing="1.1">DRAWN 9.3</text>
+        </g>
+
+        <!-- ═══ WALL REFUSAL (FERAL-06 attempted segment) ═══ -->
+        <g>
+          <line x1="520" y1="300" x2="558" y2="360" stroke="#FF4D6D" stroke-width="1.6" stroke-dasharray="5 3"/>
+          <rect x="540" y="340" width="160" height="22" fill="none" stroke="#FF4D6D" stroke-width="1.8"/>
+          <g font-family="IBM Plex Mono">
+            <rect x="566" y="366" width="130" height="24" fill="#090D13" stroke="#FF4D6D"/>
+            <text x="574" y="382" fill="#FF4D6D" font-size="9" letter-spacing="1.2">✕ PATH CROSSES WALL</text>
+          </g>
+          <circle cx="546" cy="331" r="3.5" fill="none" stroke="#FF4D6D" stroke-width="1.4"/>
+          <text x="428" y="336" fill="#6B8096" font-family="IBM Plex Mono" font-size="8.5" letter-spacing="1.1">SNAPS TO LAST LEGAL POINT</text>
+        </g>
+
+        <!-- ═══ MARKERS ═══ -->
+        <!-- SPINE-01 selected -->
+        <g transform="translate(240,430)">
+          <circle r="25" fill="none" stroke="#4DE1FF" stroke-width="1" stroke-dasharray="3 4" opacity="0.85"/>
+          <circle r="17" fill="#04060A" stroke="#A8FBFF" stroke-width="1.6"/>
+          <path d="M0 -7 L6.5 5 L-6.5 5 Z" fill="#A8FBFF"/>
+          <rect x="-15" y="-34" width="6" height="6" fill="#FF4D6D"/><rect x="-7" y="-34" width="6" height="6" fill="#FF4D6D"/>
+          <rect x="1" y="-34" width="6" height="6" fill="none" stroke="#42566A"/><rect x="9" y="-34" width="6" height="6" fill="none" stroke="#42566A"/><rect x="17" y="-34" width="6" height="6" fill="none" stroke="#42566A"/>
+          <text x="-58" y="4" fill="#A8FBFF" font-size="10" font-family="IBM Plex Mono" letter-spacing="1">VC·01</text>
+        </g>
+
+        <!-- SPINE-02 -->
+        <g transform="translate(215,330)">
+          <circle r="15" fill="#04060A" stroke="#A8FBFF" stroke-width="1.2"/>
+          <path d="M0 -6 L5.5 4.5 L-5.5 4.5 Z" fill="#A8FBFF"/>
+          <rect x="-13" y="-32" width="6" height="6" fill="#FF4D6D"/>
+          <rect x="-5" y="-32" width="6" height="6" fill="none" stroke="#42566A"/><rect x="3" y="-32" width="6" height="6" fill="none" stroke="#42566A"/><rect x="11" y="-32" width="6" height="6" fill="none" stroke="#42566A"/>
+          <text x="-56" y="4" fill="#A8FBFF" font-size="10" font-family="IBM Plex Mono" letter-spacing="1">VC·02</text>
+        </g>
+
+        <!-- RELAY-03 -->
+        <g transform="translate(330,556)">
+          <circle r="13" fill="#04060A" stroke="#A8FBFF" stroke-width="1.2"/>
+          <path d="M0 -5.5 L5 4 L-5 4 Z" fill="#A8FBFF"/>
+          <rect x="-11" y="-29" width="6" height="6" fill="none" stroke="#42566A"/><rect x="-3" y="-29" width="6" height="6" fill="none" stroke="#42566A"/><rect x="5" y="-29" width="6" height="6" fill="none" stroke="#42566A"/><rect x="13" y="-29" width="6" height="6" fill="none" stroke="#42566A"/>
+          <text x="20" y="4" fill="#A8FBFF" font-size="10" font-family="IBM Plex Mono" letter-spacing="1">VC·03</text>
+        </g>
+
+        <!-- KILN-04 -->
+        <g transform="translate(452,398)">
+          <circle r="17" fill="#04060A" stroke="#A8FBFF" stroke-width="1.2"/>
+          <path d="M0 -7 L6.5 5 L-6.5 5 Z" fill="#A8FBFF"/>
+          <rect x="-11" y="-34" width="6" height="6" fill="#FF4D6D"/><rect x="-3" y="-34" width="6" height="6" fill="#FF4D6D"/>
+          <rect x="5" y="-34" width="6" height="6" fill="none" stroke="#42566A"/><rect x="13" y="-34" width="6" height="6" fill="none" stroke="#42566A"/>
+          <text x="-58" y="4" fill="#A8FBFF" font-size="10" font-family="IBM Plex Mono" letter-spacing="1">VC·04</text>
+        </g>
+
+        <!-- LATCH-05 CMD, HOLD -->
+        <g transform="translate(250,478)">
+          <circle r="20" fill="none" stroke="#A8FBFF" stroke-width="1"/>
+          <circle r="15" fill="#04060A" stroke="#A8FBFF" stroke-width="1.4"/>
+          <path d="M0 -6 L5.5 4.5 L-5.5 4.5 Z" fill="#A8FBFF"/>
+          <rect x="-11" y="-33" width="6" height="6" fill="none" stroke="#42566A"/><rect x="-3" y="-33" width="6" height="6" fill="none" stroke="#42566A"/><rect x="5" y="-33" width="6" height="6" fill="none" stroke="#42566A"/><rect x="13" y="-33" width="6" height="6" fill="none" stroke="#42566A"/><rect x="21" y="-33" width="6" height="6" fill="none" stroke="#42566A"/>
+          <text x="-66" y="0" fill="#A8FBFF" font-size="10" font-family="IBM Plex Mono" letter-spacing="1">VC·05</text>
+          <text x="-66" y="12" fill="#4DE1FF" font-size="8.5" font-family="IBM Plex Mono" letter-spacing="1.2">◆CMD</text>
+          <rect x="-22" y="24" width="44" height="14" fill="#090D13" stroke="#2A3946"/>
+          <text x="0" y="34" fill="#9CB0C4" font-size="8.5" font-family="IBM Plex Mono" letter-spacing="1.3" text-anchor="middle">HOLD</text>
+        </g>
+
+        <!-- FERAL-06 unplotted -->
+        <g transform="translate(520,300)">
+          <circle r="14" fill="#04060A" stroke="#A8FBFF" stroke-width="1.2" stroke-dasharray="4 3"/>
+          <path d="M0 -6 L5.5 4.5 L-5.5 4.5 Z" fill="#A8FBFF"/>
+          <rect x="-11" y="-30" width="6" height="6" fill="#FF4D6D"/><rect x="-3" y="-30" width="6" height="6" fill="#FF4D6D"/><rect x="5" y="-30" width="6" height="6" fill="#FF4D6D"/>
+          <rect x="13" y="-30" width="6" height="6" fill="none" stroke="#42566A"/>
+          <text x="-58" y="4" fill="#A8FBFF" font-size="10" font-family="IBM Plex Mono" letter-spacing="1">VC·06</text>
+        </g>
+
+        <!-- ENEMIES -->
+        <g transform="translate(560,300)">
+          <circle r="17" fill="#04060A" stroke="#F2569B" stroke-width="1.4"/>
+          <path d="M0 -8 L7 -4 L7 4 L0 8 L-7 4 L-7 -4 Z" fill="#F2569B"/>
+          <rect x="-11" y="-34" width="6" height="6" fill="#FF4D6D"/><rect x="-3" y="-34" width="6" height="6" fill="#FF4D6D"/>
+          <rect x="5" y="-34" width="6" height="6" fill="none" stroke="#42566A"/><rect x="13" y="-34" width="6" height="6" fill="none" stroke="#42566A"/>
+          <text x="22" y="4" fill="#F2569B" font-size="10" font-family="IBM Plex Mono" letter-spacing="1">HL·4</text>
+        </g>
+        <g transform="translate(620,420)">
+          <circle r="15" fill="#04060A" stroke="#F2569B" stroke-width="1.2"/>
+          <path d="M0 -7 L6 -3.5 L6 3.5 L0 7 L-6 3.5 L-6 -3.5 Z" fill="#F2569B"/>
+          <rect x="-13" y="-32" width="6" height="6" fill="#FF4D6D"/>
+          <rect x="-5" y="-32" width="6" height="6" fill="none" stroke="#42566A"/><rect x="3" y="-32" width="6" height="6" fill="none" stroke="#42566A"/><rect x="11" y="-32" width="6" height="6" fill="none" stroke="#42566A"/><rect x="19" y="-32" width="6" height="6" fill="none" stroke="#42566A"/>
+          <text x="22" y="4" fill="#F2569B" font-size="10" font-family="IBM Plex Mono" letter-spacing="1">HL·2</text>
+        </g>
+        <g transform="translate(640,180)">
+          <circle r="24" fill="none" stroke="#5AA8FF" stroke-width="1"/>
+          <circle r="19" fill="#04060A" stroke="#5AA8FF" stroke-width="1.4"/>
+          <path d="M0 -8 L8 0 L0 8 L-8 0 Z" fill="#5AA8FF"/>
+          <rect x="-11" y="-40" width="6" height="6" fill="none" stroke="#42566A"/><rect x="-3" y="-40" width="6" height="6" fill="none" stroke="#42566A"/><rect x="5" y="-40" width="6" height="6" fill="none" stroke="#42566A"/><rect x="13" y="-40" width="6" height="6" fill="none" stroke="#42566A"/><rect x="21" y="-40" width="6" height="6" fill="none" stroke="#42566A"/>
+          <text x="30" y="0" fill="#5AA8FF" font-size="10" font-family="IBM Plex Mono" letter-spacing="1">KS·1</text>
+          <text x="30" y="12" fill="#4DE1FF" font-size="8.5" font-family="IBM Plex Mono" letter-spacing="1.2">◆CMD</text>
+        </g>
+        <g transform="translate(500,560)">
+          <circle r="14" fill="#04060A" stroke="#8C6BD6" stroke-width="1.2"/><circle r="6.5" fill="#8C6BD6"/>
+          <rect x="-11" y="-30" width="6" height="6" fill="#FF4D6D"/><rect x="-3" y="-30" width="6" height="6" fill="#FF4D6D"/><rect x="5" y="-30" width="6" height="6" fill="#FF4D6D"/>
+          <rect x="13" y="-30" width="6" height="6" fill="none" stroke="#42566A"/>
+          <text x="21" y="4" fill="#8C6BD6" font-size="10" font-family="IBM Plex Mono" letter-spacing="1">NS·3</text>
+        </g>
+
+        <!-- GHOST AX-2 -->
+        <g transform="translate(200,180)" opacity="0.34">
+          <circle r="64" fill="none" stroke="#FFB43C" stroke-width="0.75" stroke-dasharray="1 6" opacity="0.7"/>
+          <circle r="14" fill="url(#dither)" stroke="#FFB43C" stroke-width="1.2" stroke-dasharray="3 2"/>
+          <rect x="-5.5" y="-5.5" width="11" height="11" fill="#FFB43C"/>
+        </g>
+        <g transform="translate(200,180)" font-family="IBM Plex Mono">
+          <text x="22" y="0" fill="#FFB43C" font-size="10" letter-spacing="1" opacity="0.75">AX·2 ?</text>
+          <text x="22" y="12" fill="#6B8096" font-size="8.5" letter-spacing="1">LAST SEEN R4</text>
+        </g>
+        <g transform="translate(150,250)">
+          <circle r="14" fill="#04060A" stroke="#FFB43C" stroke-width="1.2"/>
+          <rect x="-5.5" y="-5.5" width="11" height="11" fill="#FFB43C"/>
+          <rect x="-11" y="-30" width="6" height="6" fill="#FF4D6D"/>
+          <rect x="-3" y="-30" width="6" height="6" fill="none" stroke="#42566A"/><rect x="5" y="-30" width="6" height="6" fill="none" stroke="#42566A"/><rect x="13" y="-30" width="6" height="6" fill="none" stroke="#42566A"/>
+          <text x="21" y="4" fill="#FFB43C" font-size="10" font-family="IBM Plex Mono" letter-spacing="1">AX·5</text>
+        </g>
+      </svg>
+
+      <!-- clamp toast -->
+      <div class="absolute right-4 top-4 bg-panel border border-warn px-3 py-2 flex items-center gap-2">
+        <span class="text-warn text-[13px] leading-none">!</span>
+        <span class="lbl text-warn">PATH CLAMPED TO 7.0 — KILN-04 ALLOWANCE</span>
+      </div>
+
+      <!-- plotting help -->
+      <div class="absolute left-4 bottom-4 bg-panel/95 border border-line notch px-3 py-2">
+        <div class="lbl text-ink3 mb-1.5">PLOTTING</div>
+        <div class="grid grid-cols-2 gap-x-5 gap-y-[3px] font-mono text-[10px] text-ink3">
+          <span>CLICK</span><span class="text-ink4">ADD WAYPOINT</span>
+          <span>DRAG</span><span class="text-ink4">FREEHAND</span>
+          <span>ENTER</span><span class="text-ink4">FINISH PATH</span>
+          <span>BACKSPACE</span><span class="text-ink4">DROP LAST</span>
+          <span>H</span><span class="text-ink4">HOLD POSITION</span>
+          <span>ESC</span><span class="text-ink4">CLEAR PATH</span>
+        </div>
+      </div>
+    </main>
+
+    <!-- ───── INSPECTOR ───── -->
+    <aside class="w-[320px] shrink-0 border-l border-line bg-panel flex flex-col min-h-0">
+      <div class="h-9 shrink-0 px-3 flex items-center justify-between border-b border-line">
+        <span class="lbl text-ink2">INSPECTOR</span>
+        <span class="lbl text-ink4">ANY CONSTRUCT · <span class="text-sys">INCL. ENEMY</span></span>
+      </div>
+      <div class="flex-1 overflow-y-auto">
+        <div class="px-3 py-3 border-b border-line">
+          <div class="flex items-center gap-2">
+            <span class="text-vector text-[14px] leading-none">▲</span>
+            <span class="text-[17px] font-700 tracking-wide">SPINE-01</span>
+            <span class="font-mono text-[10px] text-ink4 border border-line px-1">VECTOR</span>
+          </div>
+          <div class="text-[12px] text-ink2 mt-1">SPINE-CLASS · <span class="text-ink3">DEGRADE DIAL</span></div>
+          <div class="font-mono text-[10px] text-ok mt-1.5">POSITION: CONFIRMED · STATS: CONFIRMED</div>
+        </div>
+
+        <div class="px-3 py-2.5 border-b border-line">
+          <div class="lbl text-ink3 mb-2">CURRENT STATE · S3 OF 5</div>
+          <div class="grid grid-cols-2 gap-x-4 gap-y-1 font-mono text-[11px] tnum">
+            <div class="flex justify-between"><span class="text-ink4">MOVE</span><span class="text-ink">7.0 <span class="text-bad text-[9px]">−2.0</span></span></div>
+            <div class="flex justify-between"><span class="text-ink4">INTEG</span><span class="text-ink">11</span></div>
+            <div class="flex justify-between"><span class="text-ink4">DMG</span><span class="text-ink">5 <span class="text-bad text-[9px]">−2</span></span></div>
+            <div class="flex justify-between"><span class="text-ink4">RANGE</span><span class="text-ink">12.0</span></div>
+            <div class="flex justify-between"><span class="text-ink4">DEF</span><span class="text-ink">0</span></div>
+            <div class="flex justify-between"><span class="text-ink4">RES</span><span class="text-ink">28.0</span></div>
+          </div>
+        </div>
+
+        <div class="px-3 py-2.5 border-b border-line">
+          <div class="lbl text-ink3 mb-2">DIAL · FULL <span class="text-ink4">(ALL STATES PUBLIC)</span></div>
+          <table class="w-full font-mono text-[10.5px] tnum">
+            <thead><tr class="text-ink4">
+              <th class="text-left font-400 pb-1"></th>
+              <th class="font-400 pb-1">S1</th><th class="font-400 pb-1">S2</th>
+              <th class="font-400 pb-1 text-sys">S3</th><th class="font-400 pb-1">S4</th><th class="font-400 pb-1">S5</th>
+            </tr></thead>
+            <tbody class="text-ink2">
+              <tr><td class="text-ink4 text-left py-[3px]">MOVE</td><td class="text-center">9.0</td><td class="text-center">8.0</td><td class="text-center text-ink bg-sys/10">7.0</td><td class="text-center">5.0</td><td class="text-center">3.0</td></tr>
+              <tr><td class="text-ink4 text-left py-[3px]">DMG</td><td class="text-center">7</td><td class="text-center">7</td><td class="text-center text-ink bg-sys/10">5</td><td class="text-center">4</td><td class="text-center">2</td></tr>
+              <tr><td class="text-ink4 text-left py-[3px]">RANGE</td><td class="text-center">14</td><td class="text-center">14</td><td class="text-center text-ink bg-sys/10">12</td><td class="text-center">10</td><td class="text-center">8</td></tr>
+              <tr><td class="text-ink4 text-left py-[3px]">DEF</td><td class="text-center">0</td><td class="text-center">0</td><td class="text-center text-ink bg-sys/10">0</td><td class="text-center text-bad">−1</td><td class="text-center text-bad">−1</td></tr>
+            </tbody>
+          </table>
+          <svg viewBox="0 0 264 30" class="w-full h-[30px] mt-2">
+            <line x1="0" y1="29" x2="264" y2="29" stroke="#1C2733"/>
+            <polyline points="20,4 76,8 132,14 188,20 244,26" fill="none" stroke="#6B8096" stroke-width="1.4"/>
+            <circle cx="132" cy="14" r="2.8" fill="#4DE1FF"/>
+          </svg>
+          <div class="font-mono text-[9.5px] text-ink4 -mt-1">DEGRADE — ALL STATS DECLINE</div>
+        </div>
+
+        <div class="px-3 py-2.5">
+          <div class="lbl text-ink3 mb-2">ROUND LOG · TAIL</div>
+          <div class="font-mono text-[10px] leading-[1.6] space-y-[2px]">
+            <div class="text-ink4">R5 · ATTACK</div>
+            <div class="text-ink2"><span class="text-hollow">⬡</span> HL-4 <span class="text-sys">»CALLED→</span> <span class="text-vector">▲</span>SPINE-01 <span class="text-bad">13 DMG</span></div>
+            <div class="text-ink2"><span class="text-vector">▲</span> SPINE-01 dial <span class="text-ink4">S2 → S3</span></div>
+            <div class="text-ink4 pt-1">R5 · TRACE</div>
+            <div class="text-ink2"><span class="text-nullset">●</span> NS-1 <span class="text-trace">4 INTEGRITY</span></div>
+            <div class="text-ink4 pt-1">R6 · REFILL</div>
+            <div class="text-ink2">POOL <span class="text-ink">4</span> <span class="text-ink4">= 1 + 1 + ⌊6/3⌋</span></div>
+          </div>
+        </div>
+      </div>
+    </aside>
+  </div>
+
+  <!-- ══════════ COMMAND BAR ══════════ -->
+  <footer class="h-[72px] shrink-0 border-t border-line bg-panel flex items-center px-4 gap-4">
+    <div class="flex items-center gap-2">
+      <button class="h-9 px-3 border border-line2 text-ink2 hover:border-sys hover:text-ink text-[11px] tracking-[.14em]">HOLD ALL <span class="kbd ml-1.5">⇧H</span></button>
+      <button class="h-9 px-3 border border-line2 text-ink2 hover:border-sys hover:text-ink text-[11px] tracking-[.14em]">CLEAR PATH <span class="kbd ml-1.5">ESC</span></button>
+      <button class="h-9 px-3 border border-line2 text-ink2 hover:border-sys hover:text-ink text-[11px] tracking-[.14em]">NEXT UNPLOTTED <span class="kbd ml-1.5">TAB</span></button>
+    </div>
+
+    <div class="h-9 border-l border-line pl-4 flex flex-col justify-center">
+      <span class="lbl text-ink4">PLOT STATE</span>
+      <span class="font-mono text-[11px] text-ink2 tnum">4 PATHS · 1 HOLD · <span class="text-warn">1 UNPLOTTED (WILL HOLD)</span></span>
+    </div>
+
+    <div class="ml-auto flex items-center gap-4">
+      <div class="text-right">
+        <div class="font-mono text-[11px] text-ink3">NO SQUAD SEES ANOTHER'S PLOT BEFORE COMMIT</div>
+        <div class="lbl text-ink4">COMMIT IS IRREVERSIBLE</div>
+      </div>
+      <div class="flex flex-col items-end">
+        <button class="h-11 px-6 bg-sys text-void font-700 text-[13px] tracking-[.16em] notch hover:brightness-110">COMMIT MOVEMENT</button>
+        <span class="lbl text-ink4 mt-1">NO TIMER — COMMIT WHEN READY <span class="kbd ml-1">⌃⏎</span></span>
+      </div>
+    </div>
+  </footer>
+</div>
+
+<!-- commit confirm modal -->
+<button onclick="document.getElementById('modal').style.display='flex'"
+        class="fixed right-4 bottom-[86px] z-30 h-7 px-2 border border-line2 bg-panel text-ink3 hover:text-sys hover:border-sys font-mono text-[9.5px] tracking-wider">
+  SHOW COMMIT CONFIRM ▸
+</button>
+<div class="fixed inset-0 z-40 bg-void/70 items-center justify-center hidden" id="modal">
+  <div class="w-[420px] bg-panel border border-sys notch glow2">
+    <div class="h-9 px-4 flex items-center border-b border-line2 bg-panel2">
+      <span class="lbl text-sys">CONFIRM COMMIT · MOVEMENT · ROUND 06</span>
+    </div>
+    <div class="px-4 py-4">
+      <div class="font-mono text-[11px] space-y-1 tnum">
+        <div class="flex justify-between"><span class="text-ink2">SPINE-01</span><span class="text-ink">PATH 7.4</span></div>
+        <div class="flex justify-between"><span class="text-ink2">SPINE-02</span><span class="text-ink">PATH 4.7</span></div>
+        <div class="flex justify-between"><span class="text-ink2">RELAY-03</span><span class="text-ink">PATH 10.8</span></div>
+        <div class="flex justify-between"><span class="text-ink2">KILN-04</span><span class="text-warn">PATH 7.0 · CLAMPED</span></div>
+        <div class="flex justify-between"><span class="text-ink2">LATCH-05</span><span class="text-ink3">HOLD</span></div>
+        <div class="flex justify-between"><span class="text-ink2">FERAL-06</span><span class="text-warn">UNPLOTTED → WILL HOLD</span></div>
+      </div>
+      <div class="mt-3 pt-3 border-t border-line font-mono text-[10px] text-ink3 leading-relaxed">
+        ALL SQUADS RESOLVE SIMULTANEOUSLY. IF TWO CONSTRUCTS WOULD TOUCH, BOTH HALT — NO PASS-THROUGH, NO PRIORITY.
+      </div>
+    </div>
+    <div class="px-4 py-3 border-t border-line flex gap-2 justify-end">
+      <button class="h-9 px-4 border border-line2 text-ink2 text-[11px] tracking-[.14em] hover:border-ink3" onclick="document.getElementById('modal').style.display='none'">BACK TO PLOT</button>
+      <button class="h-9 px-5 bg-sys text-void font-700 text-[11px] tracking-[.16em]" onclick="document.getElementById('modal').style.display='none'">COMMIT</button>
+    </div>
+  </div>
+</div>
+
+<div class="fixed left-0 bottom-0 z-50 flex items-center gap-3 bg-void/90 border-t border-r border-line px-2.5 py-1">
+  <a href="index.html" class="font-mono text-[9.5px] text-sys hover:underline">← ALL MOCKS</a>
+  <span class="font-mono text-[9.5px] text-ink4">MOCK · SIGNAL LOSS · 06 MOVEMENT PLOT</span>
+</div>
+
+<script>
+// trace timeline ticks
+const contractions = new Set([4,6,8,10,12,14,16,18]);
+const wrap = document.getElementById('ticks');
+for (let r=1; r<=19; r++){
+  const s = document.createElement('span');
+  s.className = 'flex flex-col items-center';
+  const isC = contractions.has(r), isNow = r===6;
+  const dmg = isC ? (r-4)/2*2+2 : null;
+  s.innerHTML = `<span class="${isNow?'w-[3px] h-[13px] bg-sys':isC?'w-[3px] h-[11px] bg-trace/70':'w-px h-[7px] bg-line2'}"></span>
+    <span class="font-mono text-[9px] tnum mt-[1px] ${isNow?'text-sys font-600':isC?'text-trace/80':'text-ink4'}">${isC?dmg:r}</span>`;
+  wrap.appendChild(s);
+}
+</script>
+</body>
+</html>

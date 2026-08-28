@@ -1,0 +1,346 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>BOOT — SIGNAL LOSS</title>
+<script src="https://cdn.tailwindcss.com"></script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Chakra+Petch:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<script>
+tailwind.config = { theme: { extend: {
+  colors: {
+    void:'#04060A', panel:'#090D13', panel2:'#0E141C', panel3:'#141C27',
+    line:'#1C2733', line2:'#2A3946',
+    ink:'#E8F2FB', ink2:'#9CB0C4', ink3:'#6B8096', ink4:'#42566A',
+    sys:'#4DE1FF', ok:'#4BE8A4', warn:'#FFB43C', bad:'#FF4D6D', trace:'#FF3B6B',
+    vector:'#A8FBFF', axiom:'#FFB43C', kestrel:'#5AA8FF', hollow:'#F2569B', nullset:'#8C6BD6',
+  },
+  fontFamily: { display:['Chakra Petch','sans-serif'], mono:['IBM Plex Mono','monospace'] },
+}}}
+</script>
+<style>
+  .notch{clip-path:polygon(10px 0,100% 0,100% calc(100% - 10px),calc(100% - 10px) 100%,0 100%,0 10px)}
+  .notch-sm{clip-path:polygon(6px 0,100% 0,100% calc(100% - 6px),calc(100% - 6px) 100%,0 100%,0 6px)}
+  .hatch{background-image:repeating-linear-gradient(45deg,rgba(255,59,107,.55) 0 1px,transparent 1px 6px)}
+  .dither{background-image:repeating-conic-gradient(rgba(232,242,251,.3) 0% 25%,transparent 0% 50%);background-size:2px 2px}
+  .glow-1{border-color:#2A3946;box-shadow:0 0 0 1px rgba(77,225,255,.06)}
+  .glow-2{border-color:#4DE1FF;box-shadow:0 0 12px -2px rgba(77,225,255,.45)}
+  .glow-3{box-shadow:0 0 20px -2px currentColor}
+  .rule{border-top:1px solid #1C2733}
+  .tnum{font-variant-numeric:tabular-nums}
+  body{letter-spacing:.01em}
+  .h-label{text-transform:uppercase;letter-spacing:.14em}
+  .drift{animation:drift 44s linear infinite}
+  @keyframes drift{0%{transform:translate3d(0,0,0)}50%{transform:translate3d(-26px,-14px,0)}100%{transform:translate3d(0,0,0)}}
+  .ghostpulse{animation:gp 2400ms ease-in-out infinite}
+  @keyframes gp{0%,100%{opacity:.34}50%{opacity:.2}}
+  .entry:hover{border-color:#2A3946;box-shadow:0 0 0 1px rgba(77,225,255,.06);background:#0E141C}
+  .entry:hover .entry-idx{color:#4DE1FF}
+  .entry:hover .entry-chev{transform:translateX(4px);color:#4DE1FF}
+  .entry-chev{transition:transform 90ms ease-out,color 90ms ease-out}
+  .entry:focus-visible{outline:none;border-color:#4DE1FF;box-shadow:0 0 12px -2px rgba(77,225,255,.45)}
+  .gate{display:none}
+  @media (max-width:1279px){
+    .gated{display:none !important}
+    .gate{display:block}
+  }
+  @media (prefers-reduced-motion:reduce){.drift,.ghostpulse{animation:none}}
+  ::-webkit-scrollbar{width:10px;height:10px}
+  ::-webkit-scrollbar-track{background:#04060A}
+  ::-webkit-scrollbar-thumb{background:#1C2733}
+</style>
+</head>
+<body class="bg-void text-ink font-display antialiased">
+
+<!-- ============ BACKGROUND: WIREFRAME MAP FRAGMENT @6% ============ -->
+<div class="fixed inset-0 pointer-events-none overflow-hidden" aria-hidden="true">
+  <svg class="drift absolute -inset-16 w-[calc(100%+8rem)] h-[calc(100%+8rem)]" viewBox="0 0 1440 900" preserveAspectRatio="xMidYMid slice" style="opacity:.06">
+    <defs>
+      <pattern id="gmin" width="20" height="20" patternUnits="userSpaceOnUse">
+        <path d="M20 0H0V20" fill="none" stroke="#1C2733" stroke-width="1"/>
+      </pattern>
+      <pattern id="gmaj" width="100" height="100" patternUnits="userSpaceOnUse">
+        <path d="M100 0H0V100" fill="none" stroke="#2A3946" stroke-width="1"/>
+      </pattern>
+    </defs>
+    <rect width="1440" height="900" fill="url(#gmin)"/>
+    <rect width="1440" height="900" fill="url(#gmaj)"/>
+    <g fill="none" stroke="#4DE1FF" stroke-width="1.5">
+      <path d="M120 120H420V240H300V400H120Z"/>
+      <path d="M520 90H760V180H640V300H520Z"/>
+      <path d="M860 140H1180V220H1040V360H1180V460H860Z"/>
+      <path d="M180 520H360V640H520V760H180Z"/>
+      <path d="M600 420H820V520H700V660H600Z"/>
+      <path d="M880 560H1240V680H1060V800H880Z"/>
+      <path d="M420 300H480V360H420Z"/>
+      <path d="M1260 240H1340V520H1260Z"/>
+      <path d="M60 700H140V860H420V800"/>
+      <path d="M560 820H820V700H900"/>
+    </g>
+    <g stroke="#4DE1FF" stroke-width="1" opacity=".5">
+      <circle cx="720" cy="450" r="330" fill="none" stroke-dasharray="6 8"/>
+      <circle cx="720" cy="450" r="210" fill="none" stroke-dasharray="2 6"/>
+    </g>
+  </svg>
+</div>
+
+<!-- ============ TOP HAIRLINE STATUS BAR ============ -->
+<header class="relative border-b border-line">
+  <div class="mx-auto max-w-[1280px] px-8 h-11 flex items-center justify-between">
+    <div class="flex items-center gap-3">
+      <svg width="16" height="16" viewBox="0 0 16 16" aria-hidden="true"><path d="M8 1 15 14H1Z" fill="none" stroke="#A8FBFF" stroke-width="1.2"/></svg>
+      <span class="text-[11px] h-label text-ink2">SIGNAL LOSS</span>
+      <span class="text-ink4">/</span>
+      <span class="text-[11px] h-label text-ink3">BOOT</span>
+    </div>
+    <div class="flex items-center gap-6 font-mono text-[11px] tnum text-ink3">
+      <span>BUILD <span class="text-ink2">0.4.1</span></span>
+      <span>CATALOG <span class="text-ink2">7</span> CHASSIS · <span class="text-ink2">11</span> MOUNTS</span>
+      <span>RULESET <span class="text-ink2">V1</span></span>
+      <span class="text-ok">● LOCAL STORE OK</span>
+    </div>
+  </div>
+</header>
+
+<!-- ============ MAIN ============ -->
+<main class="relative mx-auto max-w-[1280px] px-8">
+
+  <!-- WORDMARK BLOCK -->
+  <section class="pt-20 pb-10 flex items-end justify-between gap-16">
+    <div>
+      <div class="text-[11px] h-label text-ink3 mb-6 flex items-center gap-3">
+        <span class="inline-block w-8 h-px bg-line2"></span>
+        FIVE-WAY SIMULTANEOUS SKIRMISH
+      </div>
+
+      <!-- chromatic-offset ghost wordmark: packet loss as type treatment -->
+      <h1 class="relative select-none" style="font-weight:700;font-size:88px;line-height:.92;letter-spacing:.06em;text-transform:uppercase">
+        <span aria-hidden="true" class="absolute inset-0 text-sys" style="transform:translate(-1px,-1px);opacity:.55">Signal<br>Loss</span>
+        <span aria-hidden="true" class="absolute inset-0 text-trace" style="transform:translate(1px,1px);opacity:.45">Signal<br>Loss</span>
+        <span class="relative text-ink">Signal<br>Loss</span>
+      </h1>
+
+      <p class="mt-8 font-mono text-[13px] tnum text-ink2" style="letter-spacing:.02em">
+        DETERMINISTIC · NO ROLLS · NO TIMERS · INTENT IS THE ONLY UNKNOWN
+      </p>
+      <p class="mt-3 text-[14px] text-ink3 max-w-[560px]">
+        Build constructs from a catalog with nothing hidden. Plot movement and fire blind against
+        four rival squads at once. Every number on screen is the number used in resolution.
+      </p>
+    </div>
+
+    <!-- SQUAD LADDER — lightness rank + glyph + tag, never colour alone -->
+    <div class="w-[300px] shrink-0 border border-line bg-panel/80 notch">
+      <div class="px-4 h-9 flex items-center justify-between border-b border-line">
+        <span class="text-[11px] h-label text-ink2">Squads</span>
+        <span class="font-mono text-[11px] text-ink3 tnum">5 / MATCH</span>
+      </div>
+      <ul class="p-2">
+        <li class="flex items-center gap-3 px-2 h-8">
+          <svg width="14" height="14" viewBox="0 0 14 14" aria-hidden="true"><path d="M7 1.5 13 12.5H1Z" fill="#A8FBFF"/></svg>
+          <span class="font-mono text-[11px] tnum w-6 text-ink" style="color:#A8FBFF">VC</span>
+          <span class="text-[13px] text-ink flex-1">VECTOR</span>
+          <span class="text-[10px] h-label text-sys border border-sys/50 px-1.5 py-px">YOU</span>
+        </li>
+        <li class="flex items-center gap-3 px-2 h-8">
+          <svg width="14" height="14" viewBox="0 0 14 14" aria-hidden="true"><rect x="2" y="2" width="10" height="10" fill="#FFB43C"/></svg>
+          <span class="font-mono text-[11px] tnum w-6" style="color:#FFB43C">AX</span>
+          <span class="text-[13px] text-ink2 flex-1">AXIOM</span>
+          <span class="font-mono text-[11px] text-ink4 tnum">L*80</span>
+        </li>
+        <li class="flex items-center gap-3 px-2 h-8">
+          <svg width="14" height="14" viewBox="0 0 14 14" aria-hidden="true"><path d="M7 1 13 7 7 13 1 7Z" fill="#5AA8FF" fill-opacity=".5" stroke="#5AA8FF" stroke-width="1"/></svg>
+          <span class="font-mono text-[11px] tnum w-6" style="color:#5AA8FF">KS</span>
+          <span class="text-[13px] text-ink2 flex-1">KESTREL</span>
+          <span class="font-mono text-[11px] text-ink4 tnum">L*68</span>
+        </li>
+        <li class="flex items-center gap-3 px-2 h-8">
+          <svg width="14" height="14" viewBox="0 0 14 14" aria-hidden="true"><path d="M7 1 12.2 4v6L7 13 1.8 10V4Z" fill="none" stroke="#F2569B" stroke-width="1.2"/><path d="M2 5.5h10M2 8.5h10" stroke="#F2569B" stroke-width="1"/></svg>
+          <span class="font-mono text-[11px] tnum w-6" style="color:#F2569B">HL</span>
+          <span class="text-[13px] text-ink2 flex-1">HOLLOW</span>
+          <span class="font-mono text-[11px] text-ink4 tnum">L*60</span>
+        </li>
+        <li class="flex items-center gap-3 px-2 h-8">
+          <svg width="14" height="14" viewBox="0 0 14 14" aria-hidden="true"><circle cx="7" cy="7" r="5.5" fill="none" stroke="#8C6BD6" stroke-width="1.2"/><path d="M4.5 2.5v9M7 1.6v10.8M9.5 2.5v9" stroke="#8C6BD6" stroke-width="1"/></svg>
+          <span class="font-mono text-[11px] tnum w-6" style="color:#8C6BD6">NS</span>
+          <span class="text-[13px] text-ink2 flex-1">NULLSET</span>
+          <span class="font-mono text-[11px] text-ink4 tnum">L*50</span>
+        </li>
+      </ul>
+      <div class="px-4 py-2.5 border-t border-line text-[11px] text-ink3 leading-relaxed">
+        Identity reads as <span class="text-ink2">lightness</span> → <span class="text-ink2">glyph</span> → <span class="text-ink2">tag</span>. Hue is the last channel, never the only one.
+      </div>
+    </div>
+  </section>
+
+  <!-- ============ ENTRY POINTS ============ -->
+  <section class="gated grid grid-cols-3 gap-4 pb-8">
+
+    <a href="04-match-setup.html" class="entry group block border border-line bg-panel/70 notch p-5 transition-colors duration-90" style="transition-duration:90ms">
+      <div class="flex items-start justify-between mb-6">
+        <svg width="30" height="30" viewBox="0 0 30 30" aria-hidden="true">
+          <circle cx="15" cy="15" r="13" fill="none" stroke="#4DE1FF" stroke-width="1" opacity=".35"/>
+          <circle cx="15" cy="15" r="8" fill="none" stroke="#4DE1FF" stroke-width="1" stroke-dasharray="3 3"/>
+          <path d="M15 3v6M15 21v6M3 15h6M21 15h6" stroke="#4DE1FF" stroke-width="1"/>
+          <path d="M15 11.5 18 20h-6Z" fill="#A8FBFF"/>
+        </svg>
+        <span class="entry-idx font-mono text-[11px] tnum text-ink4">01</span>
+      </div>
+      <div class="text-[18px] h-label text-ink font-semibold">New Match</div>
+      <p class="mt-2 text-[13px] text-ink3 leading-relaxed h-[60px]">
+        Pick a budget and a roster, take a seeded procedural map against four AI squads.
+        Prebuilt rosters are ready and legality-checked.
+      </p>
+      <div class="mt-4 pt-3 rule flex items-center justify-between">
+        <span class="font-mono text-[11px] tnum text-ink3">100 PTS · TIER 1 · ANY MAP</span>
+        <span class="entry-chev text-sys text-[14px]">→</span>
+      </div>
+    </a>
+
+    <a href="01-build-collection.html" class="entry group block border border-line bg-panel/70 notch p-5" style="transition-duration:90ms">
+      <div class="flex items-start justify-between mb-6">
+        <svg width="30" height="30" viewBox="0 0 30 30" aria-hidden="true">
+          <rect x="4" y="4" width="22" height="22" fill="none" stroke="#4DE1FF" stroke-width="1" opacity=".35"/>
+          <rect x="9" y="9" width="12" height="12" fill="none" stroke="#4DE1FF" stroke-width="1"/>
+          <path d="M15 1v8M15 21v8M1 15h8M21 15h8" stroke="#4DE1FF" stroke-width="1"/>
+          <rect x="13" y="13" width="4" height="4" fill="#A8FBFF"/>
+        </svg>
+        <span class="entry-idx font-mono text-[11px] tnum text-ink4">02</span>
+      </div>
+      <div class="text-[18px] h-label text-ink font-semibold">Build Zone</div>
+      <p class="mt-2 text-[13px] text-ink3 leading-relaxed h-[60px]">
+        Compose constructs from chassis and typed hardpoints. Tag one commander.
+        Save rosters locally and trade them as share strings.
+      </p>
+      <div class="mt-4 pt-3 rule flex items-center justify-between">
+        <span class="font-mono text-[11px] tnum text-ink3">4 ROSTERS · 19 CONSTRUCTS</span>
+        <span class="entry-chev text-sys text-[14px]">→</span>
+      </div>
+    </a>
+
+    <a href="03-catalog.html" class="entry group block border border-line bg-panel/70 notch p-5" style="transition-duration:90ms">
+      <div class="flex items-start justify-between mb-6">
+        <svg width="30" height="30" viewBox="0 0 30 30" aria-hidden="true">
+          <path d="M5 4h9v22H5Z" fill="none" stroke="#4DE1FF" stroke-width="1" opacity=".35"/>
+          <path d="M16 4h9v22h-9Z" fill="none" stroke="#4DE1FF" stroke-width="1"/>
+          <path d="M18 9h5M18 13h5M18 17h3" stroke="#A8FBFF" stroke-width="1"/>
+          <path d="M7 9h5M7 13h5M7 17h3" stroke="#4DE1FF" stroke-width="1" opacity=".5"/>
+        </svg>
+        <span class="entry-idx font-mono text-[11px] tnum text-ink4">03</span>
+      </div>
+      <div class="text-[18px] h-label text-ink font-semibold">Codex</div>
+      <p class="mt-2 text-[13px] text-ink3 leading-relaxed h-[60px]">
+        Every chassis, every mount, every dial state, every commander modification.
+        Nothing is gated and nothing is rounded.
+      </p>
+      <div class="mt-4 pt-3 rule flex items-center justify-between">
+        <span class="font-mono text-[11px] tnum text-ink3">3 CURVE FAMILIES · 5 PORT TYPES</span>
+        <span class="entry-chev text-sys text-[14px]">→</span>
+      </div>
+    </a>
+  </section>
+
+  <!-- ============ NFR-4 GATE: replaces entries under 1280 ============ -->
+  <section class="gate pb-8">
+    <div class="border border-warn/50 bg-panel notch p-8">
+      <div class="flex items-start gap-4">
+        <span class="text-warn text-[20px] leading-none font-mono">!</span>
+        <div>
+          <div class="text-[18px] h-label text-warn font-semibold">Signal Loss is a desktop product</div>
+          <p class="mt-3 font-mono text-[13px] tnum text-ink2">1280×720 MINIMUM · MOUSE + KEYBOARD REQUIRED</p>
+          <p class="mt-3 text-[13px] text-ink3 max-w-[560px]">
+            The match shell assumes a real pointer and a wide canvas. Rather than reflow into
+            something that reads wrong, entry is withheld at this viewport. Widen the window to continue.
+          </p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============ BELOW THE FOLD ============ -->
+  <section class="grid grid-cols-[1fr_320px] gap-4 pb-16">
+
+    <!-- CONTRACT STRIP -->
+    <div class="border border-line bg-panel/60 notch">
+      <div class="px-5 h-9 flex items-center border-b border-line">
+        <span class="text-[11px] h-label text-ink2">The contract</span>
+      </div>
+      <div class="grid grid-cols-4 divide-x divide-line">
+        <div class="p-4">
+          <div class="font-mono text-[20px] tnum text-ink">0</div>
+          <div class="mt-1 text-[11px] h-label text-ink3">Dice rolled</div>
+          <p class="mt-2 text-[12px] text-ink3 leading-snug">Identical committed states resolve identically. Always.</p>
+        </div>
+        <div class="p-4">
+          <div class="font-mono text-[20px] tnum text-ink">1</div>
+          <div class="mt-1 text-[11px] h-label text-ink3">Hidden fact</div>
+          <p class="mt-2 text-[12px] text-ink3 leading-snug">Intent, until commit. Every other value is public.</p>
+        </div>
+        <div class="p-4">
+          <div class="font-mono text-[20px] tnum text-ink">2–5</div>
+          <div class="mt-1 text-[11px] h-label text-ink3">Reaction points</div>
+          <p class="mt-2 text-[12px] text-ink3 leading-snug">Against 3–9 constructs. Unspent points are destroyed.</p>
+        </div>
+        <div class="p-4">
+          <div class="font-mono text-[20px] tnum text-ink">∞</div>
+          <div class="mt-1 text-[11px] h-label text-ink3">Thinking time</div>
+          <p class="mt-2 text-[12px] text-ink3 leading-snug">No timer exists anywhere in the product. Commit when ready.</p>
+        </div>
+      </div>
+    </div>
+
+    <!-- PLATFORM NOTICE -->
+    <div class="border border-line bg-panel/60 notch p-4">
+      <div class="text-[11px] h-label text-ink2 mb-3">Platform</div>
+      <p class="font-mono text-[12px] tnum text-ink2 leading-relaxed">
+        DESKTOP ONLY<br>
+        1280×720 MINIMUM<br>
+        MOUSE + KEYBOARD
+      </p>
+      <p class="mt-3 text-[12px] text-ink3 leading-snug">
+        Chrome · Firefox · Safari · Edge, current versions. Tablet and mobile are explicit non-goals.
+      </p>
+      <div class="mt-3 pt-3 rule flex items-center gap-2">
+        <span class="w-1.5 h-1.5 bg-ok"></span>
+        <span class="font-mono text-[11px] tnum text-ink3">THIS VIEWPORT: <span id="vp" class="text-ok">1440×900</span></span>
+      </div>
+    </div>
+  </section>
+
+  <!-- FOOTER -->
+  <footer class="rule py-5 flex items-center justify-between text-[11px] h-label text-ink3">
+    <div class="flex items-center gap-6">
+      <span>No progression</span><span class="text-ink4">·</span>
+      <span>No unlocks</span><span class="text-ink4">·</span>
+      <span>No currency</span><span class="text-ink4">·</span>
+      <span>No tutorial</span>
+    </div>
+    <div class="flex items-center gap-5 font-mono normal-case tracking-normal">
+      <span class="text-ink3">Reduced motion <span class="text-ink2">AVAILABLE</span></span>
+      <span class="text-ink3">High-contrast squads <span class="text-ink2">AVAILABLE</span></span>
+      <span class="text-ink4">?  RULES</span>
+    </div>
+  </footer>
+</main>
+
+<!-- ============ MOCK TAG ============ -->
+<div class="fixed bottom-0 left-0 z-50 flex items-stretch border-t border-r border-line bg-panel">
+  <a href="index.html" class="px-3 h-7 flex items-center text-[10px] h-label text-sys hover:bg-panel2 border-r border-line">← All mocks</a>
+  <span class="px-3 h-7 flex items-center font-mono text-[10px] tnum text-ink3">MOCK · SIGNAL LOSS · BOOT</span>
+</div>
+
+<script>
+  // Live viewport readout — the platform notice states a real fact, not a decoration.
+  function vp(){
+    var el=document.getElementById('vp');
+    var w=window.innerWidth,h=window.innerHeight;
+    el.textContent=w+'×'+h;
+    var ok=w>=1280&&h>=720;
+    el.className=ok?'text-ok':'text-warn';
+  }
+  vp(); window.addEventListener('resize',vp);
+</script>
+</body>
+</html>

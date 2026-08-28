@@ -1,0 +1,729 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>RESOLUTION PLAYBACK — SIGNAL LOSS</title>
+<script src="https://cdn.tailwindcss.com"></script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Chakra+Petch:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<script>
+tailwind.config = { theme: { extend: {
+  colors: {
+    void:'#04060A', panel:'#090D13', panel2:'#0E141C', panel3:'#141C27',
+    line:'#1C2733', line2:'#2A3946',
+    ink:'#E8F2FB', ink2:'#9CB0C4', ink3:'#6B8096', ink4:'#42566A',
+    sys:'#4DE1FF', ok:'#4BE8A4', warn:'#FFB43C', bad:'#FF4D6D', trace:'#FF3B6B',
+    vector:'#A8FBFF', axiom:'#FFB43C', kestrel:'#5AA8FF', hollow:'#F2569B', nullset:'#8C6BD6',
+  },
+  fontFamily: { display:['Chakra Petch','sans-serif'], mono:['IBM Plex Mono','monospace'] },
+}}}
+</script>
+<style>
+  html,body{height:100%}
+  .notch{clip-path:polygon(0 0, calc(100% - 10px) 0, 100% 10px, 100% 100%, 0 100%)}
+  .notch-both{clip-path:polygon(0 0, calc(100% - 10px) 0, 100% 10px, 100% 100%, 10px 100%, 0 calc(100% - 10px))}
+  .rule{border-top:1px solid #1C2733}
+  .tnum{font-variant-numeric:tabular-nums;font-feature-settings:"tnum"}
+  .glow-1{border:1px solid #2A3946;box-shadow:0 0 0 1px rgba(77,225,255,.06)}
+  .glow-2{border:1px solid #4DE1FF;box-shadow:0 0 12px -2px rgba(77,225,255,.45)}
+  .h-label{letter-spacing:.14em;text-transform:uppercase}
+  .hover\:glow-1:hover{border-color:#2A3946;box-shadow:0 0 0 1px rgba(77,225,255,.06)}
+  .scroll::-webkit-scrollbar{width:8px;height:8px}
+  .scroll::-webkit-scrollbar-track{background:#090D13}
+  .scroll::-webkit-scrollbar-thumb{background:#1C2733}
+  .scroll::-webkit-scrollbar-thumb:hover{background:#2A3946}
+  @keyframes march{to{stroke-dashoffset:-24}}
+  .march{animation:march 3.2s linear infinite}
+  @keyframes pulse42{0%,100%{opacity:.34}50%{opacity:.22}}
+  .ghostpulse{animation:pulse42 2400ms ease-in-out infinite}
+  @media (prefers-reduced-motion:reduce){.march,.ghostpulse{animation:none}}
+</style>
+</head>
+<body class="bg-void text-ink font-display antialiased overflow-hidden">
+
+<div class="h-screen w-screen flex flex-col select-none">
+
+  <!-- ══════════════ TOP BAR ══════════════ -->
+  <header class="h-16 shrink-0 border-b border-line bg-panel flex items-stretch">
+
+    <div class="w-[280px] shrink-0 border-r border-line px-4 flex items-center gap-3">
+      <div class="font-mono tnum text-[26px] leading-none text-ink">R<span class="text-vector">06</span></div>
+      <div class="leading-tight">
+        <div class="text-[10px] h-label text-ink3">ROUND 6 OF 24 MAX</div>
+        <div class="text-[13px] h-label font-semibold text-sys">PHASE: RESOLUTION</div>
+        <div class="font-mono text-[9px] text-trace">CONTRACTION ROUND</div>
+      </div>
+    </div>
+
+    <!-- trace timeline -->
+    <div class="flex-1 min-w-0 overflow-hidden border-r border-line px-4 flex items-center gap-3">
+      <div class="shrink-0 leading-tight">
+        <div class="text-[10px] h-label text-ink3">TRACE</div>
+        <div class="text-[10px] h-label text-ink3">SCHEDULE</div>
+      </div>
+      <svg viewBox="0 0 430 50" class="h-[50px] w-[430px] shrink-0" aria-label="Trace timeline: round 6 is contraction 2 of 5, 4 damage">
+        <line x1="8" y1="16" x2="408" y2="16" stroke="#2A3946" stroke-width="1"/>
+        <line x1="8" y1="16" x2="94.9" y2="16" stroke="#6B8096" stroke-width="1.5"/>
+        <g font-family="IBM Plex Mono" font-size="8" text-anchor="middle">
+          <g stroke="#42566A"><line x1="8" y1="12" x2="8" y2="20"/><line x1="25.4" y1="12" x2="25.4" y2="20"/><line x1="42.8" y1="12" x2="42.8" y2="20"/><line x1="77.6" y1="12" x2="77.6" y2="20"/><line x1="112.3" y1="12" x2="112.3" y2="20"/><line x1="147.1" y1="12" x2="147.1" y2="20"/><line x1="181.9" y1="12" x2="181.9" y2="20"/><line x1="216.7" y1="12" x2="216.7" y2="20"/><line x1="251.5" y1="12" x2="251.5" y2="20"/><line x1="286.3" y1="12" x2="286.3" y2="20"/><line x1="321" y1="12" x2="321" y2="20"/><line x1="355.8" y1="12" x2="355.8" y2="20"/><line x1="390.6" y1="12" x2="390.6" y2="20"/></g>
+          <line x1="60.2" y1="7" x2="60.2" y2="25" stroke="#FF3B6B" stroke-width="1.5" opacity=".45"/>
+          <line x1="94.9" y1="4" x2="94.9" y2="28" stroke="#FF3B6B" stroke-width="2"/>
+          <g stroke="#FF3B6B"><line x1="129.7" y1="7" x2="129.7" y2="25" stroke-width="1.5"/><line x1="164.5" y1="7" x2="164.5" y2="25" stroke-width="1.5"/><line x1="199.3" y1="7" x2="199.3" y2="25" stroke-width="1.5"/></g>
+          <g fill="#FF3B6B"><text x="60.2" y="36" opacity=".5">2</text><text x="94.9" y="36" font-weight="600">4</text><text x="129.7" y="36">6</text><text x="164.5" y="36">8</text><text x="199.3" y="36">10</text></g>
+          <line x1="199.3" y1="16" x2="408" y2="16" stroke="#FF3B6B" stroke-width="1" opacity=".3"/>
+          <text x="216" y="36" text-anchor="start" font-family="Chakra Petch" font-size="8" letter-spacing=".1em" fill="#FF3B6B" opacity=".6">FINAL REGION HELD ·</text>
+          <text x="330" y="36" text-anchor="start" fill="#FF3B6B" opacity=".6">10 / RND</text>
+          <g fill="#6B8096"><text x="8" y="47">R1</text><text x="60.2" y="47">R4</text><text x="129.7" y="47">R8</text><text x="199.3" y="47">R12</text><text x="268.8" y="47">R16</text><text x="338.4" y="47">R20</text><text x="408" y="47">R24</text></g>
+        </g>
+        <g><polygon points="94.9,2 90.9,-4 98.9,-4" fill="#A8FBFF"/><circle cx="94.9" cy="16" r="3.5" fill="#A8FBFF"/></g>
+      </svg>
+    </div>
+
+    <!-- reduced motion toggle -->
+    <label class="w-[132px] shrink-0 border-r border-line px-3 flex items-center gap-2 cursor-pointer hover:bg-panel2">
+      <span class="relative w-8 h-4 border border-line2 bg-panel2 shrink-0">
+        <span class="absolute top-[1px] left-[1px] w-3 h-3 bg-ink4"></span>
+      </span>
+      <span class="leading-tight">
+        <span class="block text-[10px] h-label text-ink2">REDUCED</span>
+        <span class="block text-[10px] h-label text-ink2">MOTION</span>
+        <span class="block font-mono text-[9px] text-ink3">OFF</span>
+      </span>
+    </label>
+
+    <!-- pool ledger -->
+    <div class="w-[228px] shrink-0 border-r border-line px-3 flex flex-col justify-center">
+      <div class="flex items-baseline gap-2">
+        <span class="text-[10px] h-label text-ink3">POOL</span>
+        <span class="font-mono text-[15px] tracking-[.18em] leading-none"><span class="text-warn">◆◆◆</span><span class="text-ink4">◇</span></span>
+        <span class="font-mono tnum text-[13px] text-ink ml-auto">3 / 4 SPENT</span>
+      </div>
+      <div class="font-mono tnum text-[10px] text-ink3 mt-0.5">1 base + 1 cmd(SYSOP) + ⌊6/3⌋=2</div>
+      <div class="font-mono tnum text-[10px] text-ink2">⌐ posture ×2 &nbsp; » called ×1</div>
+      <div class="font-mono text-[10px] text-warn">⚠ 1 POINT LOST — NO CARRYOVER</div>
+    </div>
+
+    <div class="w-[84px] shrink-0 flex items-center justify-center gap-1.5">
+      <button class="w-9 h-9 border border-line bg-panel2 text-ink2 hover:glow-1 hover:text-ink text-[15px] leading-none" title="Settings">⚙</button>
+      <button class="w-9 h-9 border border-line bg-panel2 text-ink2 hover:glow-1 hover:text-ink text-[15px] leading-none" title="Rules drawer — F1">?</button>
+    </div>
+  </header>
+
+  <!-- ══════════════ BODY ══════════════ -->
+  <div class="flex-1 flex min-h-0">
+
+    <!-- ────── SQUAD RAIL ────── -->
+    <aside class="w-[280px] shrink-0 border-r border-line bg-panel flex flex-col min-h-0">
+      <div class="px-4 py-2.5 border-b border-line flex items-center justify-between">
+        <div class="flex items-center gap-2">
+          <span class="text-vector text-[13px] leading-none">▲</span>
+          <span class="text-[12px] h-label font-semibold text-ink">VECTOR</span>
+          <span class="font-mono text-[10px] text-vector border border-line2 px-1 leading-[14px]">VC</span>
+        </div>
+        <span class="font-mono tnum text-[11px] text-ink2">6 ALIVE</span>
+      </div>
+
+      <div class="flex-1 overflow-y-auto scroll min-h-0">
+        <div class="px-4 pt-3 pb-1.5 text-[10px] h-label text-ink3">Round 6 · resolved</div>
+
+        <!-- selected -->
+        <div class="mx-3 mb-1.5 bg-panel3 px-3 py-2 glow-2">
+          <div class="flex items-center gap-2">
+            <span class="font-mono text-[10px] text-ink4">1</span>
+            <span class="text-vector text-[11px] leading-none">▲</span>
+            <span class="font-mono text-[12px] text-ink">SPINE-01</span>
+            <span class="ml-auto font-mono text-[10px] tracking-[.16em]"><span class="text-vector">●●</span><span class="text-ink4">○○○</span></span>
+          </div>
+          <div class="mt-1 font-mono text-[10px] text-ink2 flex gap-2"><span class="text-ink3">MOVED</span><span>7.4 / 9.0</span><span class="ml-auto text-vector">⌐ POSTURE</span></div>
+          <div class="font-mono text-[10px] text-ink2 flex gap-2"><span class="text-ink3">SHOT</span><span class="text-vector">»CALLED</span><span>→ ⬡ HL-4</span><span class="ml-auto text-ink">3</span></div>
+          <div class="font-mono text-[10px] text-ink3">TOOK 0 · 2 SHOTS BLANKED BY POSTURE</div>
+        </div>
+
+        <div class="mx-3 mb-1.5 border border-line bg-panel2 px-3 py-2 hover:glow-1 cursor-pointer">
+          <div class="flex items-center gap-2">
+            <span class="font-mono text-[10px] text-ink4">2</span>
+            <span class="text-vector text-[11px] leading-none">▲</span>
+            <span class="font-mono text-[12px] text-ink">SPINE-02</span>
+            <span class="ml-auto font-mono text-[10px] tracking-[.16em]"><span class="text-vector">●</span><span class="text-ink4">○○○○</span></span>
+          </div>
+          <div class="mt-1 font-mono text-[10px] text-ink2 flex gap-2"><span class="text-ink3">MOVED</span><span>6.2 / 9.0</span><span class="ml-auto text-ink3">FLAT</span></div>
+          <div class="font-mono text-[10px] text-ink3">NO TARGET — NEAREST 14.8 / 12.0</div>
+        </div>
+
+        <div class="mx-3 mb-1.5 border border-line bg-panel2 px-3 py-2 hover:glow-1 cursor-pointer">
+          <div class="flex items-center gap-2">
+            <span class="font-mono text-[10px] text-ink4">3</span>
+            <span class="text-vector text-[11px] leading-none">▲</span>
+            <span class="font-mono text-[12px] text-ink">RELAY-03</span>
+            <span class="ml-auto font-mono text-[10px] tracking-[.16em]"><span class="text-ink4">○○○○○</span></span>
+          </div>
+          <div class="mt-1 font-mono text-[10px] text-ink2 flex gap-2"><span class="text-ink3">MOVED</span><span>9.8 / 11.0</span><span class="ml-auto text-ink3">FLAT</span></div>
+          <div class="font-mono text-[10px] text-ink2 flex gap-2"><span class="text-ink3">SHOT</span><span>NORMAL → ■ AX-2</span><span class="ml-auto text-bad">9 ✕</span></div>
+        </div>
+
+        <div class="mx-3 mb-1.5 border border-line bg-panel2 px-3 py-2 hover:glow-1 cursor-pointer">
+          <div class="flex items-center gap-2">
+            <span class="font-mono text-[10px] text-ink4">4</span>
+            <span class="text-vector text-[11px] leading-none">▲</span>
+            <span class="font-mono text-[12px] text-ink">KILN-04</span>
+            <span class="ml-auto font-mono text-[10px] tracking-[.16em]"><span class="text-vector">●●●</span><span class="text-ink4">○○</span></span>
+          </div>
+          <div class="mt-1 font-mono text-[10px] text-ink2 flex gap-2"><span class="text-ink3">MOVED</span><span>5.1 / 7.0</span><span class="ml-auto text-vector">⌐ POSTURE</span></div>
+          <div class="font-mono text-[10px] text-ink2 flex gap-2"><span class="text-ink3">SHOT</span><span>NORMAL → ● NS-1</span><span class="ml-auto text-ink">6</span></div>
+        </div>
+
+        <div class="mx-3 mb-1.5 border border-line bg-panel2 px-3 py-2 hover:glow-1 cursor-pointer">
+          <div class="flex items-center gap-2">
+            <span class="font-mono text-[10px] text-ink4">5</span>
+            <span class="text-vector text-[11px] leading-none">▲</span>
+            <span class="font-mono text-[12px] text-ink">LATCH-05</span>
+            <span class="font-mono text-[9px] text-warn border border-warn/50 px-1 leading-[13px]">◆CMD</span>
+            <span class="ml-auto font-mono text-[10px] tracking-[.16em]"><span class="text-vector">●</span><span class="text-ink4">○○○○</span></span>
+          </div>
+          <div class="mt-1 font-mono text-[10px] text-ink2 flex gap-2"><span class="text-ink3">MOVED</span><span class="text-warn">HOLD · 0.0</span><span class="ml-auto text-ink3">FLAT</span></div>
+          <div class="font-mono text-[10px] text-ink3">SYSOP ALIVE · POOL TERM +1 HELD</div>
+        </div>
+
+        <div class="mx-3 mb-1.5 border border-bad/40 bg-panel2 px-3 py-2 hover:glow-1 cursor-pointer">
+          <div class="flex items-center gap-2">
+            <span class="font-mono text-[10px] text-ink4">6</span>
+            <span class="text-vector text-[11px] leading-none">▲</span>
+            <span class="font-mono text-[12px] text-ink">FERAL-06</span>
+            <span class="ml-auto font-mono text-[10px] tracking-[.16em]"><span class="text-vector">●●●●</span><span class="text-ink4">○</span></span>
+          </div>
+          <div class="mt-1 font-mono text-[10px] text-ink2 flex gap-2"><span class="text-ink3">MOVED</span><span>10.6 / 12.0</span><span class="ml-auto text-ink3">FLAT</span></div>
+          <div class="font-mono text-[10px] text-bad">TOOK 12 — DIAL ●●○○○ → ●●●●○</div>
+        </div>
+
+        <!-- enemies -->
+        <div class="px-4 pt-4 pb-1.5 text-[10px] h-label text-ink3 border-t border-line mt-3">Opposing squads</div>
+        <div class="px-3 pb-4 space-y-px">
+          <div class="flex items-center gap-2 px-2 py-1.5 bg-panel2 opacity-55 line-through decoration-bad">
+            <span class="text-axiom text-[11px] leading-none w-3">■</span>
+            <span class="font-mono text-[10px] text-axiom w-5">AX</span>
+            <span class="text-[11px] h-label text-ink2 flex-1">AXIOM</span>
+            <span class="font-mono tnum text-[10px] text-bad">✕ ELIM R6</span>
+          </div>
+          <div class="flex items-center gap-2 px-2 py-1.5 bg-panel2 hover:glow-1 cursor-pointer">
+            <span class="text-kestrel text-[11px] leading-none w-3">◆</span>
+            <span class="font-mono text-[10px] text-kestrel w-5">KS</span>
+            <span class="text-[11px] h-label text-ink2 flex-1">KESTREL</span>
+            <span class="font-mono tnum text-[10px] text-ink2">3 ALIVE</span>
+          </div>
+          <div class="pl-7 pr-2 py-0.5 flex items-center gap-2 font-mono text-[10px] text-ink3"><span class="text-kestrel">KS-1</span><span class="text-warn">◆CMD</span><span class="ml-auto">●●○○○</span></div>
+          <div class="pl-7 pr-2 py-0.5 flex items-center gap-2 font-mono text-[10px] text-ink3"><span class="text-kestrel">KS-3</span><span class="ml-auto">●○○○○</span></div>
+          <div class="pl-7 pr-2 py-0.5 flex items-center gap-2 font-mono text-[10px] text-ink3"><span class="text-kestrel">KS-4</span><span class="text-ink3">? UNCONFIRMED</span><span class="ml-auto">●●○○○</span></div>
+          <div class="flex items-center gap-2 px-2 py-1.5 bg-panel2 hover:glow-1 cursor-pointer mt-px">
+            <span class="text-hollow text-[11px] leading-none w-3">⬡</span>
+            <span class="font-mono text-[10px] text-hollow w-5">HL</span>
+            <span class="text-[11px] h-label text-ink2 flex-1">HOLLOW</span>
+            <span class="font-mono tnum text-[10px] text-ink2">2 ALIVE</span>
+          </div>
+          <div class="flex items-center gap-2 px-2 py-1.5 bg-panel2 hover:glow-1 cursor-pointer mt-px">
+            <span class="text-nullset text-[11px] leading-none w-3">●</span>
+            <span class="font-mono text-[10px] text-nullset w-5">NS</span>
+            <span class="text-[11px] h-label text-ink2 flex-1">NULLSET</span>
+            <span class="font-mono tnum text-[10px] text-ink2">2 ALIVE</span>
+          </div>
+          <div class="pt-2 font-mono text-[9px] text-ink3 leading-relaxed">CLICK ANY ENEMY FOR FULL STATS AND DIAL — FR-24</div>
+        </div>
+      </div>
+    </aside>
+
+    <!-- ────── BOARD ────── -->
+    <main class="flex-1 min-w-0 relative bg-void">
+      <svg viewBox="0 0 800 700" preserveAspectRatio="xMidYMid meet" class="absolute inset-0 w-full h-full" aria-label="Resolution playback board, round 6">
+        <defs>
+          <pattern id="gMinor" width="20" height="20" patternUnits="userSpaceOnUse"><path d="M20 0 L0 0 0 20" fill="none" stroke="#1C2733" stroke-width="1" opacity=".45"/></pattern>
+          <pattern id="gMajor" width="100" height="100" patternUnits="userSpaceOnUse"><path d="M100 0 L0 0 0 100" fill="none" stroke="#1C2733" stroke-width="1"/></pattern>
+          <pattern id="pKS" width="4" height="4" patternUnits="userSpaceOnUse"><circle cx="1" cy="1" r=".9" fill="#5AA8FF" opacity=".6"/></pattern>
+          <pattern id="pHL" width="4" height="4" patternUnits="userSpaceOnUse"><line x1="0" y1="1" x2="4" y2="1" stroke="#F2569B" stroke-width="1" opacity=".5"/></pattern>
+          <pattern id="pNS" width="4" height="4" patternUnits="userSpaceOnUse"><line x1="1" y1="0" x2="1" y2="4" stroke="#8C6BD6" stroke-width="1" opacity=".5"/></pattern>
+          <pattern id="dtr" width="3" height="3" patternUnits="userSpaceOnUse"><rect width="1" height="1" fill="#E8F2FB" opacity=".45"/></pattern>
+          <pattern id="pTrace" width="8" height="8" patternUnits="userSpaceOnUse" patternTransform="rotate(45)"><line x1="0" y1="0" x2="0" y2="8" stroke="#FF3B6B" stroke-width="1.6"/></pattern>
+          <marker id="ahVC" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="6" markerHeight="6" orient="auto"><path d="M0,1 L9,5 L0,9 Z" fill="#A8FBFF"/></marker>
+          <marker id="ahHL" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="6" markerHeight="6" orient="auto"><path d="M0,1 L9,5 L0,9 Z" fill="#F2569B"/></marker>
+          <marker id="ahKS" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="6" markerHeight="6" orient="auto"><path d="M0,1 L9,5 L0,9 Z" fill="#5AA8FF"/></marker>
+          <marker id="ahNS" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="6" markerHeight="6" orient="auto"><path d="M0,1 L9,5 L0,9 Z" fill="#8C6BD6"/></marker>
+        </defs>
+
+        <rect x="0" y="0" width="800" height="700" fill="#04060A"/>
+        <rect x="24" y="24" width="752" height="652" fill="url(#gMinor)"/>
+        <rect x="24" y="24" width="752" height="652" fill="url(#gMajor)"/>
+
+        <!-- ── TRACE: 45° hatch outside the safe region ── -->
+        <g opacity=".18">
+          <rect x="24" y="24" width="752" height="84" fill="url(#pTrace)"/>
+          <rect x="24" y="584" width="752" height="92" fill="url(#pTrace)"/>
+          <rect x="24" y="108" width="72" height="476" fill="url(#pTrace)"/>
+          <rect x="688" y="108" width="88" height="476" fill="url(#pTrace)"/>
+        </g>
+        <rect x="96" y="108" width="592" height="476" fill="none" stroke="#FF3B6B" stroke-width="1.5" stroke-dasharray="10 6" class="march"/>
+        <rect x="160" y="168" width="464" height="356" fill="none" stroke="#FF3B6B" stroke-width="1" stroke-dasharray="1 4" opacity=".65"/>
+        <g font-family="IBM Plex Mono" font-size="10" letter-spacing=".1em">
+          <rect x="160" y="156" width="86" height="14" fill="#04060A"/>
+          <text x="164" y="167" fill="#FF3B6B" opacity=".8">NEXT · R8</text>
+          <rect x="96" y="96" width="220" height="14" fill="#04060A"/>
+          <text x="100" y="107" fill="#FF3B6B">TRACE R6 · 4 DMG AT ROUND END</text>
+        </g>
+
+        <!-- ── WALLS ── -->
+        <g fill="none" stroke="#2A3946" stroke-width="1" stroke-linejoin="miter">
+          <rect x="24" y="24" width="752" height="652"/>
+          <polygon points="88,88 208,88 208,108 108,108 108,208 88,208"/>
+          <rect x="250" y="72" width="120" height="20"/>
+          <rect x="300" y="92" width="20" height="96"/>
+          <polygon points="420,72 550,72 550,92 440,92 440,182 420,182"/>
+          <rect x="600" y="96" width="140" height="20"/>
+          <rect x="720" y="116" width="20" height="150"/>
+          <rect x="196" y="120" width="60" height="20"/>
+          <rect x="176" y="168" width="20" height="110"/>
+          <rect x="336" y="86" width="20" height="76"/>
+          <rect x="236" y="246" width="130" height="20"/>
+          <rect x="470" y="196" width="90" height="20"/>
+          <rect x="630" y="200" width="80" height="20"/>
+          <polygon points="396,290 512,290 512,310 416,310 416,382 512,382 512,402 396,402"/>
+          <rect x="576" y="290" width="20" height="100"/>
+          <rect x="616" y="286" width="120" height="20"/>
+          <polygon points="62,286 172,286 172,306 82,306 82,402 62,402"/>
+          <rect x="210" y="376" width="96" height="20"/>
+          <rect x="496" y="420" width="80" height="20"/>
+          <rect x="664" y="436" width="20" height="80"/>
+          <rect x="684" y="546" width="90" height="20"/>
+          <rect x="96" y="470" width="20" height="120"/>
+          <rect x="286" y="470" width="20" height="90"/>
+          <rect x="380" y="470" width="110" height="20"/>
+          <rect x="528" y="470" width="20" height="70"/>
+          <rect x="116" y="570" width="130" height="20"/>
+          <rect x="246" y="596" width="20" height="60"/>
+          <rect x="140" y="640" width="80" height="20"/>
+          <rect x="440" y="600" width="44" height="20"/>
+          <rect x="548" y="600" width="120" height="20"/>
+        </g>
+        <g fill="none" stroke="#4DE1FF" stroke-width="1" opacity=".06">
+          <rect x="24" y="24" width="752" height="652"/>
+          <polygon points="396,290 512,290 512,310 416,310 416,382 512,382 512,402 396,402"/>
+        </g>
+
+        <!-- ── MOVEMENT PATHS (traversed polylines) ── -->
+        <g fill="none" stroke-width="1.5" stroke-linejoin="round" stroke-linecap="round">
+          <polyline points="320,520 352,478 368,444" stroke="#A8FBFF" opacity=".85"/>
+          <polyline points="196,560 182,530 196,504" stroke="#A8FBFF" opacity=".85"/>
+          <polyline points="120,356 128,396 140,432" stroke="#A8FBFF" opacity=".85"/>
+          <polyline points="508,596 478,566 462,548" stroke="#A8FBFF" opacity=".85"/>
+          <polyline points="640,516 612,488 596,466" stroke="#A8FBFF" opacity=".85"/>
+          <polyline points="700,318 668,334 652,346" stroke="#5AA8FF" opacity=".8"/>
+          <polyline points="356,330 318,314 282,300" stroke="#F2569B" opacity=".8"/>
+          <polyline points="282,214 250,180" stroke="#F2569B" opacity=".8"/>
+          <polyline points="688,646 716,606" stroke="#8C6BD6" opacity=".8"/>
+          <polyline points="420,250 392,214" stroke="#8C6BD6" opacity=".8"/>
+          <polyline points="170,392 210,360 250,328" stroke="#FFB43C" opacity=".8"/>
+        </g>
+        <!-- waypoint dots -->
+        <g fill="#04060A" stroke-width="1">
+          <circle cx="352" cy="478" r="2" stroke="#A8FBFF"/><circle cx="182" cy="530" r="2" stroke="#A8FBFF"/>
+          <circle cx="128" cy="396" r="2" stroke="#A8FBFF"/><circle cx="478" cy="566" r="2" stroke="#A8FBFF"/>
+          <circle cx="612" cy="488" r="2" stroke="#A8FBFF"/><circle cx="668" cy="334" r="2" stroke="#5AA8FF"/>
+          <circle cx="318" cy="314" r="2" stroke="#F2569B"/><circle cx="210" cy="360" r="2" stroke="#FFB43C"/>
+        </g>
+
+        <!-- path length rules -->
+        <g font-family="IBM Plex Mono" font-size="9" fill="#6B8096">
+          <text x="326" y="516">7.4 / 9.0</text>
+          <text x="646" y="512">10.6 / 12.0</text>
+          <text x="96" y="352">9.8 / 11.0</text>
+        </g>
+
+        <!-- ── HALT (FR-15) ── -->
+        <g>
+          <!-- un-walked remainder -->
+          <line x1="250" y1="328" x2="274" y2="307" stroke="#42566A" stroke-width="1.5" stroke-dasharray="4 3"/>
+          <!-- stop bar -->
+          <line x1="244.4" y1="321" x2="255.6" y2="335" stroke="#FFB43C" stroke-width="4" stroke-linecap="butt"/>
+          <!-- HL-4 also halted: both-stop rule -->
+          <line x1="282" y1="300" x2="262" y2="292" stroke="#42566A" stroke-width="1.5" stroke-dasharray="4 3"/>
+          <line x1="290" y1="292" x2="298" y2="308" stroke="#FFB43C" stroke-width="3" stroke-linecap="butt" opacity=".8"/>
+          <!-- floating label -->
+          <line x1="250" y1="346" x2="250" y2="364" stroke="#FFB43C" stroke-width="1"/>
+          <rect x="150" y="364" width="176" height="32" fill="#090D13" stroke="#FFB43C" stroke-width="1"/>
+          <text x="158" y="377" font-family="IBM Plex Mono" font-size="10" fill="#FFB43C" letter-spacing=".1em">▮ HALT — CONTACT</text>
+          <text x="158" y="390" font-family="IBM Plex Mono" font-size="8.5" fill="#9CB0C4">■ AX-2 ↔ ⬡ HL-4 · 3.1 UNWALKED</text>
+        </g>
+
+        <!-- ── SHOT LINES ── -->
+        <!-- 1. SPINE-01 »CALLED→ HL-4 (brighter stroke + chevron) -->
+        <line x1="363.2" y1="428.3" x2="293.6" y2="311.7" stroke="#A8FBFF" stroke-width="1.75" marker-end="url(#ahVC)"/>
+        <g transform="translate(328.4,370) rotate(-120.8)" stroke="#A8FBFF" stroke-width="1.6" fill="none" stroke-linecap="round">
+          <path d="M-6,-5 L0,0 L-6,5 M0,-5 L6,0 L0,5"/>
+        </g>
+        <g font-family="IBM Plex Mono" font-size="9"><text x="336" y="386" fill="#A8FBFF">»CALLED 8.2 / 12.0</text></g>
+
+        <!-- 2. HL-4 NORMAL→ SPINE-01 -->
+        <line x1="286.8" y1="315.8" x2="356.4" y2="432.4" stroke="#F2569B" stroke-width="1" marker-end="url(#ahHL)"/>
+        <!-- 3. NS-2 NORMAL→ SPINE-01 -->
+        <line x1="390.3" y1="229.9" x2="369.7" y2="428.1" stroke="#8C6BD6" stroke-width="1" marker-end="url(#ahNS)"/>
+        <!-- 4. RELAY-03 NORMAL→ AX-2 -->
+        <line x1="151.6" y1="421" x2="238.4" y2="339" stroke="#A8FBFF" stroke-width="1" marker-end="url(#ahVC)"/>
+        <!-- 5. KS-1 »CALLED→ FERAL-06 -->
+        <line x1="641.8" y1="410.4" x2="606.2" y2="453.6" stroke="#5AA8FF" stroke-width="1.75" marker-end="url(#ahKS)"/>
+        <g transform="translate(624,432) rotate(129.5)" stroke="#5AA8FF" stroke-width="1.6" fill="none" stroke-linecap="round">
+          <path d="M-6,-5 L0,0 L-6,5 M0,-5 L6,0 L0,5"/>
+        </g>
+        <!-- 6. KS-3 NORMAL→ FERAL-06 -->
+        <line x1="645.2" y1="360.5" x2="602.8" y2="451.5" stroke="#5AA8FF" stroke-width="1" marker-end="url(#ahKS)"/>
+        <!-- 7. KILN-04 NORMAL→ NS-1 -->
+        <line x1="477.6" y1="551.6" x2="700.4" y2="602.4" stroke="#A8FBFF" stroke-width="1" marker-end="url(#ahVC)"/>
+        <g font-family="IBM Plex Mono" font-size="9"><text x="540" y="576" fill="#6B8096">13.1 / 14.0</text></g>
+
+        <!-- damage flashes -->
+        <g font-family="IBM Plex Mono" font-size="12" font-weight="600">
+          <text x="256" y="272" fill="#FF4D6D" text-anchor="middle">3</text>
+          <text x="392" y="470" fill="#4BE8A4" text-anchor="middle">0 ⌐</text>
+          <text x="616" y="500" fill="#FF4D6D" text-anchor="middle">12</text>
+          <text x="676" y="586" fill="#FF4D6D" text-anchor="middle">6</text>
+        </g>
+
+        <!-- persistent wreck mark from an earlier round -->
+        <g opacity=".7">
+          <path d="M593,143 L607,157 M607,143 L593,157" stroke="#FF4D6D" stroke-width="1.5"/>
+          <circle cx="600" cy="150" r="11" fill="none" stroke="#FF4D6D" stroke-width="1" stroke-dasharray="2 3" opacity=".5"/>
+          <text x="615" y="154" font-family="IBM Plex Mono" font-size="9" fill="#6B8096">AX-1 · WRECK R5</text>
+        </g>
+
+        <g id="markers"></g>
+
+        <!-- destroyed AX-2 annotations -->
+        <g font-family="IBM Plex Mono" font-size="9" text-anchor="end">
+          <text x="228" y="352" fill="#FF4D6D" letter-spacing=".08em">AXIOM ELIMINATED · 1ST</text>
+        </g>
+
+        <!-- in-trace callout for NS-1 -->
+        <g>
+          <line x1="700" y1="622" x2="732" y2="622" stroke="#FF3B6B" stroke-width="2"/>
+          <text x="770" y="638" text-anchor="end" font-family="IBM Plex Mono" font-size="9" fill="#FF3B6B">IN TRACE — 4 INTEGRITY AT ROUND END</text>
+        </g>
+      </svg>
+
+      <!-- board overlays -->
+      <div class="absolute top-3 left-3 flex items-center gap-2">
+        <div class="border border-sys/50 bg-panel/95 px-2.5 py-1.5 notch">
+          <div class="text-[10px] h-label text-ink3">Beat</div>
+          <div class="font-mono text-[12px] text-sys">3 / 5 · ATTACK</div>
+        </div>
+        <div class="border border-line bg-panel/90 px-2.5 py-1.5">
+          <div class="text-[10px] h-label text-ink3">Transport</div>
+          <div class="font-mono text-[12px] text-ink">▶ PLAYING · 1×</div>
+        </div>
+        <div class="border border-line bg-panel/90 px-2.5 py-1.5">
+          <div class="text-[10px] h-label text-ink3">Map</div>
+          <div class="font-mono text-[12px] text-ink2">SPLIT-VAULT · <span class="text-sys">7QK3-8ZR1-M04D</span></div>
+        </div>
+      </div>
+
+      <div class="absolute top-3 right-3 border border-line bg-panel/95 px-3 py-2 max-w-[268px]">
+        <div class="text-[10px] h-label text-ink3">Playback contract</div>
+        <div class="text-[11px] text-ink2 leading-snug mt-1">THIS IS A PRESENTATION OF AN ALREADY-COMPUTED RESULT. SKIPPING CHANGES NOTHING.</div>
+        <div class="font-mono text-[9px] text-ink3 mt-1">FR-26 · <span class="text-sys">S</span> SKIPS · <span class="text-sys">→</span> STEPS</div>
+      </div>
+
+      <div class="absolute bottom-3 right-3 border border-trace/40 bg-panel/95 px-3 py-2">
+        <div class="text-[10px] h-label text-trace mb-1">Trace · contraction 2 of 5</div>
+        <div class="font-mono text-[10px] text-ink2 leading-relaxed">
+          BOUNDARY <span class="text-ink">59.2 × 47.6</span> UNITS<br>
+          DAMAGE THIS ROUND <span class="text-trace">4</span> · LADDER 2·4·6·8·10<br>
+          NEXT CONTRACTION <span class="text-ink">R8</span> · DAMAGE <span class="text-trace">6</span><br>
+          IN TRACE NOW <span class="text-ink">● NS-1</span>
+        </div>
+      </div>
+
+      <!-- reduced-motion equivalent: stepped state cards -->
+      <div class="absolute bottom-[38px] left-3 w-[262px] border border-line2 bg-panel/97 notch-both">
+        <div class="px-3 py-1.5 border-b border-line flex items-center justify-between">
+          <span class="text-[10px] h-label text-ink2">Reduced motion · preview</span>
+          <span class="font-mono text-[9px] text-ink3">STEP WITH →</span>
+        </div>
+        <div class="p-2 space-y-1.5">
+          <div class="border border-line bg-panel2 px-2.5 py-1.5 opacity-60">
+            <div class="flex items-baseline justify-between"><span class="font-mono text-[9px] text-ink3">BEAT 2 / 5</span><span class="text-[10px] h-label text-ink3">POSTURE REVEAL</span></div>
+            <div class="font-mono text-[10px] text-ink2 mt-0.5">⌐ ▲ SPINE-01 · ▲ KILN-04 · ⬡ HL-4</div>
+            <div class="font-mono text-[9px] text-ink3">ALL OTHERS FLAT</div>
+          </div>
+          <div class="bg-panel3 px-2.5 py-1.5 glow-2">
+            <div class="flex items-baseline justify-between"><span class="font-mono text-[9px] text-sys">BEAT 3 / 5</span><span class="text-[10px] h-label text-sys">ATTACK</span></div>
+            <div class="font-mono text-[10px] text-ink mt-0.5">▲ SPINE-01 »CALLED→ ⬡ HL-4</div>
+            <div class="font-mono text-[10px] text-ink2">3 DMG · TARGET HELD POSTURE</div>
+            <div class="font-mono text-[9px] text-ink3">DIAL ●●○○○ → ●●●○○</div>
+          </div>
+          <div class="border border-line bg-panel2 px-2.5 py-1.5 opacity-60">
+            <div class="flex items-baseline justify-between"><span class="font-mono text-[9px] text-ink3">BEAT 4 / 5</span><span class="text-[10px] h-label text-ink3">TRACE</span></div>
+            <div class="font-mono text-[10px] text-ink2 mt-0.5">● NS-1 — 4 INTEGRITY</div>
+            <div class="font-mono text-[9px] text-ink3">CONTRACTION 2 OF 5</div>
+          </div>
+        </div>
+        <div class="px-3 py-1.5 border-t border-line font-mono text-[9px] text-ink3">NO INFORMATION IS LOST — NFR-5</div>
+      </div>
+    </main>
+
+    <!-- ────── INSPECTOR / ROUND LOG ────── -->
+    <aside class="w-[320px] shrink-0 border-l border-line bg-panel flex flex-col min-h-0">
+
+      <!-- slim inspector -->
+      <div class="px-4 py-2.5 border-b border-line">
+        <div class="flex items-center justify-between mb-2">
+          <span class="text-[12px] h-label font-semibold text-ink">Inspector</span>
+          <span class="font-mono text-[9px] text-ink3">▲ VECTOR · VC</span>
+        </div>
+        <div class="flex items-center gap-3">
+          <svg width="38" height="38" viewBox="0 0 38 38" class="shrink-0">
+            <circle cx="19" cy="19" r="13" fill="#A8FBFF" fill-opacity=".14" stroke="#A8FBFF"/>
+            <circle cx="19" cy="19" r="9" fill="none" stroke="#A8FBFF" opacity=".7"/>
+            <text x="19" y="23" text-anchor="middle" font-size="11" fill="#A8FBFF">▲</text>
+          </svg>
+          <div class="min-w-0 flex-1">
+            <div class="font-mono text-[14px] text-ink leading-tight">SPINE-01</div>
+            <div class="font-mono text-[10px] text-ink3">SPINE-CLASS · DIAL <span class="text-vector tracking-[.16em]">●●○○○</span></div>
+          </div>
+          <div class="text-right">
+            <div class="font-mono text-[9px] text-ink3">EXPOSURE</div>
+            <div class="font-mono text-[11px] text-warn">▮▮▯ 2 GUNS</div>
+          </div>
+        </div>
+        <div class="mt-2 grid grid-cols-4 gap-x-3 font-mono tnum text-[11px]">
+          <div><span class="block text-[9px] text-ink3">MOVE</span><span class="text-ink">9.0</span></div>
+          <div><span class="block text-[9px] text-ink3">DMG</span><span class="text-ink">7</span></div>
+          <div><span class="block text-[9px] text-ink3">RANGE</span><span class="text-ink">12.0</span></div>
+          <div><span class="block text-[9px] text-ink3">RES</span><span class="text-ink">16.0</span></div>
+        </div>
+        <div class="mt-2 flex gap-1">
+          <span class="font-mono text-[9px] text-vector border border-vector/50 px-1 leading-[14px]">⌐ POSTURE</span>
+          <span class="font-mono text-[9px] text-vector border border-vector/50 px-1 leading-[14px]">» CALLED · 1PT</span>
+          <span class="font-mono text-[9px] text-ok border border-ok/40 px-1 leading-[14px]">TOOK 0</span>
+        </div>
+      </div>
+
+      <!-- ROUND LOG -->
+      <div class="px-4 py-2 border-b border-line flex items-center justify-between bg-panel2">
+        <span class="text-[12px] h-label font-semibold text-ink">Round log</span>
+        <div class="flex items-center gap-2">
+          <span class="font-mono text-[9px] text-ink3">R6 · 5 BEATS</span>
+          <button class="font-mono text-[9px] text-sys border border-line2 px-1.5 leading-[16px] hover:glow-1">R1–R6</button>
+        </div>
+      </div>
+
+      <div class="flex-1 overflow-y-auto scroll min-h-0 px-4 py-3 font-mono text-[10.5px] leading-[1.75]">
+
+        <div class="text-ink3 tracking-[.1em] border-b border-line pb-0.5 mb-1">R6 · MOVEMENT</div>
+        <div class="space-y-px mb-3">
+          <div class="flex gap-1.5"><span class="text-vector w-[86px] shrink-0">▲ VC SPINE-01</span><span class="text-ink2 flex-1">moved</span><span class="text-ink tnum">7.4 / 9.0</span></div>
+          <div class="flex gap-1.5"><span class="text-vector w-[86px] shrink-0">▲ VC SPINE-02</span><span class="text-ink2 flex-1">moved</span><span class="text-ink tnum">6.2 / 9.0</span></div>
+          <div class="flex gap-1.5"><span class="text-vector w-[86px] shrink-0">▲ VC RELAY-03</span><span class="text-ink2 flex-1">moved</span><span class="text-ink tnum">9.8 / 11.0</span></div>
+          <div class="flex gap-1.5"><span class="text-vector w-[86px] shrink-0">▲ VC KILN-04</span><span class="text-ink2 flex-1">moved</span><span class="text-ink tnum">5.1 / 7.0</span></div>
+          <div class="flex gap-1.5"><span class="text-vector w-[86px] shrink-0">▲ VC FERAL-06</span><span class="text-ink2 flex-1">moved</span><span class="text-ink tnum">10.6 / 12.0</span></div>
+          <div class="flex gap-1.5"><span class="text-vector w-[86px] shrink-0">▲ VC LATCH-05</span><span class="text-warn flex-1">HOLD — empty path, free</span></div>
+          <div class="flex gap-1.5"><span class="text-axiom w-[86px] shrink-0">■ AX AX-2</span><span class="text-warn flex-1">HALTED — contact with ⬡ HL-4 at 3.1</span></div>
+          <div class="flex gap-1.5"><span class="text-hollow w-[86px] shrink-0">⬡ HL HL-4</span><span class="text-warn flex-1">HALTED — both-stop rule, 4.7 unwalked</span></div>
+          <div class="flex gap-1.5"><span class="text-hollow w-[86px] shrink-0">⬡ HL HL-2</span><span class="text-ink2 flex-1">moved</span><span class="text-ink tnum">4.7 / 9.0</span></div>
+          <div class="flex gap-1.5"><span class="text-kestrel w-[86px] shrink-0">◆ KS KS-3</span><span class="text-ink2 flex-1">moved</span><span class="text-ink tnum">5.9 / 9.0</span></div>
+          <div class="flex gap-1.5"><span class="text-kestrel w-[86px] shrink-0">◆ KS KS-1</span><span class="text-ink2 flex-1">HOLD — empty path, free</span></div>
+          <div class="flex gap-1.5"><span class="text-kestrel w-[86px] shrink-0">◆ KS KS-4</span><span class="text-ink3 flex-1">out of resolution — unconfirmed since R4</span></div>
+          <div class="flex gap-1.5"><span class="text-nullset w-[86px] shrink-0">● NS NS-1</span><span class="text-ink2 flex-1">moved</span><span class="text-ink tnum">8.0 / 8.0</span></div>
+          <div class="flex gap-1.5"><span class="text-nullset w-[86px] shrink-0">● NS NS-2</span><span class="text-ink2 flex-1">moved</span><span class="text-ink tnum">4.6 / 10.0</span></div>
+        </div>
+
+        <div class="text-ink3 tracking-[.1em] border-b border-line pb-0.5 mb-1">R6 · POSTURE REVEAL</div>
+        <div class="space-y-px mb-3">
+          <div class="flex gap-1.5"><span class="text-vector w-[86px] shrink-0">▲ VC SPINE-01</span><span class="text-ink2 flex-1">held POSTURE</span><span class="text-warn">1pt</span></div>
+          <div class="flex gap-1.5"><span class="text-vector w-[86px] shrink-0">▲ VC KILN-04</span><span class="text-ink2 flex-1">held POSTURE</span><span class="text-warn">1pt</span></div>
+          <div class="flex gap-1.5"><span class="text-hollow w-[86px] shrink-0">⬡ HL HL-4</span><span class="text-ink2 flex-1">held POSTURE</span><span class="text-warn">1pt</span></div>
+          <div class="text-ink3 pl-2">all 11 other constructs FLAT — 0pt</div>
+        </div>
+
+        <div class="text-ink3 tracking-[.1em] border-b border-line pb-0.5 mb-1">R6 · ATTACK</div>
+        <div class="space-y-px mb-3">
+          <div class="flex gap-1.5"><span class="text-vector w-[86px] shrink-0">▲ VC SPINE-01</span><span class="text-vector flex-1">»CALLED→ ⬡ HL-4</span><span class="text-ink tnum">3 dmg</span></div>
+          <div class="pl-2 text-ink3">(target held POSTURE · flat would have been 10)</div>
+          <div class="flex gap-1.5"><span class="text-hollow w-[86px] shrink-0">⬡ HL HL-4</span><span class="text-ink2 flex-1">NORMAL→ ▲ SPINE-01</span><span class="text-ok tnum">0 dmg</span></div>
+          <div class="pl-2 text-ink3">(target held POSTURE)</div>
+          <div class="flex gap-1.5"><span class="text-nullset w-[86px] shrink-0">● NS NS-2</span><span class="text-ink2 flex-1">NORMAL→ ▲ SPINE-01</span><span class="text-ok tnum">0 dmg</span></div>
+          <div class="pl-2 text-ink3">(target held POSTURE)</div>
+          <div class="flex gap-1.5"><span class="text-vector w-[86px] shrink-0">▲ VC RELAY-03</span><span class="text-ink2 flex-1">NORMAL→ ■ AX-2</span><span class="text-bad tnum">9 dmg</span></div>
+          <div class="flex gap-1.5"><span class="text-kestrel w-[86px] shrink-0">◆ KS KS-1</span><span class="text-kestrel flex-1">»CALLED→ ▲ FERAL-06</span><span class="text-bad tnum">7 dmg</span></div>
+          <div class="flex gap-1.5"><span class="text-kestrel w-[86px] shrink-0">◆ KS KS-3</span><span class="text-ink2 flex-1">NORMAL→ ▲ FERAL-06</span><span class="text-bad tnum">5 dmg</span></div>
+          <div class="flex gap-1.5"><span class="text-vector w-[86px] shrink-0">▲ VC KILN-04</span><span class="text-ink2 flex-1">NORMAL→ ● NS-1</span><span class="text-ink tnum">6 dmg</span></div>
+          <div class="flex gap-1.5"><span class="text-vector w-[86px] shrink-0">▲ VC SPINE-02</span><span class="text-ink3 flex-1">no target — nearest 14.8 / 12.0</span></div>
+          <div class="flex gap-1.5"><span class="text-hollow w-[86px] shrink-0">⬡ HL HL-2</span><span class="text-ink3 flex-1">no target — no line of sight</span></div>
+          <div class="flex gap-1.5 pt-1"><span class="text-hollow w-[86px] shrink-0">⬡ HL HL-4</span><span class="text-ink2 flex-1">dial ●●○○○ → ●●●○○</span></div>
+          <div class="flex gap-1.5"><span class="text-vector w-[86px] shrink-0">▲ VC FERAL-06</span><span class="text-ink2 flex-1">dial ●●○○○ → ●●●●○</span></div>
+          <div class="flex gap-1.5"><span class="text-nullset w-[86px] shrink-0">● NS NS-1</span><span class="text-ink2 flex-1">dial ●●●○○ → ●●●●○</span></div>
+        </div>
+
+        <div class="text-trace tracking-[.1em] border-b border-line pb-0.5 mb-1">R6 · TRACE</div>
+        <div class="space-y-px mb-3">
+          <div class="flex gap-1.5"><span class="text-nullset w-[86px] shrink-0">● NS NS-1</span><span class="text-ink2 flex-1">4 integrity</span><span class="text-trace">advance 2</span></div>
+          <div class="text-ink3 pl-2">boundary contracted to 59.2 × 47.6 · contraction 2 of 5</div>
+          <div class="text-ink3 pl-2">next contraction R8 · 6 damage</div>
+        </div>
+
+        <div class="text-bad tracking-[.1em] border-b border-line pb-0.5 mb-1">R6 · ELIMINATION</div>
+        <div class="space-y-px pb-2">
+          <div class="text-bad">■ AX AX-2 DESTROYED — squad AXIOM eliminated (1st)</div>
+          <div class="text-ink3 pl-2">wreck mark held at 25.0 , 32.8 for the rest of the match</div>
+          <div class="text-ink3 pl-2">4 squads remain · VECTOR · KESTREL · HOLLOW · NULLSET</div>
+        </div>
+      </div>
+    </aside>
+  </div>
+
+  <!-- ══════════════ COMMAND BAR — PLAYBACK TRANSPORT ══════════════ -->
+  <footer class="h-[84px] shrink-0 border-t border-line bg-panel flex items-center gap-3 pl-[302px] pr-5">
+
+    <button class="notch h-11 w-[104px] bg-sys text-void text-[13px] h-label font-semibold flex items-center justify-center gap-1.5 hover:brightness-110">
+      <span class="font-mono text-[14px] leading-none">▮▮</span> PAUSE
+    </button>
+    <button class="h-11 px-4 border border-line2 text-ink2 text-[12px] h-label hover:glow-1 hover:text-ink flex items-center gap-1.5">
+      <span class="font-mono text-[13px] leading-none">▶▮</span> STEP
+    </button>
+    <button class="h-11 px-4 border border-line2 text-ink2 text-[12px] h-label hover:glow-1 hover:text-ink flex items-center gap-1.5">
+      <span class="font-mono text-[13px] leading-none">▶▶</span> SKIP TO END
+    </button>
+
+    <div class="h-11 flex items-stretch border border-line2">
+      <button class="px-3 text-[12px] h-label bg-panel3 text-sys border-r border-line2">1×</button>
+      <button class="px-3 text-[12px] h-label text-ink3 hover:text-ink hover:bg-panel2">2×</button>
+    </div>
+
+    <!-- beat scrubber -->
+    <div class="flex-1 min-w-[240px] px-1">
+      <div class="flex items-baseline justify-between mb-1">
+        <span class="text-[10px] h-label text-ink3">Beat scrubber</span>
+        <span class="font-mono text-[10px] text-ink2">BEAT <span class="text-sys">3</span> / 5 · <span class="text-ink">ATTACK</span> · 00:04.2 / 00:07.0</span>
+      </div>
+      <div class="flex items-center gap-1">
+        <div class="flex-1 h-6 border border-line bg-panel2 flex items-stretch">
+          <div class="flex-1 border-r border-line bg-panel3 flex items-center justify-center gap-1"><span class="font-mono text-[9px] text-ink3">1</span><span class="text-[9px] h-label text-ink3">MOVEMENT</span></div>
+          <div class="flex-1 border-r border-line bg-panel3 flex items-center justify-center gap-1"><span class="font-mono text-[9px] text-ink3">2</span><span class="text-[9px] h-label text-ink3">POSTURE</span></div>
+          <div class="flex-1 border-r border-line bg-sys/20 flex items-center justify-center gap-1 relative">
+            <span class="font-mono text-[9px] text-sys">3</span><span class="text-[9px] h-label text-sys">ATTACK</span>
+            <span class="absolute left-[58%] top-0 bottom-0 w-px bg-sys"></span>
+          </div>
+          <div class="flex-1 border-r border-line flex items-center justify-center gap-1"><span class="font-mono text-[9px] text-ink4">4</span><span class="text-[9px] h-label text-ink4">TRACE</span></div>
+          <div class="flex-1 flex items-center justify-center gap-1"><span class="font-mono text-[9px] text-ink4">5</span><span class="text-[9px] h-label text-ink4">ELIM</span></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="text-right shrink-0 max-[1439px]:hidden">
+      <div class="text-[10px] h-label text-ink3">Next phase</div>
+      <div class="font-mono text-[12px] text-ink2">R7 · MOVEMENT PLOT</div>
+    </div>
+    <button class="notch h-12 px-6 border border-line2 bg-panel2 text-ink text-[13px] h-label font-semibold hover:glow-1">
+      CONTINUE →
+    </button>
+  </footer>
+</div>
+
+<!-- mock tag -->
+<div class="fixed bottom-0 left-0 z-50 flex items-stretch border-t border-r border-line2 bg-panel">
+  <a href="index.html" class="px-3 py-1.5 text-[10px] h-label text-sys hover:bg-panel3 border-r border-line">← ALL MOCKS</a>
+  <div class="px-3 py-1.5 font-mono text-[10px] text-ink3 tracking-[.1em]">MOCK · SIGNAL LOSS · PLAYBACK</div>
+</div>
+
+<script>
+const SQ = {
+  VC:{c:'#A8FBFF',g:'▲',pat:null},
+  AX:{c:'#FFB43C',g:'■',pat:null},
+  KS:{c:'#5AA8FF',g:'◆',pat:'pKS'},
+  HL:{c:'#F2569B',g:'⬡',pat:'pHL'},
+  NS:{c:'#8C6BD6',g:'●',pat:'pNS'}
+};
+
+function pips(spent,c){
+  let s='', n=5, w=6.6, x0=-(n-1)*w/2;
+  for(let i=0;i<n;i++){
+    const f=i<spent;
+    s+=`<circle cx="${(x0+i*w).toFixed(1)}" cy="-25" r="2.4" fill="${f?c:'none'}" stroke="${c}" stroke-width="1" opacity="${f?1:.55}"/>`;
+  }
+  return s;
+}
+
+function marker(o){
+  const s=SQ[o.sq], c=s.c;
+  const fill = s.pat ? `url(#${s.pat})` : c;
+  const fo   = s.pat ? 1 : .16;
+  const left = o.side==='l';
+  const tx = left ? -20 : 20;
+  const anch = left ? 'end' : 'start';
+  let g = `<g transform="translate(${o.x},${o.y})">`;
+
+  if(o.drift) g += `<circle r="${o.drift}" fill="none" stroke="${c}" stroke-width="1" stroke-dasharray="3 7" opacity=".14"/>`;
+
+  // destroyed: 45 degree cross + persistent identity
+  if(o.dead){
+    g += pips(5,'#FF4D6D');
+    g += `<circle r="14" fill="none" stroke="#FF4D6D" stroke-width="1" stroke-dasharray="3 2" opacity=".55"/>`;
+    g += `<path d="M-17,-17 L17,17 M17,-17 L-17,17" stroke="#FF4D6D" stroke-width="2"/>`;
+    g += `<text x="-22" y="-3" text-anchor="end" font-family="IBM Plex Mono" font-size="10" letter-spacing=".1em" fill="#FF4D6D">AX</text>`;
+    g += `<text x="-22" y="9" text-anchor="end" font-family="IBM Plex Mono" font-size="9" fill="#9CB0C4">AX-2</text>`;
+    g += `<text x="-22" y="21" text-anchor="end" font-family="IBM Plex Mono" font-size="9" fill="#FF4D6D">DESTROYED R6</text>`;
+    return g + `</g>`;
+  }
+
+  g += `<g${o.ghost?' class="ghostpulse" opacity=".34"':''}>`;
+  g += pips(o.dial||0,c);
+
+  if(o.cmd){
+    g += `<circle r="19" fill="none" stroke="${c}" stroke-width="1" opacity=".85"/>`;
+    g += `<circle r="22.5" fill="none" stroke="${c}" stroke-width="1" opacity=".5"/>`;
+  }
+  if(o.posture){
+    g += `<circle r="10" fill="none" stroke="${c}" stroke-width="1" opacity=".75"/>`;
+    g += `<text x="-23" y="5" text-anchor="middle" font-size="15" fill="${c}">⌐</text>`;
+    g += `<text x="23" y="5" text-anchor="middle" font-size="15" fill="${c}">¬</text>`;
+  }
+
+  g += `<circle r="14" fill="${fill}" fill-opacity="${fo}" stroke="${c}" stroke-width="1"${o.ghost?' stroke-dasharray="3 2"':''}/>`;
+  if(o.ghost) g += `<circle r="13" fill="url(#dtr)" opacity=".8"/>`;
+  g += `<text y="5" text-anchor="middle" font-size="13" fill="${c}">${s.g}</text>`;
+
+  if(o.trace) g += `<line x1="-13" y1="19" x2="13" y2="19" stroke="#FF3B6B" stroke-width="2.5"/>`;
+
+  g += `<text x="${tx}" y="-3" text-anchor="${anch}" font-family="IBM Plex Mono" font-size="10" letter-spacing=".1em" fill="${c}">${o.sq}</text>`;
+  g += `<text x="${tx}" y="9" text-anchor="${anch}" font-family="IBM Plex Mono" font-size="9" fill="#9CB0C4">${o.id}</text>`;
+  if(o.note) g += `<text x="${tx}" y="21" text-anchor="${anch}" font-family="IBM Plex Mono" font-size="9" fill="#FFB43C">${o.note}</text>`;
+
+  if(o.cmd) g += `<text y="37" text-anchor="middle" font-family="IBM Plex Mono" font-size="9" letter-spacing=".08em" fill="${c}">◆CMD</text>`;
+  if(o.ghost){
+    g += `<text x="12" y="-11" font-family="IBM Plex Mono" font-size="11" fill="${c}">?</text>`;
+    g += `<text y="33" text-anchor="middle" font-family="IBM Plex Mono" font-size="9" fill="#9CB0C4">LAST SEEN R4</text>`;
+    g += `<text y="44" text-anchor="middle" font-family="IBM Plex Mono" font-size="8" fill="#6B8096">DRIFT 12.0 = MOVE 6.0 × 2</text>`;
+  }
+  return g + `</g></g>`;
+}
+
+const MARKERS = [
+  // VECTOR
+  {x:368,y:444,sq:'VC',id:'SPINE-01',dial:2,posture:true},
+  {x:196,y:504,sq:'VC',id:'SPINE-02',dial:1,side:'l'},
+  {x:140,y:432,sq:'VC',id:'RELAY-03',dial:0},
+  {x:462,y:548,sq:'VC',id:'KILN-04',dial:3,posture:true},
+  {x:400,y:566,sq:'VC',id:'LATCH-05',dial:1,cmd:true,side:'l',note:'HOLD'},
+  {x:596,y:466,sq:'VC',id:'FERAL-06',dial:4,side:'l'},
+  // AXIOM
+  {x:250,y:328,sq:'AX',id:'AX-2',dead:true},
+  // KESTREL
+  {x:652,y:398,sq:'KS',id:'KS-1',dial:2,cmd:true,side:'l',note:'HOLD'},
+  {x:652,y:346,sq:'KS',id:'KS-3',dial:1},
+  {x:480,y:150,sq:'KS',id:'KS-4',dial:2,ghost:true,drift:120},
+  // HOLLOW
+  {x:250,y:180,sq:'HL',id:'HL-2',dial:2,side:'l'},
+  {x:282,y:300,sq:'HL',id:'HL-4',dial:3,posture:true,side:'l'},
+  // NULLSET
+  {x:716,y:606,sq:'NS',id:'NS-1',dial:4,side:'l',trace:true},
+  {x:392,y:214,sq:'NS',id:'NS-2',dial:1,cmd:true},
+];
+document.getElementById('markers').innerHTML = MARKERS.map(marker).join('');
+</script>
+</body>
+</html>

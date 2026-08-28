@@ -1,0 +1,600 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>MATCH SUMMARY — SIGNAL LOSS</title>
+<script src="https://cdn.tailwindcss.com"></script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Chakra+Petch:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<script>
+tailwind.config = { theme: { extend: {
+  colors: {
+    void:'#04060A', panel:'#090D13', panel2:'#0E141C', panel3:'#141C27',
+    line:'#1C2733', line2:'#2A3946',
+    ink:'#E8F2FB', ink2:'#9CB0C4', ink3:'#6B8096', ink4:'#42566A',
+    sys:'#4DE1FF', ok:'#4BE8A4', warn:'#FFB43C', bad:'#FF4D6D', trace:'#FF3B6B',
+    vector:'#A8FBFF', axiom:'#FFB43C', kestrel:'#5AA8FF', hollow:'#F2569B', nullset:'#8C6BD6',
+  },
+  fontFamily: { display:['Chakra Petch','sans-serif'], mono:['IBM Plex Mono','monospace'] },
+}}}
+</script>
+<style>
+  html,body{height:100%}
+  .tnum{font-variant-numeric:tabular-nums}
+  .rule{border-top:1px solid #1C2733}
+  .notch{position:relative;clip-path:polygon(0 0,calc(100% - 12px) 0,100% 12px,100% 100%,0 100%)}
+  .notch::after{content:"";position:absolute;top:0;right:0;width:13px;height:13px;pointer-events:none;
+    background:linear-gradient(45deg,transparent calc(50% - .5px),var(--nc,#2A3946) calc(50% - .5px),var(--nc,#2A3946) calc(50% + .5px),transparent calc(50% + .5px))}
+  .glow-v{border-color:#A8FBFF;box-shadow:0 0 24px -6px rgba(168,251,255,.35)}
+  .lbl{font-size:11px;letter-spacing:.14em;text-transform:uppercase}
+  .dp{display:inline-block;width:7px;height:7px;border-radius:50%;border:1px solid #2A3946;margin-right:3px;vertical-align:middle}
+  .dp.on{background:#9CB0C4;border-color:#9CB0C4}
+  .dp.dead{background:#FF4D6D;border-color:#FF4D6D}
+  ::-webkit-scrollbar{width:8px;height:8px}
+  ::-webkit-scrollbar-track{background:#04060A}
+  ::-webkit-scrollbar-thumb{background:#1C2733}
+  ::-webkit-scrollbar-thumb:hover{background:#2A3946}
+  .row:hover{background:#0E141C}
+  .strike{text-decoration:line-through}
+</style>
+</head>
+<body class="bg-void text-ink font-display antialiased overflow-hidden">
+
+<div class="flex flex-col" style="height:100vh">
+
+  <!-- ══ TOP BAR ══ -->
+  <header class="h-12 flex items-stretch border-b border-line bg-panel shrink-0 select-none">
+    <div class="flex items-center gap-3 px-4 border-r border-line">
+      <svg width="18" height="18" viewBox="0 0 18 18" fill="none"><path d="M9 1 17 15H1L9 1Z" stroke="#A8FBFF" stroke-width="1"/><path d="M9 6.5 13.2 13.5H4.8L9 6.5Z" stroke="#4DE1FF" stroke-width=".8" opacity=".7"/></svg>
+      <span class="lbl font-semibold text-ink">Signal Loss</span>
+    </div>
+    <div class="flex items-center gap-3 px-4"><span class="lbl text-ink">Match Summary</span></div>
+    <div class="flex-1"></div>
+    <div class="flex items-center gap-4 px-4 border-l border-line font-mono text-[11px] text-ink3 tnum">
+      <span>MATCH 8f2a · 2026-08-28 · 14:02</span>
+      <span>ELAPSED 16 M 41 S</span>
+      <span class="text-sys">REPLAYS BYTE-IDENTICAL FROM SEED + PLOTS</span>
+    </div>
+  </header>
+
+  <main class="flex-1 min-h-0 overflow-y-auto">
+
+    <!-- ══ A · PLACEMENT + LADDER ══ -->
+    <section class="grid gap-px bg-line border-b border-line" style="grid-template-columns:1fr 560px">
+
+      <!-- placement hero -->
+      <div class="bg-panel px-6 py-6">
+        <div class="flex items-center gap-3">
+          <span class="w-[22px] h-[22px] grid place-items-center border border-vector/60 text-vector text-[13px] leading-none">▲</span>
+          <span class="font-mono text-[12px] text-vector tnum">VC</span>
+          <span class="lbl text-ink2 font-semibold">Vector — your squad</span>
+          <span class="lbl text-ink3 border border-line px-1.5">Roster: Long dark</span>
+        </div>
+
+        <div class="mt-4 flex items-end gap-5">
+          <div class="flex items-end gap-2">
+            <span class="font-mono font-semibold text-vector tnum leading-[.82]" style="font-size:104px">2</span>
+            <span class="font-display font-bold text-vector tracking-[.06em] leading-none" style="font-size:40px;margin-bottom:8px">ND</span>
+          </div>
+          <div class="pb-3">
+            <div class="font-display font-bold tracking-[.06em] text-ink3" style="font-size:28px">OF 5</div>
+            <div class="mt-1 font-mono text-[12px] text-ink2 tnum">PLACEMENT · 4 SQUADS BELOW YOU</div>
+          </div>
+          <div class="pb-3 pl-5 border-l border-line">
+            <div class="font-mono font-semibold tnum leading-none" style="font-size:30px">ROUND 19</div>
+            <div class="mt-1.5 font-mono text-[12px] text-ink2 tnum">OF 24 EXPECTED · TRACE WOULD HAVE CLOSED AT R24</div>
+          </div>
+        </div>
+
+        <div class="mt-5 border border-line2 bg-panel2 px-4 py-3">
+          <div class="lbl text-ink2 font-semibold">Match ended at round 19 — your last construct was destroyed</div>
+          <div class="mt-1 font-mono text-[12px] text-ink3 tnum leading-[1.7]">
+            VC-2 SPINE-CLASS LOST TO TRACE (10 INTEGRITY) AND VC-3 FERAL-CLASS LOST ITS LAST DIAL STATE TO ◆ KS-2 IN THE SAME ROUND.<br>
+            SIMULTANEOUS-ELIMINATION RULE NOT INVOKED — KESTREL HAD 3 LIVING CONSTRUCTS AT MATCH END.
+          </div>
+        </div>
+
+        <div class="mt-4 grid grid-cols-4 gap-px bg-line border border-line">
+          <div class="bg-panel2 px-3 py-2"><div class="lbl text-ink3">Damage dealt</div><div class="font-mono text-[20px] tnum">114</div></div>
+          <div class="bg-panel2 px-3 py-2"><div class="lbl text-ink3">Damage taken</div><div class="font-mono text-[20px] tnum">131</div></div>
+          <div class="bg-panel2 px-3 py-2"><div class="lbl text-ink3">Kills</div><div class="font-mono text-[20px] tnum">5</div></div>
+          <div class="bg-panel2 px-3 py-2"><div class="lbl text-ink3">Rounds survived</div><div class="font-mono text-[20px] tnum">19</div></div>
+        </div>
+      </div>
+
+      <!-- elimination ladder -->
+      <div class="bg-panel px-5 py-5">
+        <div class="flex items-baseline justify-between mb-3">
+          <h2 class="lbl font-semibold text-ink2">Elimination ladder</h2>
+          <span class="font-mono text-[11px] text-ink3 tnum">SURVIVOR FIRST · FR-21</span>
+        </div>
+
+        <div class="border border-line divide-y divide-line">
+          <!-- 1st -->
+          <div class="flex items-center gap-3 px-3 py-3 bg-panel2">
+            <span class="font-mono text-[13px] text-ink tnum w-[34px]">1ST</span>
+            <span class="w-[22px] h-[22px] grid place-items-center border border-kestrel/60 text-kestrel text-[13px] leading-none">◆</span>
+            <span class="font-mono text-[12px] text-kestrel tnum w-[24px]">KS</span>
+            <span class="text-[15px] font-semibold tracking-[.03em]">KESTREL</span>
+            <span class="flex-1"></span>
+            <span class="lbl text-ok border border-ok/60 px-1.5 py-[2px]">✓ Survivor</span>
+            <span class="font-mono text-[12px] text-ink2 tnum w-[112px] text-right">3 OF 6 LIVING</span>
+          </div>
+          <!-- 2nd — player -->
+          <div class="flex items-center gap-3 px-3 py-3 bg-panel3 border-l-2 border-l-vector">
+            <span class="font-mono text-[13px] text-vector tnum w-[34px]">2ND</span>
+            <span class="w-[22px] h-[22px] grid place-items-center border border-vector/60 text-vector text-[13px] leading-none">▲</span>
+            <span class="font-mono text-[12px] text-vector tnum w-[24px]">VC</span>
+            <span class="text-[15px] font-semibold tracking-[.03em] text-vector">VECTOR</span>
+            <span class="lbl text-vector border border-vector/50 px-1.5 py-[2px]">You</span>
+            <span class="flex-1"></span>
+            <span class="lbl text-bad">✕ Eliminated</span>
+            <span class="font-mono text-[12px] text-ink tnum w-[112px] text-right">ROUND 19</span>
+          </div>
+          <!-- 3rd -->
+          <div class="flex items-center gap-3 px-3 py-3">
+            <span class="font-mono text-[13px] text-ink2 tnum w-[34px]">3RD</span>
+            <span class="w-[22px] h-[22px] grid place-items-center border border-hollow/60 text-hollow text-[13px] leading-none">⬡</span>
+            <span class="font-mono text-[12px] text-hollow tnum w-[24px]">HL</span>
+            <span class="text-[15px] font-medium tracking-[.03em]">HOLLOW</span>
+            <span class="flex-1"></span>
+            <span class="lbl text-ink3">✕ Eliminated</span>
+            <span class="font-mono text-[12px] text-ink2 tnum w-[112px] text-right">ROUND 17</span>
+          </div>
+          <!-- 4th -->
+          <div class="flex items-center gap-3 px-3 py-3">
+            <span class="font-mono text-[13px] text-ink2 tnum w-[34px]">4TH</span>
+            <span class="w-[22px] h-[22px] grid place-items-center border border-nullset/60 text-nullset text-[13px] leading-none">●</span>
+            <span class="font-mono text-[12px] text-nullset tnum w-[24px]">NS</span>
+            <span class="text-[15px] font-medium tracking-[.03em]">NULLSET</span>
+            <span class="flex-1"></span>
+            <span class="lbl text-ink3">✕ Eliminated</span>
+            <span class="font-mono text-[12px] text-ink2 tnum w-[112px] text-right">ROUND 13</span>
+          </div>
+          <!-- 5th -->
+          <div class="flex items-center gap-3 px-3 py-3">
+            <span class="font-mono text-[13px] text-ink2 tnum w-[34px]">5TH</span>
+            <span class="w-[22px] h-[22px] grid place-items-center border border-axiom/60 text-axiom text-[13px] leading-none">■</span>
+            <span class="font-mono text-[12px] text-axiom tnum w-[24px]">AX</span>
+            <span class="text-[15px] font-medium tracking-[.03em]">AXIOM</span>
+            <span class="flex-1"></span>
+            <span class="lbl text-ink3">✕ Eliminated</span>
+            <span class="font-mono text-[12px] text-ink2 tnum w-[112px] text-right">ROUND 7</span>
+          </div>
+        </div>
+
+        <!-- timeline rail -->
+        <div class="mt-3">
+          <svg viewBox="0 0 520 62" class="w-full">
+            <g stroke="#1C2733" stroke-width="1"><path d="M10 44H510"/></g>
+            <g stroke="#42566A" stroke-width="1">
+              <path d="M10 40v8M78 40v8M146 40v8M214 40v8M282 40v8M350 40v8M418 40v8M486 40v8"/>
+            </g>
+            <text x="10" y="60" fill="#6B8096" font-family="IBM Plex Mono" font-size="10">R1</text>
+            <text x="200" y="60" fill="#6B8096" font-family="IBM Plex Mono" font-size="10">R10</text>
+            <text x="404" y="60" fill="#6B8096" font-family="IBM Plex Mono" font-size="10">R19</text>
+            <text x="470" y="60" fill="#42566A" font-family="IBM Plex Mono" font-size="10">R24</text>
+            <!-- eliminations -->
+            <g font-family="IBM Plex Mono" font-size="13" text-anchor="middle">
+              <line x1="140" y1="20" x2="140" y2="44" stroke="#FFB43C" stroke-width="1"/><text x="140" y="16" fill="#FFB43C">■</text>
+              <line x1="270" y1="20" x2="270" y2="44" stroke="#8C6BD6" stroke-width="1"/><text x="270" y="16" fill="#8C6BD6">●</text>
+              <line x1="357" y1="20" x2="357" y2="44" stroke="#F2569B" stroke-width="1"/><text x="357" y="16" fill="#F2569B">⬡</text>
+              <line x1="401" y1="20" x2="401" y2="44" stroke="#A8FBFF" stroke-width="1.4"/><text x="401" y="16" fill="#A8FBFF">▲</text>
+            </g>
+            <text x="406" y="34" fill="#6B8096" font-family="IBM Plex Mono" font-size="10">MATCH END</text>
+          </svg>
+        </div>
+      </div>
+    </section>
+
+    <!-- ══ B · CONSTRUCT TABLE + POOL EFFICIENCY ══ -->
+    <section class="grid gap-px bg-line border-b border-line" style="grid-template-columns:1fr 480px">
+
+      <!-- per-construct table -->
+      <div class="bg-panel px-5 py-5">
+        <div class="flex items-baseline justify-between mb-3">
+          <h2 class="lbl font-semibold text-ink2">Per-construct — VECTOR</h2>
+          <span class="font-mono text-[11px] text-ink3 tnum">6 CONSTRUCTS · 98 / 100 PTS · CMD SYSOP</span>
+        </div>
+
+        <table class="w-full font-mono text-[12px] tnum">
+          <thead>
+            <tr class="text-ink3 lbl text-left border-b border-line2">
+              <th class="font-normal py-2 w-[52px]">ID</th>
+              <th class="font-normal py-2">Construct</th>
+              <th class="font-normal py-2 w-[66px] text-right">Dealt</th>
+              <th class="font-normal py-2 w-[66px] text-right">Taken</th>
+              <th class="font-normal py-2 w-[70px] text-right">Rounds</th>
+              <th class="font-normal py-2 pl-4 w-[112px]">Final dial</th>
+              <th class="font-normal py-2 w-[268px]">Fate</th>
+            </tr>
+          </thead>
+          <tbody class="text-ink2">
+            <tr class="row border-b border-line">
+              <td class="py-2 text-vector">VC-1</td>
+              <td class="py-2 text-ink whitespace-nowrap">RELAY-CLASS <span class="lbl text-vector border border-vector/50 px-1 ml-1">◆ CMD</span></td>
+              <td class="py-2 text-right text-ink4">0</td>
+              <td class="py-2 text-right">22</td>
+              <td class="py-2 text-right">16</td>
+              <td class="py-2 pl-4"><span class="dp dead"></span><span class="dp dead"></span><span class="dp dead"></span><span class="dp dead"></span> <span class="text-bad">4/4</span></td>
+              <td class="py-2 text-bad">✕ R16 · DIAL EXHAUSTED · ◆ KS-1</td>
+            </tr>
+            <tr class="row border-b border-line">
+              <td class="py-2 text-vector">VC-2</td>
+              <td class="py-2 text-ink">SPINE-CLASS</td>
+              <td class="py-2 text-right text-ink font-semibold">63</td>
+              <td class="py-2 text-right">37</td>
+              <td class="py-2 text-right">19</td>
+              <td class="py-2 pl-4"><span class="dp on"></span><span class="dp on"></span><span class="dp on"></span><span class="dp on"></span><span class="dp"></span> <span class="text-ink2">4/5</span></td>
+              <td class="py-2 text-bad">✕ R19 · TRACE · 10 INTEGRITY</td>
+            </tr>
+            <tr class="row border-b border-line">
+              <td class="py-2 text-vector">VC-3</td>
+              <td class="py-2 text-ink">FERAL-CLASS</td>
+              <td class="py-2 text-right text-ink font-semibold">51</td>
+              <td class="py-2 text-right">30</td>
+              <td class="py-2 text-right">19</td>
+              <td class="py-2 pl-4"><span class="dp dead"></span><span class="dp dead"></span><span class="dp dead"></span><span class="dp dead"></span><span class="dp dead"></span> <span class="text-bad">5/5</span></td>
+              <td class="py-2 text-bad">✕ R19 · DIAL EXHAUSTED · ◆ KS-2</td>
+            </tr>
+            <tr class="row border-b border-line">
+              <td class="py-2 text-vector">VC-4</td>
+              <td class="py-2 text-ink">CIPHER-CLASS</td>
+              <td class="py-2 text-right text-ink4">0</td>
+              <td class="py-2 text-right">16</td>
+              <td class="py-2 text-right">12</td>
+              <td class="py-2 pl-4"><span class="dp dead"></span><span class="dp dead"></span><span class="dp dead"></span><span class="dp dead"></span> <span class="text-bad">4/4</span></td>
+              <td class="py-2 text-bad">✕ R12 · DIAL EXHAUSTED · ⬡ HL-1</td>
+            </tr>
+            <tr class="row border-b border-line">
+              <td class="py-2 text-vector">VC-5</td>
+              <td class="py-2 text-ink">RELAY-CLASS</td>
+              <td class="py-2 text-right text-ink4">0</td>
+              <td class="py-2 text-right">14</td>
+              <td class="py-2 text-right">8</td>
+              <td class="py-2 pl-4"><span class="dp dead"></span><span class="dp dead"></span><span class="dp dead"></span><span class="dp dead"></span> <span class="text-bad">4/4</span></td>
+              <td class="py-2 text-bad">✕ R8 · DIAL EXHAUSTED · ● NS-4</td>
+            </tr>
+            <tr class="row border-b border-line2">
+              <td class="py-2 text-vector">VC-6</td>
+              <td class="py-2 text-ink">CIPHER-CLASS</td>
+              <td class="py-2 text-right text-ink4">0</td>
+              <td class="py-2 text-right">12</td>
+              <td class="py-2 text-right">4</td>
+              <td class="py-2 pl-4"><span class="dp on"></span><span class="dp on"></span><span class="dp"></span><span class="dp"></span> <span class="text-ink2">2/4</span></td>
+              <td class="py-2 text-bad">✕ R4 · TRACE · 4 INTEGRITY</td>
+            </tr>
+            <tr>
+              <td class="py-2 text-ink3 lbl" colspan="2">Squad total</td>
+              <td class="py-2 text-right text-ink font-semibold">114</td>
+              <td class="py-2 text-right text-ink font-semibold">131</td>
+              <td class="py-2 pl-4 text-right text-ink3">78 CST-RD</td>
+              <td class="py-2 pl-4 text-ink3" colspan="2">2 LOST TO TRACE · 4 LOST TO DIAL EXHAUSTION</td>
+            </tr>
+          </tbody>
+        </table>
+
+        <div class="mt-3 border border-warn/40 bg-warn/[.04] px-3 py-2 flex items-start gap-2">
+          <span class="text-warn text-[13px] leading-none mt-[1px]">!</span>
+          <div class="text-[12px] text-ink2 leading-[1.6]">
+            VC-1, VC-4, VC-5 and VC-6 carry no SPIKE or WIPE mount — their <span class="font-mono">0</span> is the roster, not the play.
+            <span class="text-ink3">All 114 damage came from two SPIKE-NEEDLE mounts (DMG 5 / RNG 14) on VC-2 and VC-3.</span>
+          </div>
+        </div>
+
+        <!-- damage exchange -->
+        <div class="mt-4">
+          <div class="flex items-baseline justify-between mb-2">
+            <h3 class="lbl font-semibold text-ink2">Damage exchange — by squad</h3>
+            <span class="font-mono text-[11px] text-ink3 tnum">DEALT 114 · TAKEN 131</span>
+          </div>
+          <div class="border border-line divide-y divide-line">
+
+            <div class="grid items-center gap-2 px-3 py-2" style="grid-template-columns:118px 1fr 34px 34px 1fr">
+              <div class="flex items-center gap-2">
+                <span class="w-[18px] h-[18px] grid place-items-center border border-axiom/60 text-axiom text-[11px] leading-none">■</span>
+                <span class="font-mono text-[11px] text-axiom tnum">AX</span>
+                <span class="text-[12px] tracking-[.03em]">AXIOM</span>
+              </div>
+              <div class="flex justify-end"><div class="h-3 bg-sys/35 border-r border-sys" style="width:62%"></div></div>
+              <div class="font-mono text-[12px] tnum text-right text-ink">31</div>
+              <div class="font-mono text-[12px] tnum text-right text-ink2">18</div>
+              <div><div class="h-3 bg-bad/25 border-r border-bad" style="width:36%"></div></div>
+            </div>
+
+            <div class="grid items-center gap-2 px-3 py-2" style="grid-template-columns:118px 1fr 34px 34px 1fr">
+              <div class="flex items-center gap-2">
+                <span class="w-[18px] h-[18px] grid place-items-center border border-kestrel/60 text-kestrel text-[11px] leading-none">◆</span>
+                <span class="font-mono text-[11px] text-kestrel tnum">KS</span>
+                <span class="text-[12px] tracking-[.03em]">KESTREL</span>
+              </div>
+              <div class="flex justify-end"><div class="h-3 bg-sys/35 border-r border-sys" style="width:44%"></div></div>
+              <div class="font-mono text-[12px] tnum text-right text-ink">22</div>
+              <div class="font-mono text-[12px] tnum text-right text-bad">47</div>
+              <div><div class="h-3 bg-bad/25 border-r border-bad" style="width:94%"></div></div>
+            </div>
+
+            <div class="grid items-center gap-2 px-3 py-2" style="grid-template-columns:118px 1fr 34px 34px 1fr">
+              <div class="flex items-center gap-2">
+                <span class="w-[18px] h-[18px] grid place-items-center border border-hollow/60 text-hollow text-[11px] leading-none">⬡</span>
+                <span class="font-mono text-[11px] text-hollow tnum">HL</span>
+                <span class="text-[12px] tracking-[.03em]">HOLLOW</span>
+              </div>
+              <div class="flex justify-end"><div class="h-3 bg-sys/35 border-r border-sys" style="width:68%"></div></div>
+              <div class="font-mono text-[12px] tnum text-right text-ink">34</div>
+              <div class="font-mono text-[12px] tnum text-right text-ink2">29</div>
+              <div><div class="h-3 bg-bad/25 border-r border-bad" style="width:58%"></div></div>
+            </div>
+
+            <div class="grid items-center gap-2 px-3 py-2" style="grid-template-columns:118px 1fr 34px 34px 1fr">
+              <div class="flex items-center gap-2">
+                <span class="w-[18px] h-[18px] grid place-items-center border border-nullset/60 text-nullset text-[11px] leading-none">●</span>
+                <span class="font-mono text-[11px] text-nullset tnum">NS</span>
+                <span class="text-[12px] tracking-[.03em]">NULLSET</span>
+              </div>
+              <div class="flex justify-end"><div class="h-3 bg-sys/35 border-r border-sys" style="width:54%"></div></div>
+              <div class="font-mono text-[12px] tnum text-right text-ink">27</div>
+              <div class="font-mono text-[12px] tnum text-right text-ink2">22</div>
+              <div><div class="h-3 bg-bad/25 border-r border-bad" style="width:44%"></div></div>
+            </div>
+
+            <div class="grid items-center gap-2 px-3 py-2" style="grid-template-columns:118px 1fr 34px 34px 1fr">
+              <div class="flex items-center gap-2">
+                <span class="w-[18px] h-[18px] grid place-items-center border border-trace/60 text-trace text-[11px] leading-none">▨</span>
+                <span class="font-mono text-[11px] text-trace tnum">TR</span>
+                <span class="text-[12px] tracking-[.03em]">TRACE</span>
+              </div>
+              <div class="flex justify-end"><div class="h-3" style="width:0%"></div></div>
+              <div class="font-mono text-[12px] tnum text-right text-ink4">—</div>
+              <div class="font-mono text-[12px] tnum text-right text-ink2">15</div>
+              <div><div class="h-3 bg-trace/25 border-r border-trace" style="width:30%"></div></div>
+            </div>
+
+            <div class="grid items-center gap-2 px-3 py-1.5 bg-panel2" style="grid-template-columns:118px 1fr 34px 34px 1fr">
+              <span class="lbl text-ink3">Scale</span>
+              <span class="font-mono text-[11px] text-ink3 tnum text-right">◀ YOU DEALT</span>
+              <span></span><span></span>
+              <span class="font-mono text-[11px] text-ink3 tnum">YOU TOOK ▶ · BAR MAX 50</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- pool efficiency -->
+      <div class="bg-panel px-5 py-5">
+        <div class="flex items-baseline justify-between mb-3">
+          <h2 class="lbl font-semibold text-ink2">Pool efficiency</h2>
+          <span class="font-mono text-[11px] text-ink3 tnum">FR-28 · ZERO CARRYOVER</span>
+        </div>
+
+        <div class="grid grid-cols-3 gap-px bg-line border border-line">
+          <div class="bg-panel2 px-3 py-3">
+            <div class="lbl text-ink3">Granted</div>
+            <div class="font-mono text-[30px] tnum leading-none mt-1">52</div>
+          </div>
+          <div class="bg-panel2 px-3 py-3">
+            <div class="lbl text-ink3">Spent</div>
+            <div class="font-mono text-[30px] tnum leading-none mt-1 text-ok">46</div>
+          </div>
+          <div class="bg-panel2 px-3 py-3">
+            <div class="lbl text-warn">Wasted</div>
+            <div class="font-mono text-[30px] tnum leading-none mt-1 text-warn">6</div>
+          </div>
+        </div>
+
+        <div class="mt-2 font-mono text-[11px] text-ink3 tnum leading-[1.7]">
+          POOL = 1 BASE + 1 CMD (SYSOP) + ⌊LIVING / 3⌋ · EFFICIENCY 46 / 52 = 88.5%
+        </div>
+
+        <!-- split -->
+        <div class="mt-4">
+          <div class="flex items-baseline justify-between">
+            <span class="lbl text-ink2">Spend split</span>
+            <span class="font-mono text-[11px] text-ink3 tnum">46 POINTS · 28 + 18</span>
+          </div>
+          <div class="mt-2 flex h-6 border border-line">
+            <div class="bg-sys/25 border-r border-sys flex items-center px-2" style="width:61%">
+              <span class="font-mono text-[11px] text-ink tnum">⌐ POSTURES 28</span>
+            </div>
+            <div class="bg-warn/20 flex items-center px-2" style="width:39%">
+              <span class="font-mono text-[11px] text-ink tnum">» CALLED 18</span>
+            </div>
+          </div>
+          <div class="mt-1.5 flex justify-between font-mono text-[11px] text-ink3 tnum">
+            <span>61% DEFENSIVE · 47 CONSTRUCT-ROUNDS POSTURED</span>
+            <span>39% OFFENSIVE · 18 CALLED SHOTS</span>
+          </div>
+        </div>
+
+        <!-- sparkline -->
+        <div class="mt-5">
+          <div class="flex items-baseline justify-between">
+            <span class="lbl text-ink2">Spent vs wasted · per round</span>
+            <span class="font-mono text-[11px] text-ink3 tnum">19 ROUNDS</span>
+          </div>
+          <div class="mt-2 border border-line bg-panel2 px-2 pt-2">
+            <svg viewBox="0 0 436 118" class="w-full">
+              <!-- gridlines -->
+              <g stroke="#1C2733" stroke-width="1">
+                <path d="M6 88H430M6 74H430M6 60H430M6 46H430M6 32H430M6 18H430"/>
+              </g>
+              <text x="0" y="22" fill="#42566A" font-family="IBM Plex Mono" font-size="9">5</text>
+              <text x="0" y="92" fill="#42566A" font-family="IBM Plex Mono" font-size="9">0</text>
+
+              <!-- bars: spent (sys) + wasted (warn) -->
+              <g fill="#4DE1FF" fill-opacity=".55">
+                <rect x="8"   y="32" width="16" height="56"/>
+                <rect x="30"  y="18" width="16" height="70"/>
+                <rect x="52"  y="18" width="16" height="70"/>
+                <rect x="74"  y="18" width="16" height="70"/>
+                <rect x="96"  y="46" width="16" height="42"/>
+                <rect x="118" y="32" width="16" height="56"/>
+                <rect x="140" y="32" width="16" height="56"/>
+                <rect x="162" y="32" width="16" height="56"/>
+                <rect x="184" y="46" width="16" height="42"/>
+                <rect x="206" y="32" width="16" height="56"/>
+                <rect x="228" y="32" width="16" height="56"/>
+                <rect x="250" y="32" width="16" height="56"/>
+                <rect x="272" y="46" width="16" height="42"/>
+                <rect x="294" y="32" width="16" height="56"/>
+                <rect x="316" y="32" width="16" height="56"/>
+                <rect x="338" y="46" width="16" height="42"/>
+                <rect x="382" y="74" width="16" height="14"/>
+              </g>
+              <g fill="#FFB43C">
+                <rect x="8"   y="18" width="16" height="14"/>
+                <rect x="96"  y="32" width="16" height="14"/>
+                <rect x="184" y="32" width="16" height="14"/>
+                <rect x="272" y="32" width="16" height="14"/>
+                <rect x="338" y="32" width="16" height="14"/>
+                <rect x="360" y="74" width="16" height="14"/>
+                <rect x="404" y="74" width="16" height="14"/>
+              </g>
+
+              <!-- commander loss marker -->
+              <line x1="357" y1="10" x2="357" y2="92" stroke="#FF4D6D" stroke-width="1" stroke-dasharray="3 3"/>
+              <text x="352" y="9" text-anchor="end" fill="#FF4D6D" font-family="IBM Plex Mono" font-size="9">CMD LOST R16 — POOL COLLAPSES TO 1</text>
+
+              <!-- baseline + ticks -->
+              <line x1="6" y1="88" x2="430" y2="88" stroke="#2A3946" stroke-width="1"/>
+              <g stroke="#42566A" stroke-width="1">
+                <path d="M16 88v4M104 88v4M214 88v4M324 88v4M412 88v4"/>
+              </g>
+              <g fill="#6B8096" font-family="IBM Plex Mono" font-size="9" text-anchor="middle">
+                <text x="16" y="103">R1</text><text x="104" y="103">R5</text><text x="214" y="103">R10</text>
+                <text x="324" y="103">R15</text><text x="412" y="103">R19</text>
+              </g>
+              <!-- legend -->
+              <g font-family="IBM Plex Mono" font-size="9">
+                <rect x="6" y="110" width="8" height="6" fill="#4DE1FF" fill-opacity=".55"/><text x="18" y="116" fill="#6B8096">SPENT 64</text>
+                <rect x="86" y="110" width="8" height="6" fill="#FFB43C"/><text x="98" y="116" fill="#6B8096">WASTED 7</text>
+                <text x="180" y="116" fill="#6B8096">EACH GRIDLINE = 1 POINT</text>
+              </g>
+            </svg>
+          </div>
+        </div>
+
+        <div class="mt-3 border border-warn/40 bg-warn/[.04] px-3 py-2 flex items-start gap-2">
+          <span class="text-warn text-[13px] leading-none mt-[1px]">!</span>
+          <div class="text-[12px] text-ink2 leading-[1.6]">
+            7 points expired unspent. There is no carryover.
+            <span class="text-ink3">3 of them fell in R16–R19 after your commander died and the pool collapsed to 1 — the other 4 were single points left on the table in full-pool rounds (R1, R5, R9, R13).</span>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ══ C · REPRODUCIBILITY ══ -->
+    <section class="px-5 py-5">
+      <div class="flex items-baseline justify-between mb-3">
+        <h2 class="lbl font-semibold text-ink2">Reproducibility</h2>
+        <span class="font-mono text-[11px] text-ink3 tnum">FR-21 · EVERY ROSTER IN THIS MATCH IS COPYABLE, INCLUDING ALL FOUR AI</span>
+      </div>
+
+      <div class="grid grid-cols-4 gap-px bg-line border border-line mb-3">
+        <div class="bg-panel px-4 py-2.5"><div class="lbl text-ink3">Seed</div><div class="font-mono text-[16px] tnum tracking-[.08em]">7K3M-QX92-4LDA</div></div>
+        <div class="bg-panel px-4 py-2.5"><div class="lbl text-ink3">Budget</div><div class="font-mono text-[16px] tnum">100 PTS</div></div>
+        <div class="bg-panel px-4 py-2.5"><div class="lbl text-ink3">Archetype</div><div class="font-mono text-[16px] tnum">ASYMMETRIC RUINS <span class="text-ink3 text-[11px]">← ANY</span></div></div>
+        <div class="bg-panel px-4 py-2.5"><div class="lbl text-ink3">AI tier</div><div class="font-mono text-[16px] tnum">TIER 2 · MODELLING</div></div>
+      </div>
+
+      <div class="border border-line divide-y divide-line bg-panel">
+
+        <div class="px-4 py-3 grid gap-3 items-start" style="grid-template-columns:200px 1fr 96px">
+          <div class="flex items-center gap-2">
+            <span class="w-[20px] h-[20px] grid place-items-center border border-vector/60 text-vector text-[12px] leading-none">▲</span>
+            <span class="font-mono text-[11px] text-vector tnum">VC</span>
+            <span class="text-[13px] font-semibold tracking-[.03em]">LONG DARK</span>
+            <span class="lbl text-ink3 border border-line px-1">Yours</span>
+          </div>
+          <div class="font-mono text-[11px] text-ink2 leading-[1.7] bg-panel3 border border-line px-2 py-1.5" style="word-break:break-all">SLR1:100:8f2a-QmVjdG9yLVJlbGF5LTI1LVNQRFJGVC1ETUVDSE8tT1ZDTEs.U3BpbmUtMjEtSUNFTEFULU5VTEwtU1BLTkRM.RmVyYWwtMTktU1BLTkRMLU5VTEw.Q2lwaGVyLTEyLU5VTEwtRE1FQ0hP.UmVsYXktMTItU1BEUkZULU5VTEw.Q2lwaGVyLTktTlVMTC1OVUxM-x91c</div>
+          <button class="copy lbl text-sys border border-sys/60 px-3 py-1.5 hover:bg-sys/10 w-full">Copy</button>
+        </div>
+
+        <div class="px-4 py-3 grid gap-3 items-start" style="grid-template-columns:200px 1fr 96px">
+          <div class="flex items-center gap-2">
+            <span class="w-[20px] h-[20px] grid place-items-center border border-kestrel/60 text-kestrel text-[12px] leading-none">◆</span>
+            <span class="font-mono text-[11px] text-kestrel tnum">KS</span>
+            <span class="text-[13px] font-semibold tracking-[.03em]">KESTREL</span>
+            <span class="lbl text-ok border border-ok/60 px-1">1st</span>
+          </div>
+          <div class="font-mono text-[11px] text-ink2 leading-[1.7] bg-panel3 border border-line px-2 py-1.5" style="word-break:break-all">SLR1:100:8f2a-S2VzdHJlbC1DaXBoZXItMTktU1BGTVNLLURNRUNITy1DVVJJRVI.S2lsbi0yNy1TUEtOREwtTlVMTC1XUE5VTEw.UmVsYXktMTUtU1BEUkZULURNRUNITw.TGF0Y2gtMTctSUNFTEFULURNRUNITw.UmVsYXktMTItU1BEUkZULU5VTEw.Q2lwaGVyLTEwLU5VTEwtRE1FQ0hP-4a7f</div>
+          <button class="copy lbl text-sys border border-sys/60 px-3 py-1.5 hover:bg-sys/10 w-full">Copy</button>
+        </div>
+
+        <div class="px-4 py-3 grid gap-3 items-start" style="grid-template-columns:200px 1fr 96px">
+          <div class="flex items-center gap-2">
+            <span class="w-[20px] h-[20px] grid place-items-center border border-hollow/60 text-hollow text-[12px] leading-none">⬡</span>
+            <span class="font-mono text-[11px] text-hollow tnum">HL</span>
+            <span class="text-[13px] font-semibold tracking-[.03em]">HOLLOW</span>
+            <span class="lbl text-ink3 border border-line px-1">3rd</span>
+          </div>
+          <div class="font-mono text-[11px] text-ink2 leading-[1.7] bg-panel3 border border-line px-2 py-1.5" style="word-break:break-all">SLR1:100:8f2a-SG9sbG93LUZlcmFsLTMzLVNQS01BVUwtU1BGTVNLLU9WQ0xL.U3BpbmUtMjUtSUNFTEFULUlDRUxBVC1TUEtOREw.RmVyYWwtMjMtU1BLTkRMLVNQRFJGVA.TGF0Y2gtMTYtSUNFTEFULU5VTEw-6c02</div>
+          <button class="copy lbl text-sys border border-sys/60 px-3 py-1.5 hover:bg-sys/10 w-full">Copy</button>
+        </div>
+
+        <div class="px-4 py-3 grid gap-3 items-start" style="grid-template-columns:200px 1fr 96px">
+          <div class="flex items-center gap-2">
+            <span class="w-[20px] h-[20px] grid place-items-center border border-nullset/60 text-nullset text-[12px] leading-none">●</span>
+            <span class="font-mono text-[11px] text-nullset tnum">NS</span>
+            <span class="text-[13px] font-semibold tracking-[.03em]">NULLSET</span>
+            <span class="lbl text-ink3 border border-line px-1">4th</span>
+          </div>
+          <div class="font-mono text-[11px] text-ink2 leading-[1.7] bg-panel3 border border-line px-2 py-1.5" style="word-break:break-all">SLR1:100:8f2a-TnVsbHNldC1SZWxheS0yMS1TUERSRlQtRE1FQ0hPLVNZU09Q.S2lsbi0zNS1TUEtNQVVMLU5VTEwtV1BOVUxM.U3BpbmUtMTctTlVMTC1OVUxMLVNQS05ETA.TGF0Y2gtMTctSUNFTEFULURNRUNITw.Q2lwaGVyLTEwLU5VTEwtRE1FQ0hP-b330</div>
+          <button class="copy lbl text-sys border border-sys/60 px-3 py-1.5 hover:bg-sys/10 w-full">Copy</button>
+        </div>
+
+        <div class="px-4 py-3 grid gap-3 items-start" style="grid-template-columns:200px 1fr 96px">
+          <div class="flex items-center gap-2">
+            <span class="w-[20px] h-[20px] grid place-items-center border border-axiom/60 text-axiom text-[12px] leading-none">■</span>
+            <span class="font-mono text-[11px] text-axiom tnum">AX</span>
+            <span class="text-[13px] font-semibold tracking-[.03em]">AXIOM</span>
+            <span class="lbl text-ink3 border border-line px-1">5th</span>
+          </div>
+          <div class="font-mono text-[11px] text-ink2 leading-[1.7] bg-panel3 border border-line px-2 py-1.5" style="word-break:break-all">SLR1:100:8f2a-QXhpb20tU3BpbmUtMzYtSUNFTEFULUlDRUxBVC1TUEtNQVVMLUJMV1JL.RmVyYWwtMjMtU1BLTkRMLVNQRFJGVA.TGF0Y2gtMTctSUNFTEFULURNRUNITw.UmVsYXktMTUtU1BEUkZULURNRUNITw.Q2lwaGVyLTktTlVMTC1OVUxM-2d18</div>
+          <button class="copy lbl text-sys border border-sys/60 px-3 py-1.5 hover:bg-sys/10 w-full">Copy</button>
+        </div>
+      </div>
+
+      <div class="mt-2 font-mono text-[11px] text-ink3 tnum leading-[1.7]">
+        PASTE ANY OF THESE INTO BUILD ZONE → IMPORT. THE WINNING KESTREL ROSTER OPENS IN THE COMPOSER LIKE ANY OTHER.<br>
+        STRINGS CARRY THE ROSTER ONLY — NO PERSONAL DATA, NO IDENTIFIERS, NO MATCH HISTORY.
+      </div>
+    </section>
+
+    <div class="h-4"></div>
+  </main>
+
+  <!-- ══ ACTION BAR ══ -->
+  <footer class="h-16 shrink-0 border-t border-line bg-panel flex items-center px-5 gap-4">
+    <div class="flex items-center gap-3">
+      <span class="lbl text-ink font-semibold border border-line2 px-2 py-1">No progression — rosters are unchanged by play</span>
+      <span class="font-mono text-[11px] text-ink3 tnum">NO XP · NO UNLOCKS · NO PERSISTENT DAMAGE</span>
+    </div>
+    <div class="flex-1"></div>
+    <a href="01-build-collection.html" class="lbl text-ink2 border border-line2 px-4 py-2.5 hover:bg-panel2">Build zone</a>
+    <button class="lbl text-ink border border-line2 px-4 py-2.5 hover:bg-panel2">Rematch · new seed</button>
+    <button class="lbl bg-sys text-void font-semibold px-5 py-2.5 notch text-[13px]" style="--nc:#4DE1FF">Rematch · same seed</button>
+  </footer>
+
+  <div class="h-[30px] shrink-0"></div>
+</div>
+
+<!-- ══ MOCK TAG ══ -->
+<div class="fixed bottom-0 left-0 z-50 flex items-stretch border-t border-r border-line bg-panel">
+  <a href="index.html" class="px-3 py-[7px] lbl text-sys border-r border-line hover:bg-panel2">← All mocks</a>
+  <span class="px-3 py-[7px] font-mono text-[11px] text-ink3 tnum">MOCK · SIGNAL LOSS · MATCH SUMMARY</span>
+</div>
+
+<script>
+  document.querySelectorAll('.copy').forEach(function(b){
+    b.addEventListener('click', function(){
+      var o = b.textContent; b.textContent = '✓ Copied';
+      setTimeout(function(){ b.textContent = o; }, 1200);
+    });
+  });
+</script>
+</body>
+</html>

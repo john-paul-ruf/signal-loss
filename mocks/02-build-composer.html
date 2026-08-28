@@ -1,0 +1,491 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>COMPOSER — SIGNAL LOSS</title>
+<script src="https://cdn.tailwindcss.com"></script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Chakra+Petch:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<script>
+tailwind.config = { theme: { extend: {
+  colors: {
+    void:'#04060A', panel:'#090D13', panel2:'#0E141C', panel3:'#141C27',
+    line:'#1C2733', line2:'#2A3946',
+    ink:'#E8F2FB', ink2:'#9CB0C4', ink3:'#6B8096', ink4:'#42566A',
+    sys:'#4DE1FF', ok:'#4BE8A4', warn:'#FFB43C', bad:'#FF4D6D', trace:'#FF3B6B',
+    vector:'#A8FBFF', axiom:'#FFB43C', kestrel:'#5AA8FF', hollow:'#F2569B', nullset:'#8C6BD6',
+  },
+  fontFamily: { display:['Chakra Petch','sans-serif'], mono:['IBM Plex Mono','monospace'] },
+}}}
+</script>
+<style>
+  html,body{height:100%}
+  .notch{clip-path:polygon(0 0, calc(100% - 10px) 0, 100% 10px, 100% 100%, 10px 100%, 0 calc(100% - 10px))}
+  .tnum{font-variant-numeric:tabular-nums}
+  .glow2{box-shadow:0 0 12px -2px rgba(77,225,255,.45)}
+  .glowbad{box-shadow:0 0 12px -2px rgba(255,77,109,.45)}
+  .kbd{font-family:'IBM Plex Mono',monospace;font-size:10px;border:1px solid #2A3946;padding:1px 4px;color:#6B8096}
+  .lbl{font-size:10px;letter-spacing:.16em;text-transform:uppercase}
+  ::-webkit-scrollbar{width:8px}
+  ::-webkit-scrollbar-track{background:#04060A}
+  ::-webkit-scrollbar-thumb{background:#1C2733}
+</style>
+</head>
+<body class="bg-void text-ink font-display antialiased overflow-hidden">
+
+<div class="h-screen min-h-[720px] flex flex-col">
+
+  <!-- ══════════ TOP BAR ══════════ -->
+  <header class="h-[54px] shrink-0 border-b border-line bg-panel flex items-center px-4 gap-4">
+    <a href="01-build-collection.html" class="lbl text-ink3 hover:text-sys">← COLLECTION</a>
+    <div class="w-px h-6 bg-line"></div>
+    <span class="lbl text-ink2">BUILD ZONE · COMPOSER</span>
+    <div class="w-px h-6 bg-line"></div>
+    <div class="flex items-center gap-2">
+      <span class="lbl text-ink4">ROSTER</span>
+      <span class="text-[13px] font-600 tracking-wide">NINE THREADS</span>
+      <span class="font-mono text-[10px] text-ink3 border border-line px-1.5 py-[1px]">100 PT</span>
+    </div>
+    <div class="w-px h-6 bg-line"></div>
+    <div class="flex items-center gap-2">
+      <span class="lbl text-ink4">CONSTRUCT</span>
+      <input value="LATCHKEY" class="bg-panel3 border border-line2 focus:border-sys outline-none px-2 h-7 text-[13px] tracking-wide w-[160px]">
+    </div>
+    <div class="ml-auto flex items-center gap-2">
+      <span class="lbl text-ink4">SEARCH <span class="kbd ml-1">/</span></span>
+      <a href="03-catalog.html" class="h-7 px-3 border border-line2 text-ink2 hover:border-sys hover:text-ink text-[11px] tracking-[.14em] flex items-center">CODEX</a>
+    </div>
+  </header>
+
+  <!-- ══════════ MAIN 3 COLUMNS ══════════ -->
+  <div class="flex-1 flex min-h-0">
+
+    <!-- ───── 1. CHASSIS ───── -->
+    <aside class="w-[286px] shrink-0 border-r border-line bg-panel flex flex-col min-h-0">
+      <div class="h-9 shrink-0 px-3 flex items-center justify-between border-b border-line">
+        <span class="lbl text-ink2">1 · CHASSIS</span>
+        <span class="font-mono text-[10px] text-ink4">7 IN CATALOG</span>
+      </div>
+      <div class="px-3 py-2 border-b border-line">
+        <input placeholder="FILTER CHASSIS…" class="w-full bg-panel2 border border-line focus:border-sys outline-none px-2 h-7 text-[11px] tracking-wide placeholder:text-ink4">
+      </div>
+      <div class="flex-1 overflow-y-auto">
+
+        <!-- selected -->
+        <div class="border-b border-line bg-panel3 border-l-2 border-l-sys px-3 py-2.5">
+          <div class="flex items-center gap-2">
+            <span class="text-[13px] font-700 tracking-wide">SPINE-CLASS</span>
+            <span class="font-mono text-[12px] text-sys ml-auto tnum">12</span>
+          </div>
+          <div class="flex items-center gap-1 mt-1.5">
+            <span class="font-mono text-[9px] text-ink3 border border-line2 px-1">ICE</span>
+            <span class="font-mono text-[9px] text-ink3 border border-line2 px-1">ICE</span>
+            <span class="font-mono text-[9px] text-ink3 border border-line2 px-1">SPIKE</span>
+          </div>
+          <div class="flex items-center gap-3 mt-1.5 font-mono text-[10px] text-ink3 tnum">
+            <span>MOVE 9.0</span><span>FOOT 1.0</span>
+          </div>
+          <div class="flex items-center gap-2 mt-1.5">
+            <span class="lbl text-ink4">DEGRADE</span>
+            <svg viewBox="0 0 60 14" class="w-[60px] h-[14px]"><polyline points="2,3 16,4 30,7 44,10 58,12" fill="none" stroke="#6B8096" stroke-width="1.2"/></svg>
+          </div>
+        </div>
+
+        <div class="border-b border-line px-3 py-2.5 hover:bg-panel2 cursor-pointer">
+          <div class="flex items-center gap-2"><span class="text-[13px] font-600 tracking-wide">RELAY-CLASS</span><span class="font-mono text-[12px] text-ink2 ml-auto tnum">8</span></div>
+          <div class="flex items-center gap-1 mt-1.5">
+            <span class="font-mono text-[9px] text-ink3 border border-line2 px-1">SPOOFER</span>
+            <span class="font-mono text-[9px] text-ink3 border border-line2 px-1">DAEMON</span>
+          </div>
+          <div class="flex items-center gap-3 mt-1.5 font-mono text-[10px] text-ink3 tnum"><span>MOVE 11.0</span><span>FOOT 0.8</span></div>
+          <div class="flex items-center gap-2 mt-1.5"><span class="lbl text-ink4">DEGRADE</span>
+            <svg viewBox="0 0 60 14" class="w-[60px] h-[14px]"><polyline points="2,3 16,5 30,7 44,10 58,12" fill="none" stroke="#42566A" stroke-width="1.2"/></svg></div>
+        </div>
+
+        <div class="border-b border-line px-3 py-2.5 hover:bg-panel2 cursor-pointer">
+          <div class="flex items-center gap-2"><span class="text-[13px] font-600 tracking-wide">CIPHER-CLASS</span><span class="font-mono text-[12px] text-ink2 ml-auto tnum">9</span></div>
+          <div class="flex items-center gap-1 mt-1.5">
+            <span class="font-mono text-[9px] text-ink3 border border-line2 px-1">SPOOFER</span>
+            <span class="font-mono text-[9px] text-ink3 border border-line2 px-1">DAEMON</span>
+          </div>
+          <div class="flex items-center gap-3 mt-1.5 font-mono text-[10px] text-ink3 tnum"><span>MOVE 9.5</span><span>FOOT 0.8</span></div>
+          <div class="flex items-center gap-2 mt-1.5"><span class="lbl text-warn">INVERSION</span>
+            <svg viewBox="0 0 60 14" class="w-[60px] h-[14px]"><polyline points="2,3 16,5 30,7 44,9 58,11" fill="none" stroke="#42566A" stroke-width="1"/><polyline points="2,12 16,10 30,7 44,4 58,2" fill="none" stroke="#FFB43C" stroke-width="1.2"/></svg></div>
+        </div>
+
+        <div class="border-b border-line px-3 py-2.5 hover:bg-panel2 cursor-pointer">
+          <div class="flex items-center gap-2"><span class="text-[13px] font-600 tracking-wide">LATCH-CLASS</span><span class="font-mono text-[12px] text-ink2 ml-auto tnum">10</span></div>
+          <div class="flex items-center gap-1 mt-1.5">
+            <span class="font-mono text-[9px] text-ink3 border border-line2 px-1">ICE</span>
+            <span class="font-mono text-[9px] text-ink3 border border-line2 px-1">DAEMON</span>
+          </div>
+          <div class="flex items-center gap-3 mt-1.5 font-mono text-[10px] text-ink3 tnum"><span>MOVE 8.0</span><span>FOOT 1.0</span></div>
+          <div class="flex items-center gap-2 mt-1.5"><span class="lbl text-warn">INVERSION</span>
+            <svg viewBox="0 0 60 14" class="w-[60px] h-[14px]"><polyline points="2,3 16,5 30,7 44,9 58,11" fill="none" stroke="#42566A" stroke-width="1"/><polyline points="2,12 16,10 30,7 44,4 58,2" fill="none" stroke="#FFB43C" stroke-width="1.2"/></svg></div>
+        </div>
+
+        <div class="border-b border-line px-3 py-2.5 hover:bg-panel2 cursor-pointer">
+          <div class="flex items-center gap-2"><span class="text-[13px] font-600 tracking-wide">FERAL-CLASS</span><span class="font-mono text-[12px] text-ink2 ml-auto tnum">14</span></div>
+          <div class="flex items-center gap-1 mt-1.5">
+            <span class="font-mono text-[9px] text-ink3 border border-line2 px-1">SPIKE</span>
+            <span class="font-mono text-[9px] text-ink3 border border-line2 px-1">SPOOFER</span>
+          </div>
+          <div class="flex items-center gap-3 mt-1.5 font-mono text-[10px] text-ink3 tnum"><span>MOVE 12.0</span><span>FOOT 0.9</span></div>
+          <div class="flex items-center gap-2 mt-1.5"><span class="lbl text-bad">SPIKE</span>
+            <svg viewBox="0 0 60 14" class="w-[60px] h-[14px]"><polyline points="2,11 20,8 38,4 52,2" fill="none" stroke="#FF4D6D" stroke-width="1.2"/><line x1="52" y1="1" x2="58" y2="13" stroke="#FF4D6D" stroke-width="1" stroke-dasharray="2 2"/></svg></div>
+        </div>
+
+        <div class="border-b border-line px-3 py-2.5 hover:bg-panel2 cursor-pointer">
+          <div class="flex items-center gap-2"><span class="text-[13px] font-600 tracking-wide">KILN-CLASS</span><span class="font-mono text-[12px] text-ink2 ml-auto tnum">18</span></div>
+          <div class="flex items-center gap-1 mt-1.5">
+            <span class="font-mono text-[9px] text-ink3 border border-line2 px-1">SPIKE</span>
+            <span class="font-mono text-[9px] text-ink3 border border-line2 px-1">SPIKE</span>
+            <span class="font-mono text-[9px] text-ink3 border border-line2 px-1">WIPE</span>
+          </div>
+          <div class="flex items-center gap-3 mt-1.5 font-mono text-[10px] text-ink3 tnum"><span>MOVE 7.0</span><span>FOOT 1.2</span></div>
+          <div class="flex items-center gap-2 mt-1.5"><span class="lbl text-bad">SPIKE</span>
+            <svg viewBox="0 0 60 14" class="w-[60px] h-[14px]"><polyline points="2,11 20,8 38,4 52,2" fill="none" stroke="#FF4D6D" stroke-width="1.2"/><line x1="52" y1="1" x2="58" y2="13" stroke="#FF4D6D" stroke-width="1" stroke-dasharray="2 2"/></svg></div>
+        </div>
+
+        <div class="border-b border-line px-3 py-2.5 hover:bg-panel2 cursor-pointer">
+          <div class="flex items-center gap-2"><span class="text-[13px] font-600 tracking-wide">MONOLITH-CLASS</span><span class="font-mono text-[12px] text-ink2 ml-auto tnum">22</span></div>
+          <div class="flex items-center gap-1 mt-1.5 flex-wrap">
+            <span class="font-mono text-[9px] text-ink3 border border-line2 px-1">ICE</span>
+            <span class="font-mono text-[9px] text-ink3 border border-line2 px-1">ICE</span>
+            <span class="font-mono text-[9px] text-ink3 border border-line2 px-1">WIPE</span>
+            <span class="font-mono text-[9px] text-ink3 border border-line2 px-1">SPIKE</span>
+          </div>
+          <div class="flex items-center gap-3 mt-1.5 font-mono text-[10px] text-ink3 tnum"><span>MOVE 5.5</span><span>FOOT 1.4</span></div>
+          <div class="flex items-center gap-2 mt-1.5"><span class="lbl text-ink4">DEGRADE</span>
+            <svg viewBox="0 0 60 14" class="w-[60px] h-[14px]"><polyline points="2,4 16,5 30,7 44,9 58,12" fill="none" stroke="#42566A" stroke-width="1.2"/></svg></div>
+        </div>
+
+        <div class="px-3 py-3 font-mono text-[9.5px] text-ink4 leading-relaxed">
+          NO CHASSIS HAS A LAYOUT THAT ACCEPTS ONE OF EVERY MOUNT FAMILY. HARDPOINTS ARE THE DISCIPLINE.
+        </div>
+      </div>
+    </aside>
+
+    <!-- ───── 2. CONSTRUCT ───── -->
+    <main class="flex-1 min-w-0 flex flex-col border-r border-line">
+      <div class="h-9 shrink-0 px-4 flex items-center justify-between border-b border-line bg-panel">
+        <span class="lbl text-ink2">2 · CONSTRUCT</span>
+        <div class="flex items-center gap-3">
+          <span class="font-mono text-[10px] text-ink3">SPINE-CLASS · 3 HARDPOINTS · 2 FILLED</span>
+          <span class="lbl text-sys border border-sys/50 px-1.5">◆CMD · SYSOP</span>
+        </div>
+      </div>
+
+      <div class="flex-1 relative bg-void min-h-0">
+        <svg viewBox="0 0 620 420" preserveAspectRatio="xMidYMid meet" class="absolute inset-0 w-full h-full">
+          <defs>
+            <pattern id="g" width="20" height="20" patternUnits="userSpaceOnUse">
+              <path d="M20 0 L0 0 0 20" fill="none" stroke="#1C2733" stroke-width="0.5" opacity="0.5"/>
+            </pattern>
+          </defs>
+          <rect width="620" height="420" fill="#04060A"/>
+          <rect width="620" height="420" fill="url(#g)"/>
+
+          <!-- chassis silhouette -->
+          <g transform="translate(310,206)">
+            <circle r="112" fill="none" stroke="#1C2733" stroke-width="1" stroke-dasharray="2 6"/>
+            <circle r="84" fill="none" stroke="#2A3946" stroke-width="1"/>
+            <!-- commander double ring -->
+            <circle r="96" fill="none" stroke="#4DE1FF" stroke-width="1" opacity="0.7"/>
+            <circle r="92" fill="none" stroke="#4DE1FF" stroke-width="0.75" opacity="0.4"/>
+            <path d="M0 -56 L48 -28 L48 28 L0 56 L-48 28 L-48 -28 Z" fill="#04060A" stroke="#A8FBFF" stroke-width="1.6"/>
+            <path d="M0 -30 L26 -15 L26 15 L0 30 L-26 15 L-26 -15 Z" fill="none" stroke="#A8FBFF" stroke-width="0.75" opacity="0.5"/>
+            <path d="M0 -16 L14 10 L-14 10 Z" fill="#A8FBFF"/>
+            <text x="0" y="76" fill="#4DE1FF" font-family="IBM Plex Mono" font-size="9.5" letter-spacing="1.6" text-anchor="middle">◆CMD · SYSOP</text>
+          </g>
+
+          <!-- PORT A: ICE — filled -->
+          <line x1="310" y1="150" x2="310" y2="96" stroke="#2A3946" stroke-width="1"/>
+          <g transform="translate(310,60)">
+            <rect x="-92" y="-30" width="184" height="60" fill="#0E141C" stroke="#A8FBFF" stroke-width="1"/>
+            <text x="-84" y="-14" fill="#42566A" font-family="IBM Plex Mono" font-size="8.5" letter-spacing="1.6">PORT A · ICE</text>
+            <text x="-84" y="4" fill="#E8F2FB" font-family="Chakra Petch" font-size="13" font-weight="600" letter-spacing="0.8">ICE-LATTICE</text>
+            <text x="-84" y="19" fill="#9CB0C4" font-family="IBM Plex Mono" font-size="9" letter-spacing="0.8">+2 INTEGRITY PER STATE</text>
+            <text x="84" y="-14" fill="#4DE1FF" font-family="IBM Plex Mono" font-size="12" text-anchor="end">4</text>
+            <text x="84" y="19" fill="#42566A" font-family="IBM Plex Mono" font-size="9" text-anchor="end">⌫</text>
+          </g>
+
+          <!-- PORT B: ICE — empty (legal) -->
+          <line x1="226" y1="206" x2="150" y2="206" stroke="#2A3946" stroke-width="1"/>
+          <g transform="translate(78,206)">
+            <rect x="-70" y="-30" width="140" height="60" fill="#090D13" stroke="#2A3946" stroke-width="1" stroke-dasharray="4 4"/>
+            <text x="-62" y="-14" fill="#42566A" font-family="IBM Plex Mono" font-size="8.5" letter-spacing="1.6">PORT B · ICE</text>
+            <text x="-62" y="6" fill="#6B8096" font-family="Chakra Petch" font-size="12" letter-spacing="1.4">EMPTY</text>
+            <text x="-62" y="20" fill="#42566A" font-family="IBM Plex Mono" font-size="8.5" letter-spacing="0.8">LEGAL · COSTS 0</text>
+          </g>
+
+          <!-- PORT C: SPIKE — filled, currently target of an INVALID drag -->
+          <line x1="394" y1="206" x2="470" y2="206" stroke="#FF4D6D" stroke-width="1"/>
+          <g transform="translate(542,206)">
+            <rect x="-70" y="-30" width="140" height="60" fill="#0E141C" stroke="#FF4D6D" stroke-width="1.6"/>
+            <text x="-62" y="-14" fill="#FF4D6D" font-family="IBM Plex Mono" font-size="8.5" letter-spacing="1.6">PORT C · SPIKE</text>
+            <text x="-62" y="4" fill="#E8F2FB" font-family="Chakra Petch" font-size="13" font-weight="600" letter-spacing="0.8">SPIKE-MAUL</text>
+            <text x="-62" y="19" fill="#9CB0C4" font-family="IBM Plex Mono" font-size="9" letter-spacing="0.8">DMG 9 · RANGE 7.0</text>
+            <text x="62" y="-14" fill="#4DE1FF" font-family="IBM Plex Mono" font-size="12" text-anchor="end">8</text>
+          </g>
+
+          <!-- dragged mount ghost + rejection reason -->
+          <g transform="translate(500,296)">
+            <rect x="-84" y="-16" width="168" height="32" fill="#090D13" stroke="#FF4D6D" stroke-width="1" opacity="0.95"/>
+            <text x="-76" y="-2" fill="#E8F2FB" font-family="Chakra Petch" font-size="11.5" font-weight="600">DAEMON-ECHO</text>
+            <text x="-76" y="10" fill="#FF4D6D" font-family="IBM Plex Mono" font-size="8.5" letter-spacing="1">TYPE MISMATCH</text>
+            <text x="76" y="4" fill="#FF4D6D" font-family="IBM Plex Mono" font-size="13" text-anchor="end">✕</text>
+          </g>
+          <g transform="translate(500,336)">
+            <rect x="-104" y="-12" width="208" height="24" fill="#04060A" stroke="#FF4D6D"/>
+            <text x="0" y="4" fill="#FF4D6D" font-family="IBM Plex Mono" font-size="9" letter-spacing="1.2" text-anchor="middle">PORT: SPIKE · MOUNT: DAEMON</text>
+          </g>
+
+          <!-- footprint reference -->
+          <g transform="translate(64,382)">
+            <circle r="14" fill="none" stroke="#42566A" stroke-width="1" stroke-dasharray="3 3"/>
+            <text x="24" y="-2" fill="#42566A" font-family="IBM Plex Mono" font-size="8.5" letter-spacing="1.2">FOOTPRINT 1.0</text>
+            <text x="24" y="10" fill="#42566A" font-family="IBM Plex Mono" font-size="8.5" letter-spacing="1.2">TRUE SCALE</text>
+          </g>
+        </svg>
+
+        <!-- construct cost card -->
+        <div class="absolute right-3 top-3 w-[212px] bg-panel border border-line notch">
+          <div class="px-3 h-7 flex items-center border-b border-line bg-panel2">
+            <span class="lbl text-ink3">CONSTRUCT COST</span>
+          </div>
+          <div class="px-3 py-2 font-mono text-[11px] tnum space-y-[3px]">
+            <div class="flex justify-between"><span class="text-ink3">SPINE-CLASS</span><span class="text-ink2">12</span></div>
+            <div class="flex justify-between"><span class="text-ink3">ICE-LATTICE</span><span class="text-ink2">4</span></div>
+            <div class="flex justify-between"><span class="text-ink3">SPIKE-MAUL</span><span class="text-ink2">8</span></div>
+            <div class="flex justify-between"><span class="text-ink3">— PORT B —</span><span class="text-ink4">0</span></div>
+            <div class="flex justify-between"><span class="text-sys">◆CMD SYSOP</span><span class="text-sys">6</span></div>
+            <div class="h-px bg-line my-1"></div>
+            <div class="flex justify-between text-[13px]"><span class="text-ink">TOTAL</span><span class="text-ink font-600">30</span></div>
+          </div>
+        </div>
+      </div>
+    </main>
+
+    <!-- ───── 3. MOUNTS ───── -->
+    <aside class="w-[300px] shrink-0 bg-panel flex flex-col min-h-0">
+      <div class="h-9 shrink-0 px-3 flex items-center justify-between border-b border-line">
+        <span class="lbl text-ink2">3 · MOUNTS</span>
+        <div class="flex items-center gap-1">
+          <button class="lbl px-1.5 py-[2px] bg-sys text-void font-600">PORT C · SPIKE</button>
+          <button class="lbl px-1.5 py-[2px] border border-line2 text-ink3 hover:text-ink2">SHOW ALL</button>
+        </div>
+      </div>
+      <div class="flex-1 overflow-y-auto">
+
+        <div class="px-3 py-1.5 bg-panel2 border-b border-line"><span class="lbl text-ink4">COMPATIBLE · SPIKE</span></div>
+
+        <div class="border-b border-line px-3 py-2.5 bg-panel3 border-l-2 border-l-vector">
+          <div class="flex items-center gap-2">
+            <span class="text-[13px] font-600 tracking-wide">SPIKE-MAUL</span>
+            <span class="lbl text-ok ml-auto">✓ MOUNTED</span>
+          </div>
+          <div class="flex items-center gap-2 mt-1.5 font-mono text-[10px] text-ink2 tnum">
+            <span class="text-ink4 border border-line2 px-1">SPIKE</span><span>DMG 9</span><span>RANGE 7.0</span><span class="ml-auto text-ink">8</span>
+          </div>
+        </div>
+
+        <div class="border-b border-line px-3 py-2.5 hover:bg-panel2 cursor-pointer">
+          <div class="flex items-center gap-2"><span class="text-[13px] font-600 tracking-wide">SPIKE-NEEDLE</span></div>
+          <div class="flex items-center gap-2 mt-1.5 font-mono text-[10px] text-ink2 tnum">
+            <span class="text-ink4 border border-line2 px-1">SPIKE</span><span>DMG 5</span><span>RANGE 14.0</span><span class="ml-auto text-ink">5</span>
+          </div>
+          <div class="font-mono text-[9.5px] text-ok mt-1">SWAP SAVES 3 PT · TRADES 4 DMG FOR 7.0 RANGE</div>
+        </div>
+
+        <div class="border-b border-line px-3 py-2.5 hover:bg-panel2 cursor-pointer">
+          <div class="flex items-center gap-2"><span class="text-[13px] font-600 tracking-wide">SPIKE-LANCE</span></div>
+          <div class="flex items-center gap-2 mt-1.5 font-mono text-[10px] text-ink2 tnum">
+            <span class="text-ink4 border border-line2 px-1">SPIKE</span><span>DMG 7</span><span>RANGE 20.0</span><span class="ml-auto text-ink">11</span>
+          </div>
+        </div>
+
+        <div class="px-3 py-1.5 bg-panel2 border-y border-line"><span class="lbl text-ink4">INCOMPATIBLE WITH PORT C — SHOWN ANYWAY</span></div>
+
+        <div class="border-b border-line px-3 py-2.5 opacity-45">
+          <div class="flex items-center gap-2"><span class="text-[13px] font-600 tracking-wide">ICE-VEIL</span><span class="lbl text-ink4 ml-auto">ICE PORT ONLY</span></div>
+          <div class="flex items-center gap-2 mt-1.5 font-mono text-[10px] text-ink2 tnum">
+            <span class="text-ink4 border border-line2 px-1">ICE</span><span>+4 RES RANGE</span><span class="ml-auto text-ink">6</span>
+          </div>
+        </div>
+        <div class="border-b border-line px-3 py-2.5 opacity-45">
+          <div class="flex items-center gap-2"><span class="text-[13px] font-600 tracking-wide">DAEMON-ECHO</span><span class="lbl text-ink4 ml-auto">DAEMON PORT ONLY</span></div>
+          <div class="flex items-center gap-2 mt-1.5 font-mono text-[10px] text-ink2 tnum">
+            <span class="text-ink4 border border-line2 px-1">DAEMON</span><span>+3 RES RANGE</span><span class="ml-auto text-ink">3</span>
+          </div>
+        </div>
+        <div class="border-b border-line px-3 py-2.5 opacity-45">
+          <div class="flex items-center gap-2"><span class="text-[13px] font-600 tracking-wide">SPOOFER-MASK</span><span class="lbl text-ink4 ml-auto">SPOOFER PORT ONLY</span></div>
+          <div class="flex items-center gap-2 mt-1.5 font-mono text-[10px] text-ink2 tnum">
+            <span class="text-ink4 border border-line2 px-1">SPOOFER</span><span>−4 ENEMY RES</span><span class="ml-auto text-ink">7</span>
+          </div>
+        </div>
+
+        <div class="px-3 py-1.5 bg-panel2 border-b border-line"><span class="lbl text-warn">OVER REMAINING BUDGET</span></div>
+        <div class="border-b border-line px-3 py-2.5 opacity-60">
+          <div class="flex items-center gap-2"><span class="text-[13px] font-600 tracking-wide">WIPE-CASCADE</span><span class="lbl text-warn ml-auto">+4 OVER BUDGET</span></div>
+          <div class="flex items-center gap-2 mt-1.5 font-mono text-[10px] text-ink2 tnum">
+            <span class="text-ink4 border border-line2 px-1">WIPE</span><span>DMG 12</span><span>RANGE 9.0</span><span class="ml-auto text-warn">12</span>
+          </div>
+          <div class="font-mono text-[9.5px] text-ink4 mt-1">STILL LISTED — CATALOG IS NEVER HIDDEN</div>
+        </div>
+      </div>
+    </aside>
+  </div>
+
+  <!-- ══════════ 4. DIAL + COMMANDER STRIP ══════════ -->
+  <section class="h-[252px] shrink-0 border-t border-line bg-panel flex">
+
+    <!-- dial grid -->
+    <div class="flex-1 min-w-0 px-4 py-2.5 border-r border-line">
+      <div class="flex items-center gap-3 mb-2">
+        <span class="lbl text-ink2">4 · DIAL</span>
+        <span class="font-mono text-[10px] text-ink4">SPINE-CLASS · DEGRADE · 5 STATES</span>
+        <span class="lbl text-sys ml-2">◆ SYSOP MODIFICATIONS APPLIED AT BUILD TIME</span>
+        <div class="ml-auto flex items-center gap-1">
+          <button class="lbl px-1.5 py-[2px] border border-line2 text-ink3">BASE</button>
+          <button class="lbl px-1.5 py-[2px] bg-sys text-void font-600">BASE → COMMANDER</button>
+        </div>
+      </div>
+
+      <table class="w-full font-mono text-[11px] tnum">
+        <thead>
+          <tr class="text-ink4">
+            <th class="text-left font-400 pb-1.5 w-[76px]"></th>
+            <th class="font-400 pb-1.5">STATE 1</th><th class="font-400 pb-1.5">STATE 2</th>
+            <th class="font-400 pb-1.5">STATE 3</th><th class="font-400 pb-1.5">STATE 4</th>
+            <th class="font-400 pb-1.5">STATE 5</th>
+            <th class="font-400 pb-1.5 w-[104px] text-left pl-3">CURVE</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr class="border-t border-line">
+            <td class="text-ink3 text-left py-[3px]">INTEGRITY</td>
+            <td class="text-center"><span class="text-ink4 line-through">14</span> <span class="text-ok">17</span></td>
+            <td class="text-center"><span class="text-ink4 line-through">13</span> <span class="text-ok">16</span></td>
+            <td class="text-center"><span class="text-ink4 line-through">11</span> <span class="text-ok">14</span></td>
+            <td class="text-center"><span class="text-ink4 line-through">9</span> <span class="text-ok">12</span></td>
+            <td class="text-center"><span class="text-ink4 line-through">6</span> <span class="text-ok">9</span></td>
+            <td class="pl-3"><svg viewBox="0 0 96 16" class="w-[96px] h-[16px]"><polyline points="4,3 26,4 48,7 70,10 92,13" fill="none" stroke="#4BE8A4" stroke-width="1.2"/></svg></td>
+          </tr>
+          <tr class="border-t border-line">
+            <td class="text-ink3 text-left py-[3px]">MOVE</td>
+            <td class="text-center"><span class="text-ink4 line-through">9.0</span> <span class="text-bad">7.5</span></td>
+            <td class="text-center"><span class="text-ink4 line-through">8.0</span> <span class="text-bad">6.5</span></td>
+            <td class="text-center"><span class="text-ink4 line-through">7.0</span> <span class="text-bad">5.5</span></td>
+            <td class="text-center"><span class="text-ink4 line-through">5.0</span> <span class="text-bad">3.5</span></td>
+            <td class="text-center"><span class="text-ink4 line-through">3.0</span> <span class="text-bad">1.5</span></td>
+            <td class="pl-3"><svg viewBox="0 0 96 16" class="w-[96px] h-[16px]"><polyline points="4,4 26,6 48,8 70,11 92,14" fill="none" stroke="#FF4D6D" stroke-width="1.2"/></svg></td>
+          </tr>
+          <tr class="border-t border-line">
+            <td class="text-ink3 text-left py-[3px]">DAMAGE</td>
+            <td class="text-center text-ink">7</td><td class="text-center text-ink">7</td>
+            <td class="text-center text-ink">5</td><td class="text-center text-ink">4</td><td class="text-center text-ink">2</td>
+            <td class="pl-3"><svg viewBox="0 0 96 16" class="w-[96px] h-[16px]"><polyline points="4,3 26,3 48,7 70,10 92,14" fill="none" stroke="#6B8096" stroke-width="1.2"/></svg></td>
+          </tr>
+          <tr class="border-t border-line">
+            <td class="text-ink3 text-left py-[3px]">RANGE</td>
+            <td class="text-center text-ink">14.0</td><td class="text-center text-ink">14.0</td>
+            <td class="text-center text-ink">12.0</td><td class="text-center text-ink">10.0</td><td class="text-center text-ink">8.0</td>
+            <td class="pl-3"><svg viewBox="0 0 96 16" class="w-[96px] h-[16px]"><polyline points="4,3 26,3 48,7 70,10 92,13" fill="none" stroke="#6B8096" stroke-width="1.2"/></svg></td>
+          </tr>
+          <tr class="border-t border-b border-line">
+            <td class="text-ink3 text-left py-[3px]">DEF MOD</td>
+            <td class="text-center text-ink">0</td><td class="text-center text-ink">0</td>
+            <td class="text-center text-ink">0</td><td class="text-center text-bad">−1</td><td class="text-center text-bad">−1</td>
+            <td class="pl-3 text-ink4 text-[9.5px]">DEGRADE FAMILY</td>
+          </tr>
+        </tbody>
+      </table>
+      <div class="mt-1.5 font-mono text-[9.5px] text-ink4">
+        STRUCK = BASE CHASSIS · COLOURED = AFTER COMMANDER TAG. NO STAT SHOWN HERE DIFFERS FROM THE STAT USED IN RESOLUTION.
+      </div>
+    </div>
+
+    <!-- commander selector -->
+    <div class="w-[320px] shrink-0 px-4 py-2.5 flex flex-col">
+      <div class="flex items-center justify-between mb-2">
+        <span class="lbl text-ink2">COMMANDER TAG <span class="kbd ml-1">C</span></span>
+        <span class="lbl text-ok">✓ EXACTLY 1 IN ROSTER</span>
+      </div>
+      <div class="grid grid-cols-2 gap-1.5 flex-1">
+        <button class="border border-line2 hover:border-sys px-2 py-1.5 text-left">
+          <div class="flex items-baseline gap-1.5"><span class="text-[12px] font-600 tracking-wide">COURIER</span><span class="font-mono text-[10px] text-ink3 ml-auto">+5</span></div>
+          <div class="font-mono text-[9px] text-ink4 mt-[2px]">BASE 1 · MOVEMENT</div>
+          <div class="font-mono text-[9px] text-ink3 mt-[2px] leading-tight">+3.0 MOVE<br>−1 INTEG/STATE</div>
+        </button>
+        <button class="border border-sys bg-sys/10 px-2 py-1.5 text-left">
+          <div class="flex items-baseline gap-1.5"><span class="text-[12px] font-700 tracking-wide text-sys">SYSOP</span><span class="font-mono text-[10px] text-sys ml-auto">+6</span></div>
+          <div class="font-mono text-[9px] text-sys/70 mt-[2px]">BASE 1 · INTEGRITY</div>
+          <div class="font-mono text-[9px] text-ink2 mt-[2px] leading-tight">+3 INTEG/STATE<br>−1.5 MOVE</div>
+        </button>
+        <button class="border border-line2 hover:border-sys px-2 py-1.5 text-left">
+          <div class="flex items-baseline gap-1.5"><span class="text-[12px] font-600 tracking-wide">BULWARK</span><span class="font-mono text-[10px] text-ink3 ml-auto">+8</span></div>
+          <div class="font-mono text-[9px] text-ink4 mt-[2px]">BASE 1 · DEFENSE</div>
+          <div class="font-mono text-[9px] text-ink3 mt-[2px] leading-tight">+4 INTEG S1–S2<br>−2.0 MOVE</div>
+        </button>
+        <button class="border border-line2 hover:border-sys px-2 py-1.5 text-left">
+          <div class="flex items-baseline gap-1.5"><span class="text-[12px] font-600 tracking-wide">OVERCLOCK</span><span class="font-mono text-[10px] text-ink3 ml-auto">+10</span></div>
+          <div class="font-mono text-[9px] text-ink4 mt-[2px]">BASE 2 · FRAGILE</div>
+          <div class="font-mono text-[9px] text-ink3 mt-[2px] leading-tight">−3 INTEG/STATE<br>+1.5 MOVE</div>
+        </button>
+      </div>
+      <div class="mt-2 pt-2 border-t border-line font-mono text-[9.5px] text-ink3 leading-relaxed">
+        POOL AT 6 ALIVE, HEALTHY: <span class="text-ink">1 + 1 + ⌊6/3⌋ = 4</span><br>
+        <span class="text-bad">IF THIS CONSTRUCT DIES, POOL COLLAPSES TO 1 PERMANENTLY.</span>
+      </div>
+    </div>
+  </section>
+
+  <!-- ══════════ BOTTOM BAR ══════════ -->
+  <footer class="h-[62px] shrink-0 border-t border-line bg-panel2 flex items-center px-4 gap-5">
+    <div class="flex-1 max-w-[540px]">
+      <div class="flex items-center justify-between mb-1">
+        <span class="lbl text-ink3">ROSTER BUDGET</span>
+        <span class="font-mono text-[12px] tnum"><span class="text-ink">92</span><span class="text-ink4">/100 · </span><span class="text-ok">8 REMAINING</span></span>
+      </div>
+      <div class="h-[8px] bg-panel border border-line relative">
+        <div class="h-full bg-sys/70" style="width:62%"></div>
+        <div class="h-full bg-vector absolute top-0" style="left:62%;width:30%"></div>
+        <div class="absolute top-0 bottom-0 border-l border-line2" style="left:25%"></div>
+        <div class="absolute top-0 bottom-0 border-l border-line2" style="left:50%"></div>
+        <div class="absolute top-0 bottom-0 border-l border-line2" style="left:75%"></div>
+      </div>
+    </div>
+
+    <div class="flex flex-col gap-[3px] font-mono text-[9.5px] text-ink4 shrink-0">
+      <span><span class="inline-block w-2 h-2 bg-sys/70 align-middle"></span> 5 SAVED CONSTRUCTS · 62</span>
+      <span><span class="inline-block w-2 h-2 bg-vector align-middle"></span> LATCHKEY · 30</span>
+      <span>SQUAD 6 / 10 MAX</span>
+    </div>
+
+    <div class="h-9 px-3 border border-ok/50 bg-ok/5 flex items-center gap-2 notch">
+      <span class="text-ok text-[13px] leading-none">✓</span>
+      <div>
+        <div class="lbl text-ok">ROSTER LEGAL</div>
+        <div class="font-mono text-[9.5px] text-ink3">1 COMMANDER · 6 CONSTRUCTS · 92/100</div>
+      </div>
+    </div>
+
+    <div class="ml-auto flex items-center gap-2">
+      <button class="h-9 px-3 border border-line2 text-ink2 hover:border-sys hover:text-ink text-[11px] tracking-[.14em]">COPY STRING</button>
+      <button class="h-9 px-3 border border-line2 text-ink2 hover:border-sys hover:text-ink text-[11px] tracking-[.14em]">DUPLICATE</button>
+      <button class="h-9 px-5 bg-sys text-void font-700 text-[12px] tracking-[.16em] notch hover:brightness-110">SAVE CONSTRUCT</button>
+    </div>
+  </footer>
+</div>
+
+<div class="fixed left-0 bottom-0 z-50 flex items-center gap-3 bg-void/90 border-t border-r border-line px-2.5 py-1">
+  <a href="index.html" class="font-mono text-[9.5px] text-sys hover:underline">← ALL MOCKS</a>
+  <span class="font-mono text-[9.5px] text-ink4">MOCK · 02 COMPOSER</span>
+</div>
+
+</body>
+</html>

@@ -1,0 +1,633 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>PROTOTYPE HUB — SIGNAL LOSS</title>
+<script src="https://cdn.tailwindcss.com"></script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Chakra+Petch:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<script>
+tailwind.config = { theme: { extend: {
+  colors: {
+    void:'#04060A', panel:'#090D13', panel2:'#0E141C', panel3:'#141C27',
+    line:'#1C2733', line2:'#2A3946',
+    ink:'#E8F2FB', ink2:'#9CB0C4', ink3:'#6B8096', ink4:'#42566A',
+    sys:'#4DE1FF', ok:'#4BE8A4', warn:'#FFB43C', bad:'#FF4D6D', trace:'#FF3B6B',
+    vector:'#A8FBFF', axiom:'#FFB43C', kestrel:'#5AA8FF', hollow:'#F2569B', nullset:'#8C6BD6',
+  },
+  fontFamily: { display:['Chakra Petch','sans-serif'], mono:['IBM Plex Mono','monospace'] },
+}}}
+</script>
+<style>
+  .notch{clip-path:polygon(0 0, calc(100% - 10px) 0, 100% 10px, 100% 100%, 0 100%)}
+  .notch-both{clip-path:polygon(0 0, calc(100% - 10px) 0, 100% 10px, 100% 100%, 10px 100%, 0 calc(100% - 10px))}
+  .tnum{font-variant-numeric:tabular-nums;font-feature-settings:"tnum"}
+  .glow-1{border-color:#2A3946;box-shadow:0 0 0 1px rgba(77,225,255,.06)}
+  .glow-2{border-color:#4DE1FF;box-shadow:0 0 12px -2px rgba(77,225,255,.45)}
+  .h-label{letter-spacing:.14em;text-transform:uppercase}
+  .card:hover{border-color:#4DE1FF;box-shadow:0 0 12px -2px rgba(77,225,255,.45);background:#0E141C}
+  .card:hover .cardnum{color:#4DE1FF}
+  .card:hover .cardgo{opacity:1}
+  .hatch{background-image:repeating-linear-gradient(45deg,rgba(255,59,107,.6) 0 1px,transparent 1px 7px)}
+  .scroll::-webkit-scrollbar{width:10px}
+  .scroll::-webkit-scrollbar-track{background:#04060A}
+  .scroll::-webkit-scrollbar-thumb{background:#1C2733}
+  .scroll::-webkit-scrollbar-thumb:hover{background:#2A3946}
+</style>
+</head>
+<body class="bg-void text-ink font-display antialiased scroll">
+
+<!-- ══════════════ HEADER ══════════════ -->
+<header class="relative border-b border-line overflow-hidden">
+  <svg class="absolute inset-0 w-full h-full opacity-[.10]" viewBox="0 0 1440 260" preserveAspectRatio="xMidYMid slice" aria-hidden="true">
+    <defs>
+      <pattern id="g1" width="20" height="20" patternUnits="userSpaceOnUse"><path d="M20 0 L0 0 0 20" fill="none" stroke="#1C2733"/></pattern>
+      <pattern id="g2" width="100" height="100" patternUnits="userSpaceOnUse"><path d="M100 0 L0 0 0 100" fill="none" stroke="#2A3946"/></pattern>
+    </defs>
+    <rect width="1440" height="260" fill="url(#g1)"/><rect width="1440" height="260" fill="url(#g2)"/>
+    <g fill="none" stroke="#4DE1FF" stroke-width="1">
+      <polygon points="120,40 260,40 260,60 160,60 160,180 120,180"/>
+      <rect x="340" y="70" width="140" height="20"/><rect x="420" y="90" width="20" height="110"/>
+      <polygon points="620,50 760,50 760,70 660,70 660,160 760,160 760,180 620,180"/>
+      <rect x="860" y="60" width="20" height="130"/><rect x="900" y="110" width="150" height="20"/>
+      <polygon points="1140,40 1260,40 1260,60 1180,60 1180,200 1140,200"/>
+      <rect x="1300" y="90" width="90" height="20"/>
+      <rect x="240" y="210" width="180" height="20"/><rect x="980" y="200" width="20" height="60"/>
+    </g>
+  </svg>
+
+  <div class="relative max-w-[1360px] mx-auto px-10 py-9">
+    <div class="flex items-end justify-between gap-8">
+      <div>
+        <div class="relative inline-block">
+          <span class="absolute left-[1.5px] top-[1px] text-[44px] font-bold h-label text-trace/40 select-none" style="white-space:nowrap;line-height:1" aria-hidden="true">SIGNAL LOSS</span>
+          <span class="absolute -left-[1.5px] -top-[1px] text-[44px] font-bold h-label text-sys/40 select-none" style="white-space:nowrap;line-height:1" aria-hidden="true">SIGNAL LOSS</span>
+          <h1 class="relative text-[44px] leading-none font-bold h-label text-ink">SIGNAL LOSS</h1>
+        </div>
+        <div class="mt-3 font-mono text-[12px] text-ink2 tracking-[.06em]">DETERMINISTIC · NO ROLLS · NO TIMERS · INTENT IS THE ONLY UNKNOWN</div>
+        <div class="mt-1.5 text-[13px] h-label text-sys">Prototype hub — 12 static mocks</div>
+      </div>
+
+      <div class="shrink-0 grid grid-cols-2 gap-x-8 gap-y-1.5 text-right">
+        <span class="text-[10px] h-label text-ink3">Phase</span><span class="font-mono text-[12px] text-ink">DESIGN · DRAFT 1</span>
+        <span class="text-[10px] h-label text-ink3">Authored at</span><span class="font-mono text-[12px] text-ink">1440 × 900</span>
+        <span class="text-[10px] h-label text-ink3">Verified at</span><span class="font-mono text-[12px] text-ink">1280 × 720</span>
+        <span class="text-[10px] h-label text-ink3">Platform</span><span class="font-mono text-[12px] text-ink2">DESKTOP · MOUSE + KB</span>
+        <span class="text-[10px] h-label text-ink3">Spec</span><span class="font-mono text-[12px] text-ink2">specs/design.md</span>
+      </div>
+    </div>
+
+    <div class="mt-7 flex items-stretch gap-px border border-line bg-line">
+      <div class="flex-1 bg-panel px-4 py-2.5">
+        <div class="text-[10px] h-label text-ink3">Screens</div>
+        <div class="font-mono tnum text-[18px] text-ink">11 <span class="text-[11px] text-ink3">+ HUB</span></div>
+      </div>
+      <div class="flex-1 bg-panel px-4 py-2.5">
+        <div class="text-[10px] h-label text-ink3">Requirements covered</div>
+        <div class="font-mono tnum text-[18px] text-ink">FR-1 → FR-28</div>
+      </div>
+      <div class="flex-1 bg-panel px-4 py-2.5">
+        <div class="text-[10px] h-label text-ink3">Shared chrome</div>
+        <div class="font-mono text-[18px] text-ink">MATCH SHELL <span class="text-[11px] text-ink3">05–08 · 10</span></div>
+      </div>
+      <div class="flex-1 bg-panel px-4 py-2.5">
+        <div class="text-[10px] h-label text-ink3">Art constraint</div>
+        <div class="font-mono text-[18px] text-ink">VECTOR ONLY <span class="text-[11px] text-ink3">NO IMAGES</span></div>
+      </div>
+      <div class="flex-1 bg-panel px-4 py-2.5">
+        <div class="text-[10px] h-label text-ink3">Radius / shadow</div>
+        <div class="font-mono tnum text-[18px] text-ink">0 <span class="text-[11px] text-ink3">/ NONE</span></div>
+      </div>
+    </div>
+  </div>
+</header>
+
+<main class="max-w-[1360px] mx-auto px-10 pb-24">
+
+  <!-- ══════════════ 1 · BOOT ══════════════ -->
+  <section class="pt-10">
+    <div class="flex items-baseline gap-4 mb-4">
+      <h2 class="text-[16px] h-label font-semibold text-ink">Boot</h2>
+      <span class="font-mono text-[11px] text-ink3">01 SCREEN</span>
+      <span class="flex-1 border-t border-line"></span>
+      <span class="font-mono text-[10px] text-ink3">ENTRY POINT · DESKTOP STATEMENT</span>
+    </div>
+    <div class="grid grid-cols-3 gap-3">
+      <a href="00-boot.html" class="card notch-both block border border-line bg-panel p-4 transition-none">
+        <div class="flex items-start gap-3">
+          <span class="cardnum font-mono tnum text-[26px] leading-none text-ink4">00</span>
+          <div class="min-w-0 flex-1">
+            <div class="text-[14px] h-label font-semibold text-ink">Boot</div>
+            <div class="font-mono text-[11px] text-sys">00-boot.html</div>
+          </div>
+          <span class="cardgo font-mono text-[13px] text-sys opacity-0">→</span>
+        </div>
+        <p class="mt-2.5 text-[12.5px] text-ink2 leading-snug">Wordmark, the three entry points, and the desktop-only statement stated rather than degraded.</p>
+        <div class="mt-3 flex flex-wrap gap-1">
+          <span class="font-mono text-[9px] text-ink3 border border-line2 px-1.5 leading-[16px]">NFR-4</span>
+          <span class="font-mono text-[9px] text-ink3 border border-line2 px-1.5 leading-[16px]">FR-27</span>
+        </div>
+      </a>
+    </div>
+  </section>
+
+  <!-- ══════════════ 2 · BUILD ZONE ══════════════ -->
+  <section class="pt-10">
+    <div class="flex items-baseline gap-4 mb-4">
+      <h2 class="text-[16px] h-label font-semibold text-ink">Build zone</h2>
+      <span class="font-mono text-[11px] text-ink3">03 SCREENS</span>
+      <span class="flex-1 border-t border-line"></span>
+      <span class="font-mono text-[10px] text-ink3">THEORYCRAFT · CATALOG · SHARING</span>
+    </div>
+    <div class="grid grid-cols-3 gap-3">
+      <a href="01-build-collection.html" class="card notch-both block border border-line bg-panel p-4">
+        <div class="flex items-start gap-3">
+          <span class="cardnum font-mono tnum text-[26px] leading-none text-ink4">01</span>
+          <div class="min-w-0 flex-1">
+            <div class="text-[14px] h-label font-semibold text-ink">Collection</div>
+            <div class="font-mono text-[11px] text-sys">01-build-collection.html</div>
+          </div>
+          <span class="cardgo font-mono text-[13px] text-sys opacity-0">→</span>
+        </div>
+        <p class="mt-2.5 text-[12.5px] text-ink2 leading-snug">Rosters and constructs, pinned prebuilts that fork on edit, and import results as a screen state rather than a toast.</p>
+        <div class="mt-3 flex flex-wrap gap-1">
+          <span class="font-mono text-[9px] text-ink3 border border-line2 px-1.5 leading-[16px]">FR-5</span>
+          <span class="font-mono text-[9px] text-ink3 border border-line2 px-1.5 leading-[16px]">FR-6</span>
+          <span class="font-mono text-[9px] text-ink3 border border-line2 px-1.5 leading-[16px]">FR-7</span>
+        </div>
+      </a>
+
+      <a href="02-build-composer.html" class="card notch-both block border border-line bg-panel p-4">
+        <div class="flex items-start gap-3">
+          <span class="cardnum font-mono tnum text-[26px] leading-none text-ink4">02</span>
+          <div class="min-w-0 flex-1">
+            <div class="text-[14px] h-label font-semibold text-ink">Composer</div>
+            <div class="font-mono text-[11px] text-sys">02-build-composer.html</div>
+          </div>
+          <span class="cardgo font-mono text-[13px] text-sys opacity-0">→</span>
+        </div>
+        <p class="mt-2.5 text-[12.5px] text-ink2 leading-snug">Chassis, hardpoints as physical ports, mounts filtered by port type, commander deltas over the live dial grid.</p>
+        <div class="mt-3 flex flex-wrap gap-1">
+          <span class="font-mono text-[9px] text-ink3 border border-line2 px-1.5 leading-[16px]">FR-2</span>
+          <span class="font-mono text-[9px] text-ink3 border border-line2 px-1.5 leading-[16px]">FR-3</span>
+          <span class="font-mono text-[9px] text-ink3 border border-line2 px-1.5 leading-[16px]">FR-4</span>
+        </div>
+      </a>
+
+      <a href="03-catalog.html" class="card notch-both block border border-line bg-panel p-4">
+        <div class="flex items-start gap-3">
+          <span class="cardnum font-mono tnum text-[26px] leading-none text-ink4">03</span>
+          <div class="min-w-0 flex-1">
+            <div class="text-[14px] h-label font-semibold text-ink">Codex</div>
+            <div class="font-mono text-[11px] text-sys">03-catalog.html</div>
+          </div>
+          <span class="cardgo font-mono text-[13px] text-sys opacity-0">→</span>
+        </div>
+        <p class="mt-2.5 text-[12.5px] text-ink2 leading-snug">The whole catalog in sortable mono tables — every chassis, mount, commander type and dial state, nothing withheld.</p>
+        <div class="mt-3 flex flex-wrap gap-1">
+          <span class="font-mono text-[9px] text-ink3 border border-line2 px-1.5 leading-[16px]">FR-1</span>
+          <span class="font-mono text-[9px] text-ink3 border border-line2 px-1.5 leading-[16px]">FR-19</span>
+        </div>
+      </a>
+    </div>
+  </section>
+
+  <!-- ══════════════ 3 · MATCH SETUP ══════════════ -->
+  <section class="pt-10">
+    <div class="flex items-baseline gap-4 mb-4">
+      <h2 class="text-[16px] h-label font-semibold text-ink">Match setup</h2>
+      <span class="font-mono text-[11px] text-ink3">01 SCREEN</span>
+      <span class="flex-1 border-t border-line"></span>
+      <span class="font-mono text-[10px] text-ink3">SEED · BUDGET · AI REVEAL</span>
+    </div>
+    <div class="grid grid-cols-3 gap-3">
+      <a href="04-match-setup.html" class="card notch-both block border border-line bg-panel p-4">
+        <div class="flex items-start gap-3">
+          <span class="cardnum font-mono tnum text-[26px] leading-none text-ink4">04</span>
+          <div class="min-w-0 flex-1">
+            <div class="text-[14px] h-label font-semibold text-ink">Match setup</div>
+            <div class="font-mono text-[11px] text-sys">04-match-setup.html</div>
+          </div>
+          <span class="cardgo font-mono text-[13px] text-sys opacity-0">→</span>
+        </div>
+        <p class="mt-2.5 text-[12.5px] text-ink2 leading-snug">Budget dial, AI tier, map archetype, copyable seed, and the pre-match reveal of all four AI rosters.</p>
+        <div class="mt-3 flex flex-wrap gap-1">
+          <span class="font-mono text-[9px] text-ink3 border border-line2 px-1.5 leading-[16px]">FR-8</span>
+          <span class="font-mono text-[9px] text-ink3 border border-line2 px-1.5 leading-[16px]">FR-9</span>
+          <span class="font-mono text-[9px] text-ink3 border border-line2 px-1.5 leading-[16px]">FR-10</span>
+          <span class="font-mono text-[9px] text-ink3 border border-line2 px-1.5 leading-[16px]">FR-11</span>
+        </div>
+      </a>
+    </div>
+  </section>
+
+  <!-- ══════════════ 4 · MATCH LOOP ══════════════ -->
+  <section class="pt-10">
+    <div class="flex items-baseline gap-4 mb-4">
+      <h2 class="text-[16px] h-label font-semibold text-ink">Match loop</h2>
+      <span class="font-mono text-[11px] text-ink3">04 SCREENS</span>
+      <span class="flex-1 border-t border-line"></span>
+      <span class="font-mono text-[10px] text-sys">ONE MATCH SHELL · FOUR MODES · §5.4</span>
+    </div>
+    <div class="grid grid-cols-4 gap-3">
+      <a href="05-deploy.html" class="card notch-both block border border-line bg-panel p-4">
+        <div class="flex items-start gap-3">
+          <span class="cardnum font-mono tnum text-[26px] leading-none text-ink4">05</span>
+          <div class="min-w-0 flex-1">
+            <div class="text-[14px] h-label font-semibold text-ink">Deployment</div>
+            <div class="font-mono text-[11px] text-sys">05-deploy.html</div>
+          </div>
+          <span class="cardgo font-mono text-[13px] text-sys opacity-0">→</span>
+        </div>
+        <p class="mt-2.5 text-[12.5px] text-ink2 leading-snug">Place six constructs inside your spawn region; the four enemy regions sit outlined and empty until simultaneous reveal.</p>
+        <div class="mt-3 flex flex-wrap gap-1">
+          <span class="font-mono text-[9px] text-ink3 border border-line2 px-1.5 leading-[16px]">FR-12</span>
+        </div>
+      </a>
+
+      <a href="06-move-plot.html" class="card notch-both block border border-line bg-panel p-4">
+        <div class="flex items-start gap-3">
+          <span class="cardnum font-mono tnum text-[26px] leading-none text-ink4">06</span>
+          <div class="min-w-0 flex-1">
+            <div class="text-[14px] h-label font-semibold text-ink">Movement plot</div>
+            <div class="font-mono text-[11px] text-sys">06-move-plot.html</div>
+          </div>
+          <span class="cardgo font-mono text-[13px] text-sys opacity-0">→</span>
+        </div>
+        <p class="mt-2.5 text-[12.5px] text-ink2 leading-snug">Reach envelopes, freehand paths with a live length rule, clamping at allowance, and HOLD as a free legal choice.</p>
+        <div class="mt-3 flex flex-wrap gap-1">
+          <span class="font-mono text-[9px] text-ink3 border border-line2 px-1.5 leading-[16px]">FR-13</span>
+          <span class="font-mono text-[9px] text-ink3 border border-line2 px-1.5 leading-[16px]">FR-14</span>
+        </div>
+      </a>
+
+      <a href="07-attack-plot.html" class="card notch-both block border border-line bg-panel p-4">
+        <div class="flex items-start gap-3">
+          <span class="cardnum font-mono tnum text-[26px] leading-none text-ink4">07</span>
+          <div class="min-w-0 flex-1">
+            <div class="text-[14px] h-label font-semibold text-ink">Attack plot</div>
+            <div class="font-mono text-[11px] text-sys">07-attack-plot.html</div>
+          </div>
+          <span class="cardgo font-mono text-[13px] text-sys opacity-0">→</span>
+        </div>
+        <p class="mt-2.5 text-[12.5px] text-ink2 leading-snug">The centrepiece: rail as ledger, pool with its term breakdown and waste warning, and the Exchange Card on every hover.</p>
+        <div class="mt-3 flex flex-wrap gap-1">
+          <span class="font-mono text-[9px] text-ink3 border border-line2 px-1.5 leading-[16px]">FR-16</span>
+          <span class="font-mono text-[9px] text-ink3 border border-line2 px-1.5 leading-[16px]">FR-17</span>
+          <span class="font-mono text-[9px] text-ink3 border border-line2 px-1.5 leading-[16px]">FR-18</span>
+        </div>
+      </a>
+
+      <a href="08-playback.html" class="card notch-both block border border-line bg-panel p-4">
+        <div class="flex items-start gap-3">
+          <span class="cardnum font-mono tnum text-[26px] leading-none text-ink4">08</span>
+          <div class="min-w-0 flex-1">
+            <div class="text-[14px] h-label font-semibold text-ink">Playback</div>
+            <div class="font-mono text-[11px] text-sys">08-playback.html</div>
+          </div>
+          <span class="cardgo font-mono text-[13px] text-sys opacity-0">→</span>
+        </div>
+        <p class="mt-2.5 text-[12.5px] text-ink2 leading-snug">Traversal, halts, the posture reveal beat, the round log in full, and a reduced-motion stepped-card equivalent.</p>
+        <div class="mt-3 flex flex-wrap gap-1">
+          <span class="font-mono text-[9px] text-ink3 border border-line2 px-1.5 leading-[16px]">FR-15</span>
+          <span class="font-mono text-[9px] text-ink3 border border-line2 px-1.5 leading-[16px]">FR-25</span>
+          <span class="font-mono text-[9px] text-ink3 border border-line2 px-1.5 leading-[16px]">FR-26</span>
+        </div>
+      </a>
+    </div>
+  </section>
+
+  <!-- ══════════════ 5 · OUTCOME & REFERENCE ══════════════ -->
+  <section class="pt-10">
+    <div class="flex items-baseline gap-4 mb-4">
+      <h2 class="text-[16px] h-label font-semibold text-ink">Outcome &amp; reference</h2>
+      <span class="font-mono text-[11px] text-ink3">03 ENTRIES</span>
+      <span class="flex-1 border-t border-line"></span>
+      <span class="font-mono text-[10px] text-ink3">LEARNING FROM A LOSS · IN-MATCH RULES</span>
+    </div>
+    <div class="grid grid-cols-3 gap-3">
+      <a href="09-result.html" class="card notch-both block border border-line bg-panel p-4">
+        <div class="flex items-start gap-3">
+          <span class="cardnum font-mono tnum text-[26px] leading-none text-ink4">09</span>
+          <div class="min-w-0 flex-1">
+            <div class="text-[14px] h-label font-semibold text-ink">Match summary</div>
+            <div class="font-mono text-[11px] text-sys">09-result.html</div>
+          </div>
+          <span class="cardgo font-mono text-[13px] text-sys opacity-0">→</span>
+        </div>
+        <p class="mt-2.5 text-[12.5px] text-ink2 leading-snug">Placement, elimination ladder, pool efficiency with wasted points, and copyable share strings for all five rosters.</p>
+        <div class="mt-3 flex flex-wrap gap-1">
+          <span class="font-mono text-[9px] text-ink3 border border-line2 px-1.5 leading-[16px]">FR-21</span>
+          <span class="font-mono text-[9px] text-ink3 border border-line2 px-1.5 leading-[16px]">FR-28</span>
+        </div>
+      </a>
+
+      <a href="10-rules.html" class="card notch-both block border border-line bg-panel p-4">
+        <div class="flex items-start gap-3">
+          <span class="cardnum font-mono tnum text-[26px] leading-none text-ink4">10</span>
+          <div class="min-w-0 flex-1">
+            <div class="text-[14px] h-label font-semibold text-ink">Rules drawer</div>
+            <div class="font-mono text-[11px] text-sys">10-rules.html</div>
+          </div>
+          <span class="cardgo font-mono text-[13px] text-sys opacity-0">→</span>
+        </div>
+        <p class="mt-2.5 text-[12.5px] text-ink2 leading-snug">Outcome matrix, pool formula with your current numbers substituted, live trace schedule, and the deep-linked glossary.</p>
+        <div class="mt-3 flex flex-wrap gap-1">
+          <span class="font-mono text-[9px] text-ink3 border border-line2 px-1.5 leading-[16px]">FR-27</span>
+          <span class="font-mono text-[9px] text-ink3 border border-line2 px-1.5 leading-[16px]">FR-24</span>
+        </div>
+      </a>
+
+      <a href="index.html" class="card notch-both block border border-sys/60 bg-panel2 p-4">
+        <div class="flex items-start gap-3">
+          <span class="cardnum font-mono tnum text-[26px] leading-none text-sys">—</span>
+          <div class="min-w-0 flex-1">
+            <div class="text-[14px] h-label font-semibold text-ink">Prototype hub</div>
+            <div class="font-mono text-[11px] text-sys">index.html</div>
+          </div>
+          <span class="font-mono text-[9px] text-sys border border-sys/60 px-1.5 leading-[16px]">HERE</span>
+        </div>
+        <p class="mt-2.5 text-[12.5px] text-ink2 leading-snug">This page. Navigation across every mock plus the token reference Coder lifts directly from §1 and §9.</p>
+        <div class="mt-3 flex flex-wrap gap-1">
+          <span class="font-mono text-[9px] text-ink3 border border-line2 px-1.5 leading-[16px]">DESIGN AID</span>
+        </div>
+      </a>
+    </div>
+  </section>
+
+  <!-- ══════════════ FLOW STRIP ══════════════ -->
+  <section class="pt-10">
+    <div class="flex items-baseline gap-4 mb-4">
+      <h2 class="text-[16px] h-label font-semibold text-ink">Pipeline order</h2>
+      <span class="flex-1 border-t border-line"></span>
+      <span class="font-mono text-[10px] text-ink3">FLOW A — NEW PLAYER TO FIRST MATCH</span>
+    </div>
+    <div class="border border-line bg-panel px-5 py-4">
+      <div class="flex items-center gap-1.5 flex-wrap font-mono text-[11px]">
+        <a href="00-boot.html" class="text-ink2 hover:text-sys border border-line2 px-2 py-1">00 BOOT</a><span class="text-ink4">→</span>
+        <a href="04-match-setup.html" class="text-ink2 hover:text-sys border border-line2 px-2 py-1">04 SETUP</a><span class="text-ink4">→</span>
+        <a href="05-deploy.html" class="text-ink2 hover:text-sys border border-line2 px-2 py-1">05 DEPLOY</a><span class="text-ink4">→</span>
+        <a href="06-move-plot.html" class="text-ink2 hover:text-sys border border-line2 px-2 py-1">06 MOVE</a><span class="text-ink4">→</span>
+        <a href="08-playback.html" class="text-ink2 hover:text-sys border border-line2 px-2 py-1">08 PLAYBACK</a><span class="text-ink4">→</span>
+        <a href="07-attack-plot.html" class="text-ink2 hover:text-sys border border-line2 px-2 py-1">07 ATTACK</a><span class="text-ink4">→</span>
+        <a href="08-playback.html" class="text-ink2 hover:text-sys border border-line2 px-2 py-1">08 PLAYBACK</a>
+        <span class="text-ink3 px-1">↺ ROUNDS 1–24</span><span class="text-ink4">→</span>
+        <a href="09-result.html" class="text-ink2 hover:text-sys border border-line2 px-2 py-1">09 SUMMARY</a><span class="text-ink4">→</span>
+        <a href="01-build-collection.html" class="text-ink2 hover:text-sys border border-line2 px-2 py-1">01 COLLECTION</a>
+      </div>
+      <div class="mt-3 pt-3 border-t border-line grid grid-cols-3 gap-6 text-[12px] text-ink2 leading-snug">
+        <div><span class="text-[10px] h-label text-ink3 block mb-1">Flow B · theorycraft</span>Collection → duplicate a prebuilt → composer → swap chassis → tag commander → copy the share string.</div>
+        <div><span class="text-[10px] h-label text-ink3 block mb-1">Flow C · learning from a loss</span>Summary → read the wasted points → copy the winning AI's string → import → open it in the composer → rematch on the same seed.</div>
+        <div><span class="text-[10px] h-label text-ink3 block mb-1">Flow D · the round</span>Refill → read the ledger → plot blind → commit → find out where the board is → triage the pool → commit → find out what they intended.</div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ══════════════ TOKEN REFERENCE ══════════════ -->
+  <section class="pt-12">
+    <div class="flex items-baseline gap-4 mb-4">
+      <h2 class="text-[16px] h-label font-semibold text-ink">Design tokens</h2>
+      <span class="font-mono text-[11px] text-ink3">§1 · §9</span>
+      <span class="flex-1 border-t border-line"></span>
+      <span class="font-mono text-[10px] text-ink3">IDENTICAL ACROSS ALL TWELVE FILES</span>
+    </div>
+
+    <div class="grid grid-cols-3 gap-3">
+
+      <!-- surfaces -->
+      <div class="border border-line bg-panel notch">
+        <div class="px-4 py-2 border-b border-line text-[11px] h-label text-ink2">Surfaces</div>
+        <div class="p-4 space-y-2 font-mono text-[11px]">
+          <div class="flex items-center gap-3"><span class="w-9 h-6 border border-line2 shrink-0" style="background:#04060A"></span><span class="text-ink w-16">void</span><span class="text-ink3">#04060A</span><span class="ml-auto text-ink3 text-[10px]">PAGE · BOARD</span></div>
+          <div class="flex items-center gap-3"><span class="w-9 h-6 border border-line2 shrink-0" style="background:#090D13"></span><span class="text-ink w-16">panel</span><span class="text-ink3">#090D13</span><span class="ml-auto text-ink3 text-[10px]">PANEL</span></div>
+          <div class="flex items-center gap-3"><span class="w-9 h-6 border border-line2 shrink-0" style="background:#0E141C"></span><span class="text-ink w-16">panel-2</span><span class="text-ink3">#0E141C</span><span class="ml-auto text-ink3 text-[10px]">HOVER</span></div>
+          <div class="flex items-center gap-3"><span class="w-9 h-6 border border-line2 shrink-0" style="background:#141C27"></span><span class="text-ink w-16">panel-3</span><span class="text-ink3">#141C27</span><span class="ml-auto text-ink3 text-[10px]">SELECTED</span></div>
+          <div class="flex items-center gap-3"><span class="w-9 h-6 border border-line2 shrink-0" style="background:#1C2733"></span><span class="text-ink w-16">line</span><span class="text-ink3">#1C2733</span><span class="ml-auto text-ink3 text-[10px]">HAIRLINE</span></div>
+          <div class="flex items-center gap-3"><span class="w-9 h-6 border border-line2 shrink-0" style="background:#2A3946"></span><span class="text-ink w-16">line-2</span><span class="text-ink3">#2A3946</span><span class="ml-auto text-ink3 text-[10px]">WALLS · MAJOR</span></div>
+        </div>
+      </div>
+
+      <!-- text -->
+      <div class="border border-line bg-panel notch">
+        <div class="px-4 py-2 border-b border-line text-[11px] h-label text-ink2">Text — contrast on void</div>
+        <div class="p-4 space-y-2 font-mono text-[11px]">
+          <div class="flex items-center gap-3"><span class="w-9 h-6 border border-line2 shrink-0" style="background:#E8F2FB"></span><span class="text-ink w-16">ink</span><span class="text-ink3">#E8F2FB</span><span class="ml-auto text-ok tnum">16.8:1</span></div>
+          <div class="flex items-center gap-3"><span class="w-9 h-6 border border-line2 shrink-0" style="background:#9CB0C4"></span><span class="text-ink2 w-16">ink-2</span><span class="text-ink3">#9CB0C4</span><span class="ml-auto text-ok tnum">8.1:1</span></div>
+          <div class="flex items-center gap-3"><span class="w-9 h-6 border border-line2 shrink-0" style="background:#6B8096"></span><span class="text-ink3 w-16">ink-3</span><span class="text-ink3">#6B8096</span><span class="ml-auto text-ok tnum">4.6:1</span></div>
+          <div class="flex items-center gap-3"><span class="w-9 h-6 border border-line2 shrink-0" style="background:#42566A"></span><span class="text-ink4 w-16">ink-4</span><span class="text-ink3">#42566A</span><span class="ml-auto text-bad tnum">2.6:1</span></div>
+          <div class="pt-1 text-[10px] text-ink3 leading-relaxed">ink-3 IS THE FLOOR FOR ANY TEXT A PLAYER MUST READ.<br>ink-4 IS DECORATIVE ONLY — FORBIDDEN ON WORDS.</div>
+        </div>
+      </div>
+
+      <!-- semantic -->
+      <div class="border border-line bg-panel notch">
+        <div class="px-4 py-2 border-b border-line text-[11px] h-label text-ink2">Semantic — each has a non-colour partner</div>
+        <div class="p-4 space-y-2 font-mono text-[11px]">
+          <div class="flex items-center gap-3"><span class="w-9 h-6 border border-line2 shrink-0" style="background:#4DE1FF"></span><span class="text-sys w-16">sys</span><span class="text-ink3">#4DE1FF</span><span class="ml-auto text-ink3 text-[10px]">2PX RING</span></div>
+          <div class="flex items-center gap-3"><span class="w-9 h-6 border border-line2 shrink-0" style="background:#4BE8A4"></span><span class="text-ok w-16">ok</span><span class="text-ink3">#4BE8A4</span><span class="ml-auto text-ok text-[13px]">✓</span></div>
+          <div class="flex items-center gap-3"><span class="w-9 h-6 border border-line2 shrink-0" style="background:#FFB43C"></span><span class="text-warn w-16">warn</span><span class="text-ink3">#FFB43C</span><span class="ml-auto text-warn text-[13px]">!</span></div>
+          <div class="flex items-center gap-3"><span class="w-9 h-6 border border-line2 shrink-0" style="background:#FF4D6D"></span><span class="text-bad w-16">bad</span><span class="text-ink3">#FF4D6D</span><span class="ml-auto text-bad text-[13px]">✕</span></div>
+          <div class="flex items-center gap-3"><span class="w-9 h-6 border border-line2 shrink-0 hatch" style="background:#04060A"></span><span class="text-trace w-16">trace</span><span class="text-ink3">#FF3B6B</span><span class="ml-auto text-ink3 text-[10px]">45° HATCH</span></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- squads -->
+    <div class="mt-3 border border-line bg-panel notch">
+      <div class="px-4 py-2 border-b border-line flex items-baseline justify-between">
+        <span class="text-[11px] h-label text-ink2">Squad identity — lightness first, glyph second, hue third</span>
+        <span class="font-mono text-[10px] text-ink3">L* STEPS ≥ 8 AND MONOTONIC · SURVIVES FULL GREYSCALE</span>
+      </div>
+      <div class="grid grid-cols-5 divide-x divide-line">
+        <div class="p-4">
+          <div class="flex items-center gap-3">
+            <svg width="46" height="46" viewBox="0 0 46 46" class="shrink-0">
+              <circle cx="23" cy="23" r="15" fill="#A8FBFF" fill-opacity=".16" stroke="#A8FBFF"/>
+              <text x="23" y="28" text-anchor="middle" font-size="14" fill="#A8FBFF">▲</text>
+            </svg>
+            <div>
+              <div class="text-[13px] h-label font-semibold" style="color:#A8FBFF">Vector</div>
+              <div class="font-mono text-[10px] text-ink3">#A8FBFF</div>
+            </div>
+          </div>
+          <div class="mt-3 grid grid-cols-3 gap-1 font-mono text-[11px] tnum">
+            <div><span class="block text-[9px] text-ink3">TAG</span><span style="color:#A8FBFF">VC</span></div>
+            <div><span class="block text-[9px] text-ink3">L*</span><span class="text-ink">94</span></div>
+            <div><span class="block text-[9px] text-ink3">RANK</span><span class="text-ink">1</span></div>
+          </div>
+          <div class="mt-2 font-mono text-[9px] text-ink3">SOLID FILL · PLAYER SQUAD</div>
+          <div class="mt-1.5 h-4 border border-line2" style="background:#A8FBFF"></div>
+          <div class="h-4 border-x border-b border-line2" style="background:#F2F2F2"></div>
+        </div>
+
+        <div class="p-4">
+          <div class="flex items-center gap-3">
+            <svg width="46" height="46" viewBox="0 0 46 46" class="shrink-0">
+              <circle cx="23" cy="23" r="15" fill="#FFB43C" fill-opacity=".16" stroke="#FFB43C"/>
+              <text x="23" y="28" text-anchor="middle" font-size="14" fill="#FFB43C">■</text>
+            </svg>
+            <div>
+              <div class="text-[13px] h-label font-semibold" style="color:#FFB43C">Axiom</div>
+              <div class="font-mono text-[10px] text-ink3">#FFB43C</div>
+            </div>
+          </div>
+          <div class="mt-3 grid grid-cols-3 gap-1 font-mono text-[11px] tnum">
+            <div><span class="block text-[9px] text-ink3">TAG</span><span style="color:#FFB43C">AX</span></div>
+            <div><span class="block text-[9px] text-ink3">L*</span><span class="text-ink">80</span></div>
+            <div><span class="block text-[9px] text-ink3">RANK</span><span class="text-ink">2</span></div>
+          </div>
+          <div class="mt-2 font-mono text-[9px] text-ink3">SOLID FILL</div>
+          <div class="mt-1.5 h-4 border border-line2" style="background:#FFB43C"></div>
+          <div class="h-4 border-x border-b border-line2" style="background:#C6C6C6"></div>
+        </div>
+
+        <div class="p-4">
+          <div class="flex items-center gap-3">
+            <svg width="46" height="46" viewBox="0 0 46 46" class="shrink-0">
+              <defs><pattern id="tKS" width="4" height="4" patternUnits="userSpaceOnUse"><circle cx="1" cy="1" r=".9" fill="#5AA8FF" opacity=".6"/></pattern></defs>
+              <circle cx="23" cy="23" r="15" fill="url(#tKS)" stroke="#5AA8FF"/>
+              <text x="23" y="28" text-anchor="middle" font-size="14" fill="#5AA8FF">◆</text>
+            </svg>
+            <div>
+              <div class="text-[13px] h-label font-semibold" style="color:#5AA8FF">Kestrel</div>
+              <div class="font-mono text-[10px] text-ink3">#5AA8FF</div>
+            </div>
+          </div>
+          <div class="mt-3 grid grid-cols-3 gap-1 font-mono text-[11px] tnum">
+            <div><span class="block text-[9px] text-ink3">TAG</span><span style="color:#5AA8FF">KS</span></div>
+            <div><span class="block text-[9px] text-ink3">L*</span><span class="text-ink">68</span></div>
+            <div><span class="block text-[9px] text-ink3">RANK</span><span class="text-ink">3</span></div>
+          </div>
+          <div class="mt-2 font-mono text-[9px] text-ink3">50% DOT SCREEN</div>
+          <div class="mt-1.5 h-4 border border-line2" style="background:#5AA8FF"></div>
+          <div class="h-4 border-x border-b border-line2" style="background:#A3A3A3"></div>
+        </div>
+
+        <div class="p-4">
+          <div class="flex items-center gap-3">
+            <svg width="46" height="46" viewBox="0 0 46 46" class="shrink-0">
+              <defs><pattern id="tHL" width="4" height="4" patternUnits="userSpaceOnUse"><line x1="0" y1="1" x2="4" y2="1" stroke="#F2569B" stroke-width="1" opacity=".5"/></pattern></defs>
+              <circle cx="23" cy="23" r="15" fill="url(#tHL)" stroke="#F2569B"/>
+              <text x="23" y="28" text-anchor="middle" font-size="14" fill="#F2569B">⬡</text>
+            </svg>
+            <div>
+              <div class="text-[13px] h-label font-semibold" style="color:#F2569B">Hollow</div>
+              <div class="font-mono text-[10px] text-ink3">#F2569B</div>
+            </div>
+          </div>
+          <div class="mt-3 grid grid-cols-3 gap-1 font-mono text-[11px] tnum">
+            <div><span class="block text-[9px] text-ink3">TAG</span><span style="color:#F2569B">HL</span></div>
+            <div><span class="block text-[9px] text-ink3">L*</span><span class="text-ink">60</span></div>
+            <div><span class="block text-[9px] text-ink3">RANK</span><span class="text-ink">4</span></div>
+          </div>
+          <div class="mt-2 font-mono text-[9px] text-ink3">HORIZONTAL HATCH</div>
+          <div class="mt-1.5 h-4 border border-line2" style="background:#F2569B"></div>
+          <div class="h-4 border-x border-b border-line2" style="background:#8F8F8F"></div>
+        </div>
+
+        <div class="p-4">
+          <div class="flex items-center gap-3">
+            <svg width="46" height="46" viewBox="0 0 46 46" class="shrink-0">
+              <defs><pattern id="tNS" width="4" height="4" patternUnits="userSpaceOnUse"><line x1="1" y1="0" x2="1" y2="4" stroke="#8C6BD6" stroke-width="1" opacity=".5"/></pattern></defs>
+              <circle cx="23" cy="23" r="15" fill="url(#tNS)" stroke="#8C6BD6"/>
+              <text x="23" y="28" text-anchor="middle" font-size="14" fill="#8C6BD6">●</text>
+            </svg>
+            <div>
+              <div class="text-[13px] h-label font-semibold" style="color:#8C6BD6">Nullset</div>
+              <div class="font-mono text-[10px] text-ink3">#8C6BD6</div>
+            </div>
+          </div>
+          <div class="mt-3 grid grid-cols-3 gap-1 font-mono text-[11px] tnum">
+            <div><span class="block text-[9px] text-ink3">TAG</span><span style="color:#8C6BD6">NS</span></div>
+            <div><span class="block text-[9px] text-ink3">L*</span><span class="text-ink">50</span></div>
+            <div><span class="block text-[9px] text-ink3">RANK</span><span class="text-ink">5</span></div>
+          </div>
+          <div class="mt-2 font-mono text-[9px] text-ink3">VERTICAL HATCH</div>
+          <div class="mt-1.5 h-4 border border-line2" style="background:#8C6BD6"></div>
+          <div class="h-4 border-x border-b border-line2" style="background:#787878"></div>
+        </div>
+      </div>
+      <div class="px-4 py-2 border-t border-line font-mono text-[10px] text-ink3">
+        LOWER SWATCH = APPROXIMATE GREYSCALE. IDENTITY IS ALWAYS RENDERED AS GLYPH + TWO-LETTER TAG, NEVER COLOUR ALONE.
+      </div>
+    </div>
+
+    <!-- type scale -->
+    <div class="mt-3 grid grid-cols-3 gap-3">
+      <div class="col-span-2 border border-line bg-panel notch">
+        <div class="px-4 py-2 border-b border-line flex items-baseline justify-between">
+          <span class="text-[11px] h-label text-ink2">Type scale — two families, hard split</span>
+          <span class="font-mono text-[10px] text-ink3">WORDS = CHAKRA PETCH · NUMBERS = IBM PLEX MONO</span>
+        </div>
+        <div class="divide-y divide-line">
+          <div class="px-4 py-3 flex items-baseline gap-5">
+            <span class="w-[104px] shrink-0 font-mono text-[10px] text-ink3">DISPLAY</span>
+            <span class="text-[28px] leading-none font-bold h-label text-ink">2ND OF 5</span>
+            <span class="ml-auto font-mono text-[10px] text-ink3 text-right shrink-0">CHAKRA PETCH 700<br>28–44PX · 0.06EM</span>
+          </div>
+          <div class="px-4 py-3 flex items-baseline gap-5">
+            <span class="w-[104px] shrink-0 font-mono text-[10px] text-ink3">UI HEADING</span>
+            <span class="text-[16px] h-label font-semibold text-ink">Reaction pool ledger</span>
+            <span class="ml-auto font-mono text-[10px] text-ink3 text-right shrink-0">CHAKRA PETCH 600<br>13–18PX · 0.14EM</span>
+          </div>
+          <div class="px-4 py-3 flex items-baseline gap-5">
+            <span class="w-[104px] shrink-0 font-mono text-[10px] text-ink3">UI BODY</span>
+            <span class="text-[14px] text-ink2">Unspent points are destroyed at commit. They do not bank.</span>
+            <span class="ml-auto font-mono text-[10px] text-ink3 text-right shrink-0">CHAKRA PETCH 400/500<br>13–15PX · 0.01EM</span>
+          </div>
+          <div class="px-4 py-3 flex items-baseline gap-5">
+            <span class="w-[104px] shrink-0 font-mono text-[10px] text-ink3">DATA</span>
+            <span class="font-mono tnum text-[18px] text-ink">7.4 / 9.0 &nbsp; 0123456789 &nbsp; ●●○○○</span>
+            <span class="ml-auto font-mono text-[10px] text-ink3 text-right shrink-0">IBM PLEX MONO 400/600<br>11–20PX · TABULAR</span>
+          </div>
+          <div class="px-4 py-3 flex items-baseline gap-5">
+            <span class="w-[104px] shrink-0 font-mono text-[10px] text-ink3">MICRO</span>
+            <span class="font-mono text-[11px] text-ink3 tracking-[.1em]">LAST SEEN R4 · 11PX FLOOR</span>
+            <span class="ml-auto font-mono text-[10px] text-ink3 text-right shrink-0">MONO NUMERALS AND<br>ALL-CAPS MICRO-LABELS ONLY</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="border border-line bg-panel notch">
+        <div class="px-4 py-2 border-b border-line text-[11px] h-label text-ink2">Edges, elevation, motion</div>
+        <div class="p-4 space-y-3">
+          <div class="flex items-center gap-3">
+            <div class="notch w-16 h-9 bg-sys shrink-0"></div>
+            <div class="font-mono text-[10px] text-ink3 leading-snug"><span class="text-ink2">.notch</span> — 10PX 45° CUT<br>SIGNATURE, NOT TEXTURE</div>
+          </div>
+          <div class="flex items-center gap-3">
+            <div class="w-16 h-9 border border-line bg-panel2 shrink-0"></div>
+            <div class="font-mono text-[10px] text-ink3 leading-snug"><span class="text-ink2">glow-0</span> — 1PX line, RESTING</div>
+          </div>
+          <div class="flex items-center gap-3">
+            <div class="w-16 h-9 bg-panel2 shrink-0" style="border:1px solid #4DE1FF;box-shadow:0 0 12px -2px rgba(77,225,255,.45)"></div>
+            <div class="font-mono text-[10px] text-ink3 leading-snug"><span class="text-ink2">glow-2</span> — sys RING + 12PX BLOOM<br>ACTIVE / SELECTED</div>
+          </div>
+          <div class="pt-2 border-t border-line font-mono text-[10px] text-ink3 leading-relaxed">
+            RADIUS <span class="text-ink2">0</span> · INPUTS <span class="text-ink2">2PX</span> MAX<br>
+            DROP SHADOWS <span class="text-bad">NONE</span> · IMAGES <span class="text-bad">NONE</span><br>
+            SPACING <span class="text-ink2">4 · 8 · 12 · 16 · 24 · 32 · 48 · 64</span><br>
+            CONTROL <span class="text-ink2">90MS</span> · PANEL <span class="text-ink2">160MS</span> · FLASH <span class="text-ink2">220MS</span><br>
+            GHOST PULSE <span class="text-ink2">0.42HZ</span> · NOTHING IN <span class="text-bad">3–50HZ</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <footer class="pt-10 mt-10 border-t border-line flex items-baseline justify-between font-mono text-[10px] text-ink3">
+    <span>SIGNAL LOSS · DESIGN DRAFT 1 · MOCKS ARE STATIC HTML + TAILWIND CDN · NO BUILD STEP</span>
+    <span>BOARD LEGIBLE IN FULL GREYSCALE — VERIFICATION OBLIGATION CARRIED TO POLISH (DQ-5)</span>
+  </footer>
+</main>
+
+<!-- mock tag -->
+<div class="fixed bottom-0 left-0 z-50 flex items-stretch border-t border-r border-line2 bg-panel">
+  <a href="index.html" class="px-3 py-1.5 text-[10px] h-label text-sys hover:bg-panel3 border-r border-line">← ALL MOCKS</a>
+  <div class="px-3 py-1.5 font-mono text-[10px] text-ink3 tracking-[.1em]">MOCK · SIGNAL LOSS · PROTOTYPE HUB</div>
+</div>
+
+</body>
+</html>
