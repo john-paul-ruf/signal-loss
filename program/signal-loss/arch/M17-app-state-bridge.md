@@ -2,23 +2,32 @@
 
 > **Path:** `./src/app/store/, ./src/app/bridge/`
 > **Imports from:** M12, M14, M15
-> **Status:** planned for full v1
+> **Status:** core stores shipped in SESSION-02 (`./src/app/store/core/**`). Build stores (`./src/app/store/build/`), match store (`./src/app/store/match/`), and worker clients (`./src/app/bridge/`) remain pending Sessions 07 and 08.
 
 ## Public API
-- Core navigation/preferences/collection stores plus non-persisted MatchLaunchConfig and MatchResultPayload flow handoff
-- Build/setup and match stores partitioned into session-owned subdirectories
-- Typed Promise-based worker clients with cancellation by request ID
+
+- Core navigation/preferences/collection stores plus non-persisted `MatchLaunchConfig` and `MatchResultPayload` flow handoff (SHIPPED).
+- Build/setup and match stores partitioned into session-owned subdirectories (PENDING).
+- Typed Promise-based worker clients with cancellation by request ID (PENDING).
+
+Core store surface (`./src/app/store/core/index.ts`, shipped in SESSION-02):
+
+- `createCollectionStore(repository)` — a Zustand vanilla store carrying loaded `PersistedStateV1`, `lastError`, boot flag, `persistenceUnavailable`, `corrupt` + `corruptRaw`. Actions: `boot`, `refresh`, `saveConstructCreate`, `saveConstructUpdate`, `saveRosterCreate`, `saveRosterUpdate`, `renameEntity`, `duplicateEntity`, `deleteEntity`, `savePreferences`, `resetCorruptStore`, `markExternallyChanged`. Every action returns a boolean success value; a failed write leaves state prior-version intact.
+- `createNavigationStore({initialPath?, requestNavigation?})` — `currentPath` + `navigationCount`; `navigate(path)` publishes via the callback and `hashChanged(path)` accepts inbound hash events.
+- `createPreferencesStore()` — mirror of `PersistedStateV1.preferences` plus a `resolvedReducedMotion` derived value that resolves persisted preference over the OS media query.
+- `createFlowStore()` — non-persisted `pendingLaunch: MatchLaunchConfig`, `lastResult: MatchResultPayload`, `requestedEntity`. `MatchLaunchConfig` and `MatchResultPayload` are handoff CONTRACTS between Session 07 (setup/result) and Session 08 (match); those sessions extend the union under their own store subpaths and MUST NOT persist them via `CollectionRepository` (they are transient by design).
 
 ## Internal Structure
 
 | Area | Path |
 |---|---|
-| Core stores | `./src/app/store/core/` |
-| Build stores | `./src/app/store/build/` |
-| Match store | `./src/app/store/match/` |
-| Worker clients | `./src/app/bridge/` |
+| Core stores | `./src/app/store/core/` (`collection-store.ts`, `flow-store.ts`, `navigation-store.ts`, `preferences-store.ts`, `index.ts`) |
+| Build stores | `./src/app/store/build/` (pending Session 07) |
+| Match store | `./src/app/store/match/` (pending Session 08) |
+| Worker clients | `./src/app/bridge/` (pending Sessions 07 and 08) |
 
 ## Conventions and Invariants
+
 - Use narrow Zustand selectors.
 - Private plots stay in human-local match state and never enter AI messages.
 - Do not mirror engine rules in reducers; call the engine.
@@ -28,28 +37,4 @@
 | Date | Change |
 |---|---|
 | 2026-08-28 | Genesis/Forge contract recorded; implementation pending. |
-
-<!-- SESSION-02 -->
-
-## M17 — App state and bridge
-
-Core stores (`./src/app/store/core/index.ts`):
-
-- `createCollectionStore(repository)` — a Zustand vanilla store carrying
-  loaded PersistedStateV1, lastError, boot flag, persistenceUnavailable,
-  corrupt+corruptRaw. Actions: `boot`, `refresh`, `saveConstructCreate`,
-  `saveConstructUpdate`, `saveRosterCreate`, `saveRosterUpdate`,
-  `renameEntity`, `duplicateEntity`, `deleteEntity`, `savePreferences`,
-  `resetCorruptStore`, `markExternallyChanged`. Every action returns a
-  boolean success value; a failed write leaves state prior-version intact.
-- `createNavigationStore({initialPath?, requestNavigation?})` — currentPath +
-  navigationCount; `navigate(path)` publishes via the callback and
-  `hashChanged(path)` accepts inbound hash events.
-- `createPreferencesStore()` — mirror of `PersistedStateV1.preferences` +
-  a `resolvedReducedMotion` derived value that resolves persisted preference
-  over the OS media query.
-- `createFlowStore()` — non-persisted `pendingLaunch: MatchLaunchConfig`,
-  `lastResult: MatchResultPayload`, `requestedEntity`. Flow types are the
-  handoff CONTRACT between setup (Session 07) and match (Session 08); those
-  sessions extend the union under their own store subpaths.
-
+| 2026-08-28 | SESSION-02 shipped `./src/app/store/core/**` (collection, navigation, preferences, and non-persisted flow store) with the `MatchLaunchConfig`/`MatchResultPayload` handoff contracts. Build stores, match store, and bridge remain pending. |

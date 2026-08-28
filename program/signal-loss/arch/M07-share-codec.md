@@ -2,38 +2,11 @@
 
 > **Path:** `./src/engine/codec/`
 > **Imports from:** M05, M06
-> **Status:** planned for full v1
+> **Status:** shipped in SESSION-02.
 
 ## Public API
-- encodeConstruct, encodeRoster, and decode
-- SL1 bit-packed Base64url format with checksum
-- MALFORMED, UNKNOWN_ENTRY, ILLEGAL, and VERSION_UNSUPPORTED failures
 
-## Internal Structure
-
-| Area | Path |
-|---|---|
-| Bit IO | `./src/engine/codec/bitstream.ts` |
-| Encoding | `./src/engine/codec/encode.ts` |
-| Decoding | `./src/engine/codec/decode.ts` |
-| Facade | `./src/engine/codec/index.ts` |
-
-## Conventions and Invariants
-- Validate length/checksum before payload-sized allocation.
-- Names, timestamps, and local IDs never enter the wire format.
-- Decode validates but never repairs; round-trip is property-tested.
-
-## Change History
-
-| Date | Change |
-|---|---|
-| 2026-08-28 | Genesis/Forge contract recorded; implementation pending. |
-
-<!-- SESSION-02 -->
-
-## M07 — Share codec
-
-Public API (`./src/engine/codec/index.ts`):
+Facade: `./src/engine/codec/index.ts`.
 
 ```ts
 export function encodeConstruct(value: Construct, catalog: Catalog): string;
@@ -72,14 +45,26 @@ payload bits:
   u16   FNV-1a-16 checksum over the preceding bits (byte-padded)
 ```
 
-Invariants:
+## Internal Structure
 
-- Decode validates prefix, version, kind, exact consumption, checksum, and
-  base64url alphabet/length BEFORE catalog lookup. UNKNOWN_ENTRY is only
-  surfaced after checksum passes.
-- No name, id, or timestamp is ever emitted (NFR-8).
-- Round-trip is property-tested: `decode(encode(r)) ≡ r` under semantic
-  equivalence (mount composition + order, budget, commander tag).
-- Zero engine dependencies (§2.1); FNV-1a-16 implementation is local
-  (`bitstream.fnv1a16` / `fnv1a16OverBits`).
+| Area | Path |
+|---|---|
+| Bit IO | `./src/engine/codec/bitstream.ts` |
+| Encoding | `./src/engine/codec/encode.ts` |
+| Decoding | `./src/engine/codec/decode.ts` |
+| Facade | `./src/engine/codec/index.ts` |
 
+## Conventions and Invariants
+
+- Validate prefix, version, kind, exact consumption, checksum, and base64url alphabet/length BEFORE catalog lookup. `UNKNOWN_ENTRY` is only surfaced after checksum passes.
+- Validate length/checksum before payload-sized allocation.
+- Names, timestamps, and local IDs never enter the wire format (NFR-8).
+- Decode validates but never repairs; round-trip is property-tested: `decode(encode(r)) ≡ r` under semantic equivalence (mount composition + order, budget, commander tag).
+- Zero engine dependencies (§2.1); FNV-1a-16 implementation is local (`bitstream.fnv1a16` / `fnv1a16OverBits`).
+
+## Change History
+
+| Date | Change |
+|---|---|
+| 2026-08-28 | Genesis/Forge contract recorded; implementation pending. |
+| 2026-08-28 | SESSION-02 shipped `./src/engine/codec/**` with the SL1 bit-packed construct/roster format, byte-padded FNV-1a-16 checksum, and four distinguishable decode failure kinds. |

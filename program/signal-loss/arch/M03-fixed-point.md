@@ -2,38 +2,11 @@
 
 > **Path:** `./src/engine/fx/`
 > **Imports from:** —
-> **Status:** planned for full v1
+> **Status:** shipped in SESSION-01.
 
 ## Public API
-- Fx branded integer and FX_ONE = 1024
-- Integer vector and scalar arithmetic
-- isqrt, squared distance, segment intersection, point-in-polygon, and circle overlap
 
-## Internal Structure
-
-| Area | Path |
-|---|---|
-| Scalar | `./src/engine/fx/scalar.ts` |
-| Vector | `./src/engine/fx/vector.ts` |
-| Geometry | `./src/engine/fx/geometry.ts` |
-| Facade | `./src/engine/fx/index.ts` |
-
-## Conventions and Invariants
-- Keep all rule-affecting geometry within Number safe-integer bounds.
-- Use integer cross products and squared distances; division rounds explicitly.
-- Math.sqrt is allowed only inside corrected isqrt.
-
-## Change History
-
-| Date | Change |
-|---|---|
-| 2026-08-28 | Genesis/Forge contract recorded; implementation pending. |
-
-<!-- SESSION-01 -->
-
-## M03 — Fixed-point math
-
-Public API (`./src/engine/fx/index.ts`):
+Facade: `./src/engine/fx/index.ts`.
 
 ```ts
 type Fx = number & { readonly [fxBrand]: "Fx" };
@@ -80,20 +53,28 @@ function measurePolyline(poly: Polyline): PolylineMeasure;
 function polylinePointAt(poly: Polyline, m: PolylineMeasure, s: Fx): Vec2;
 ```
 
-Conventions in effect:
+## Internal Structure
 
-- **Rounding**: all fx division truncates toward zero (`Math.trunc`).
-- **Boundary semantics**: segments, polygons, and disks are CLOSED. Touching
-  endpoints intersect. Points on a polygon edge are inside. Boundary
-  contact of disks is overlap.
-- **Point-in-polygon** uses a half-open horizontal ray + prior boundary
-  test; polygon vertices exactly on the ray count once, not zero and not
-  twice.
-- **Polyline sampling** clamps `s` to `[0, totalLength]`. Zero-length
-  segments do not divide by zero. Interpolation is
-  `Math.trunc((componentDelta * remaining) / segmentLength)` — one
-  well-scoped truncation per component.
+| Area | Path |
+|---|---|
+| Scalar | `./src/engine/fx/scalar.ts` |
+| Vector | `./src/engine/fx/vector.ts` |
+| Geometry | `./src/engine/fx/geometry.ts` |
+| Facade | `./src/engine/fx/index.ts` |
 
-Safe-integer bound: |v| ≤ 2^21 fx → squared distances ≤ 2^44, cross
-products ≤ 2^44, both inside 2^53.
+## Conventions and Invariants
 
+- Keep all rule-affecting geometry within Number safe-integer bounds. Safe-integer bound: |v| ≤ 2^21 fx → squared distances ≤ 2^44, cross products ≤ 2^44, both inside 2^53.
+- Use integer cross products and squared distances; division rounds explicitly.
+- `Math.sqrt` is allowed only inside the corrected `isqrt`.
+- **Rounding:** all fx division truncates toward zero (`Math.trunc`).
+- **Boundary semantics:** segments, polygons, and disks are CLOSED. Touching endpoints intersect; points on a polygon edge are inside; boundary contact of disks counts as overlap.
+- **Point-in-polygon** uses a half-open horizontal ray plus a prior boundary test; polygon vertices exactly on the ray count once, not zero and not twice.
+- **Polyline sampling** clamps `s` to `[0, totalLength]`. Zero-length segments do not divide by zero. Component interpolation is `Math.trunc((componentDelta * remaining) / segmentLength)` — one well-scoped truncation per component.
+
+## Change History
+
+| Date | Change |
+|---|---|
+| 2026-08-28 | Genesis/Forge contract recorded; implementation pending. |
+| 2026-08-28 | SESSION-01 shipped `./src/engine/fx/**` with the branded `Fx` scalar, vector algebra, geometry primitives (segment, polygon, circle, polyline), and closed-boundary invariants. |

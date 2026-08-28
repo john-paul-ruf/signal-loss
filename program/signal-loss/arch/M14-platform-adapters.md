@@ -2,37 +2,11 @@
 
 > **Path:** `./src/platform/`
 > **Imports from:** M06, M13
-> **Status:** planned for full v1
+> **Status:** shipped in SESSION-02.
 
 ## Public API
-- CollectionRepository result-based port and localStorage adapter
-- Clipboard adapter for share strings and seeds
-- Capability probes for viewport, storage, and motion preferences
 
-## Internal Structure
-
-| Area | Path |
-|---|---|
-| Storage | `./src/platform/storage/` |
-| Clipboard | `./src/platform/clipboard/` |
-| Capabilities | `./src/platform/capability.ts` |
-
-## Conventions and Invariants
-- One atomic root-document setItem per logical write.
-- Preserve corrupt raw data and require explicit recovery.
-- No adapter may make a runtime network request.
-
-## Change History
-
-| Date | Change |
-|---|---|
-| 2026-08-28 | Genesis/Forge contract recorded; implementation pending. |
-
-<!-- SESSION-02 -->
-
-## M14 — Platform adapters
-
-Public surface (`./src/platform/index.ts`):
+Facade: `./src/platform/index.ts`.
 
 ```ts
 // Storage
@@ -65,19 +39,37 @@ export function copyText(text: string, clipboard: ClipboardLike | null): Promise
 export function resolveBrowserClipboard(): ClipboardLike | null;
 ```
 
-`RepositoryError` discriminants: STORAGE_UNAVAILABLE · MALFORMED_JSON ·
-UNSUPPORTED_VERSION · INVALID_SCHEMA · MIGRATION_FAILED · STALE_REVISION ·
-QUOTA_EXCEEDED · WRITE_FAILED · ENTITY_NOT_FOUND. Every mutation:
+`RepositoryError` discriminants (all nine): `STORAGE_UNAVAILABLE` · `MALFORMED_JSON` · `UNSUPPORTED_VERSION` · `INVALID_SCHEMA` · `MIGRATION_FAILED` · `STALE_REVISION` · `QUOTA_EXCEEDED` · `WRITE_FAILED` · `ENTITY_NOT_FOUND`.
 
-1. Probes storage once, caching the result.
-2. Reads and validates the current root.
-3. Rejects if `revision !== expectedRevision` (`STALE_REVISION`).
-4. Builds a fresh candidate, canonicalizing mount order (ascending
-   hardpoint index).
-5. Allocates ids from `nextEntityId` atomically in the same write.
-6. Increments `revision` exactly once.
-7. Runs `validatePersistedStateV1`.
-8. `JSON.stringify` the whole candidate, one `setItem`.
-9. Classifies quota errors by DOMException code 22/1014 or names —
-   never by name alone.
+## Internal Structure
 
+| Area | Path |
+|---|---|
+| Storage | `./src/platform/storage/` (`collection-repository.ts`, `errors.ts`, `migration-runtime.ts`, `migration-shim.d.ts`, `index.ts`) |
+| Clipboard | `./src/platform/clipboard/` |
+| Capabilities | `./src/platform/capability.ts` |
+| Facade | `./src/platform/index.ts` |
+
+## Conventions and Invariants
+
+- One atomic root-document `setItem` per logical write.
+- Preserve corrupt raw data and require explicit recovery.
+- No adapter may make a runtime network request.
+- Every mutation follows the canonical mount order and revision protocol:
+  1. Probe storage once, caching the result.
+  2. Read and validate the current root.
+  3. Reject if `revision !== expectedRevision` (`STALE_REVISION`).
+  4. Build a fresh candidate, canonicalizing mount order (ascending hardpoint index).
+  5. Allocate ids from `nextEntityId` atomically in the same write.
+  6. Increment `revision` exactly once.
+  7. Run `validatePersistedStateV1`.
+  8. `JSON.stringify` the whole candidate, one `setItem`.
+  9. Classify quota errors by DOMException code 22/1014 or names — never by name alone.
+- `preloadMigrationModule()` must be called once at app boot before creating any `CollectionRepository` — the boot path / app shell should await it.
+
+## Change History
+
+| Date | Change |
+|---|---|
+| 2026-08-28 | Genesis/Forge contract recorded; implementation pending. |
+| 2026-08-28 | SESSION-02 shipped `./src/platform/**` with `CollectionRepository` over the DB-owned migration, all nine `RepositoryError` discriminants, the atomic revisioned write protocol, storage/clipboard/viewport capability probes, and name-agnostic quota classification. |
