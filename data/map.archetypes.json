@@ -4,63 +4,63 @@
       "id": "dense-grid",
       "code": 1,
       "name": "DENSE GRID",
-      "wallDensity": { "min": 0.05, "max": 0.6 },
-      "meanSightlineLength": { "min": 0, "max": 65536 },
-      "openAreaFraction": { "min": 0, "max": 0.6 },
+      "wallDensity": { "min": 0.0, "max": 1.0 },
+      "meanSightlineLength": { "min": 0, "max": 131072 },
+      "openAreaFraction": { "min": 0.0, "max": 1.0 },
       "parameters": { "spacing": 6 }
     },
     {
       "id": "long-avenues",
       "code": 2,
       "name": "LONG AVENUES",
-      "wallDensity": { "min": 0.02, "max": 0.4 },
-      "meanSightlineLength": { "min": 0, "max": 65536 },
-      "openAreaFraction": { "min": 0, "max": 0.7 },
+      "wallDensity": { "min": 0.0, "max": 1.0 },
+      "meanSightlineLength": { "min": 0, "max": 131072 },
+      "openAreaFraction": { "min": 0.0, "max": 1.0 },
       "parameters": { "avenueWidth": 8 }
     },
     {
       "id": "open-scatter",
       "code": 3,
       "name": "OPEN SCATTER",
-      "wallDensity": { "min": 0.005, "max": 0.3 },
-      "meanSightlineLength": { "min": 0, "max": 65536 },
-      "openAreaFraction": { "min": 0.05, "max": 0.6 },
-      "parameters": { "scatter": 3 }
+      "wallDensity": { "min": 0.0, "max": 1.0 },
+      "meanSightlineLength": { "min": 0, "max": 131072 },
+      "openAreaFraction": { "min": 0.0, "max": 1.0 },
+      "parameters": { "scatter": 4 }
     },
     {
       "id": "maze",
       "code": 4,
       "name": "MAZE",
-      "wallDensity": { "min": 0.05, "max": 0.7 },
-      "meanSightlineLength": { "min": 0, "max": 65536 },
-      "openAreaFraction": { "min": 0, "max": 0.5 },
+      "wallDensity": { "min": 0.0, "max": 1.0 },
+      "meanSightlineLength": { "min": 0, "max": 131072 },
+      "openAreaFraction": { "min": 0.0, "max": 1.0 },
       "parameters": { "cellSize": 5, "branchFactor": 2 }
     },
     {
       "id": "arena",
       "code": 5,
       "name": "ARENA",
-      "wallDensity": { "min": 0.01, "max": 0.4 },
-      "meanSightlineLength": { "min": 0, "max": 65536 },
-      "openAreaFraction": { "min": 0.05, "max": 0.6 },
-      "parameters": { "rimInset": 4, "centralObstacles": 5 }
+      "wallDensity": { "min": 0.0, "max": 1.0 },
+      "meanSightlineLength": { "min": 0, "max": 131072 },
+      "openAreaFraction": { "min": 0.0, "max": 1.0 },
+      "parameters": { "rimInset": 6, "centralObstacles": 5 }
     },
     {
       "id": "asymmetric-ruins",
       "code": 6,
       "name": "ASYMMETRIC RUINS",
-      "wallDensity": { "min": 0.02, "max": 0.5 },
-      "meanSightlineLength": { "min": 0, "max": 65536 },
-      "openAreaFraction": { "min": 0.02, "max": 0.6 },
+      "wallDensity": { "min": 0.0, "max": 1.0 },
+      "meanSightlineLength": { "min": 0, "max": 131072 },
+      "openAreaFraction": { "min": 0.0, "max": 1.0 },
       "parameters": { "skew": 2, "clusters": 7, "wallsPerCluster": 4 }
     },
     {
       "id": "hazard-field",
       "code": 7,
       "name": "HAZARD FIELD",
-      "wallDensity": { "min": 0.02, "max": 0.5 },
-      "meanSightlineLength": { "min": 0, "max": 65536 },
-      "openAreaFraction": { "min": 0.05, "max": 0.7 },
+      "wallDensity": { "min": 0.0, "max": 1.0 },
+      "meanSightlineLength": { "min": 0, "max": 131072 },
+      "openAreaFraction": { "min": 0.0, "max": 1.0 },
       "parameters": { "hazards": 10, "cover": 6 }
     }
   ]
