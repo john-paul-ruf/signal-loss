@@ -40,6 +40,11 @@ import {
   scoreAttackCandidate,
   scoreMoveEndpoint,
 } from "./evaluate";
+import {
+  emptyOpponentModel,
+  postureFrequency,
+  type OpponentModel,
+} from "./model";
 import type {
   AiDecision,
   AiDiagnostics,
@@ -57,6 +62,9 @@ import type {
  * Produce a legal `SquadMovePlots` for the observer squad. Tier controls
  * the SEARCH; every tier's output is a legal `SquadMovePlots` that the
  * engine's `resolveMovementPhase` accepts.
+ *
+ * `model` is used by Tier 2+ to weight enemy retaliation by their observed
+ * posture frequency. Tier 1 ignores it.
  */
 export function aiMovePlot(
   state: PublicState,
@@ -66,6 +74,7 @@ export function aiMovePlot(
   weights: AiWeights,
   budget: NodeBudget,
   tier: AiTier = 1,
+  model: OpponentModel = emptyOpponentModel(),
 ): AiResult<AiDecision<SquadMovePlots>> {
   if ((state.observer as number) !== (squad as number)) {
     return {
@@ -76,8 +85,9 @@ export function aiMovePlot(
       },
     };
   }
-  // Tier 1 uses the greedy policy. Higher tiers reuse the same policy
-  // interface but override the search / model — added in later checkpoints.
+  // Tier 1 uses the greedy policy; movement scoring is model-agnostic in
+  // Tier 1 and Tier 2 (posture affects attacks, not endpoint exposure).
+  void model;
   return tier1MovePlot(state, squad, catalog, rng, weights, budget, tier);
 }
 
@@ -92,6 +102,7 @@ export function aiAttackPlot(
   weights: AiWeights,
   budget: NodeBudget,
   tier: AiTier = 1,
+  model: OpponentModel = emptyOpponentModel(),
 ): AiResult<AiDecision<SquadAttackPlot>> {
   if ((state.observer as number) !== (squad as number)) {
     return {
@@ -101,6 +112,9 @@ export function aiAttackPlot(
         message: `aiAttackPlot: observer ${state.observer as number} does not match squad ${squad as number}.`,
       },
     };
+  }
+  if (tier >= 2) {
+    return tier2AttackPlot(state, squad, catalog, rng, weights, budget, tier, model);
   }
   return tier1AttackPlot(state, squad, catalog, rng, weights, budget, tier);
 }
@@ -429,4 +443,157 @@ function allocatePool(
     spent = spent + 1;
   }
   return { calledIds, postureIds, spent, rng: currentRng };
+}
+
+/* ------------------------------------------------------------------------- */
+/* Tier 2 attack — opponent-model-blended EV, one-ply                          */
+/* ------------------------------------------------------------------------- */
+
+/**
+ * Tier 2's attack decision. Same greedy pool allocator as Tier 1, but the
+ * expected-damage calculation blends the FLAT and POSTURE matrix cells
+ * according to the target squad's observed posture frequency (from
+ * `model`). Deterministic per (state, rng, weights, model): the smoothed
+ * frequency is an integer ratio, so no float ever enters scoring.
+ *
+ * Node accounting: every (attacker, target-candidate) scoring counts as
+ * one node. Truncation is exact — at the boundary, `nodesVisited` equals
+ * `budget` and no further candidates are considered.
+ */
+function tier2AttackPlot(
+  state: PublicState,
+  squad: SquadId,
+  catalog: Catalog,
+  rng: Rng,
+  weights: AiWeights,
+  budget: NodeBudget,
+  tier: AiTier,
+  model: OpponentModel,
+): AiResult<AiDecision<SquadAttackPlot>> {
+  const context = buildSquadContext(state, catalog);
+  let nodesVisited = 0;
+  let candidateCount = 0;
+  const rows: AttackDecisionRow[] = [];
+  let currentRng: Rng = rng;
+
+  for (const own of context.ownConstructs) {
+    const candidates = generateAttackCandidates(state, own.base.id, catalog);
+    candidateCount = candidateCount + candidates.length;
+    let normalBest: AttackDecisionRow["normalBest"] = {
+      targetId: null,
+      score: 0,
+      damage: 0,
+      isKill: false,
+      commander: false,
+    };
+    let calledBest: AttackDecisionRow["calledBest"] = {
+      targetId: null,
+      score: -weights.calledCost,
+      damage: 0,
+      isKill: false,
+      commander: false,
+    };
+    for (let i = 0; i < candidates.length; i = i + 1) {
+      if (nodesVisited >= (budget as number)) break;
+      const c = candidates[i];
+      if (c === undefined || c.targetId === null) continue;
+      const target = state.constructs.find((k) => (k.base.id as number) === (c.targetId as number));
+      if (target === undefined) continue;
+      // Tier 2: use the target squad's observed posture frequency.
+      const targetSquad = target.base.squadId as SquadId;
+      const freq = postureFrequency(model, targetSquad);
+      const scored = scoreAttackCandidate(
+        own,
+        target,
+        c.called,
+        freq.numer,
+        freq.denom,
+        catalog,
+        weights,
+      );
+      nodesVisited = nodesVisited + 1;
+      const [nonce, r2] = nextRange(currentRng, 0, 1024);
+      currentRng = r2;
+      const composite = scored.score * 1024 + nonce;
+      if (c.called) {
+        const cur = calledBest.score * 1024;
+        if (composite > cur) {
+          calledBest = {
+            targetId: c.targetId,
+            score: scored.score,
+            damage: scored.expectedDamage,
+            isKill: scored.isKill,
+            commander: scored.targetIsCommander,
+          };
+        }
+      } else {
+        const cur = normalBest.score * 1024;
+        if (composite > cur) {
+          normalBest = {
+            targetId: c.targetId,
+            score: scored.score,
+            damage: scored.expectedDamage,
+            isKill: scored.isKill,
+            commander: scored.targetIsCommander,
+          };
+        }
+      }
+    }
+    rows.push({
+      constructId: own.base.id,
+      normalBest,
+      calledBest,
+      exposure: context.exposureByOwnId.get(own.base.id as number) ?? 0,
+    });
+  }
+
+  const pool = context.poolTotal;
+  const spendPlan = allocatePool(rows, pool, weights, currentRng);
+  currentRng = spendPlan.rng;
+
+  const attacks: AttackPlot[] = [];
+  const postures: PostureAssignment[] = [];
+  const selectedIds: number[] = [];
+
+  for (const row of rows) {
+    const wantCalled = spendPlan.calledIds.has(row.constructId as number) && row.calledBest.targetId !== null;
+    const chosen = wantCalled ? row.calledBest : row.normalBest;
+    if (chosen.targetId !== null) {
+      attacks.push({
+        constructId: row.constructId,
+        targetId: chosen.targetId,
+        called: wantCalled,
+      });
+      selectedIds.push(row.constructId as number);
+    }
+    const posture: "FLAT" | "POSTURE" = spendPlan.postureIds.has(row.constructId as number)
+      ? "POSTURE"
+      : "FLAT";
+    postures.push({ constructId: row.constructId, posture });
+  }
+
+  attacks.sort((a, b) => (a.constructId as number) - (b.constructId as number));
+  postures.sort((a, b) => (a.constructId as number) - (b.constructId as number));
+
+  const scoreTerms: Record<string, number> = {
+    calledCount: spendPlan.calledIds.size,
+    postureCount: spendPlan.postureIds.size,
+    poolSpent: spendPlan.spent,
+  };
+  const diagnostics: AiDiagnostics = {
+    tier,
+    nodesVisited,
+    nodeBudget: budget as number,
+    candidateCount,
+    selectedIds,
+    scoreTerms,
+  };
+  return {
+    ok: true,
+    value: {
+      choice: { squadId: squad, attacks, postures },
+      diagnostics,
+      rng: currentRng,
+    },
+  };
 }

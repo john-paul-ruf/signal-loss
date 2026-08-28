@@ -52,3 +52,20 @@ export {
 } from "./evaluate";
 
 export { aiAttackPlot, aiMovePlot } from "./policy";
+
+export {
+  emptyOpponentModel,
+  observationCount,
+  postureFrequency,
+  updateOpponentModel,
+  type OpponentModel,
+  type PostureObservation,
+} from "./model";
+
+export {
+  bestOf,
+  chargeNode,
+  topK,
+  type NodeCounter,
+  type Scored,
+} from "./search";
