@@ -85,9 +85,13 @@ export function aiMovePlot(
       },
     };
   }
-  // Tier 1 uses the greedy policy; movement scoring is model-agnostic in
-  // Tier 1 and Tier 2 (posture affects attacks, not endpoint exposure).
+  // Tier 1 / Tier 2 movement is greedy; movement scoring is model-agnostic
+  // (posture affects attacks, not endpoint exposure). Tier 3 adds
+  // trace-schedule lookahead over `weights.beamDepth` future rounds.
   void model;
+  if (tier >= 3) {
+    return tier3MovePlot(state, squad, catalog, rng, weights, budget, tier);
+  }
   return tier1MovePlot(state, squad, catalog, rng, weights, budget, tier);
 }
 
@@ -112,6 +116,9 @@ export function aiAttackPlot(
         message: `aiAttackPlot: observer ${state.observer as number} does not match squad ${squad as number}.`,
       },
     };
+  }
+  if (tier >= 3) {
+    return tier3AttackPlot(state, squad, catalog, rng, weights, budget, tier, model);
   }
   if (tier >= 2) {
     return tier2AttackPlot(state, squad, catalog, rng, weights, budget, tier, model);
@@ -596,4 +603,371 @@ function tier2AttackPlot(
       rng: currentRng,
     },
   };
+}
+
+/* ------------------------------------------------------------------------- */
+/* Tier 3 attack — beam search with anti-kingmaking                            */
+/* ------------------------------------------------------------------------- */
+
+/**
+ * Rank squads by aggregate advantage: total damage dealt + surviving
+ * alive-count. Higher rank = current leader. Used to power the anti-
+ * kingmaking penalty: hitting the leader when the leader is ALREADY ahead
+ * of the pack is discounted so the AI does not accelerate a runaway win.
+ */
+function squadAdvantageBySquadId(state: PublicState): ReadonlyMap<number, number> {
+  const out = new Map<number, number>();
+  for (const s of state.squads) {
+    const dealt = s.totalDamageDealt;
+    let integrity = 0;
+    for (const c of state.constructs) {
+      if ((c.base.squadId as number) !== (s.id as number)) continue;
+      if (c.base.destroyed) continue;
+      integrity = integrity + 1;
+    }
+    out.set(s.id as number, dealt + integrity);
+  }
+  return out;
+}
+
+/**
+ * Compute leader margin over the second-place squad. Explicit total-order
+ * comparator (engine sort ban requires it).
+ */
+function leaderMargin(adv: ReadonlyMap<number, number>): { readonly leaderId: number; readonly margin: number } {
+  const rows = Array.from(adv.entries()).sort((a, b) => {
+    if (a[1] !== b[1]) return b[1] - a[1];
+    return a[0] - b[0];
+  });
+  const top = rows[0];
+  const runner = rows[1];
+  if (top === undefined) return { leaderId: -1, margin: 0 };
+  if (runner === undefined) return { leaderId: top[0], margin: 0 };
+  return { leaderId: top[0], margin: Math.max(0, top[1] - runner[1]) };
+}
+
+/**
+ * Tier 3 attack decision. Same scoring as Tier 2 with an anti-kingmaking
+ * penalty layered in when a clear leader exists; damage on the leader
+ * scores lower than damage on non-leaders. Pool allocation is greedy over
+ * the post-penalty scores; node accounting is exact.
+ */
+function tier3AttackPlot(
+  state: PublicState,
+  squad: SquadId,
+  catalog: Catalog,
+  rng: Rng,
+  weights: AiWeights,
+  budget: NodeBudget,
+  tier: AiTier,
+  model: OpponentModel,
+): AiResult<AiDecision<SquadAttackPlot>> {
+  const context = buildSquadContext(state, catalog);
+  let nodesVisited = 0;
+  let candidateCount = 0;
+  let currentRng: Rng = rng;
+
+  const advantage = squadAdvantageBySquadId(state);
+  const { leaderId, margin } = leaderMargin(advantage);
+  const kingmakingScale = margin > 0 ? weights.kingmakingPenalty : 0;
+
+  const rows: AttackDecisionRow[] = [];
+  const damageByTarget = new Map<number, number>();
+
+  for (const own of context.ownConstructs) {
+    const candidates = generateAttackCandidates(state, own.base.id, catalog);
+    candidateCount = candidateCount + candidates.length;
+    let normalBest: AttackDecisionRow["normalBest"] = {
+      targetId: null,
+      score: 0,
+      damage: 0,
+      isKill: false,
+      commander: false,
+    };
+    let calledBest: AttackDecisionRow["calledBest"] = {
+      targetId: null,
+      score: -weights.calledCost,
+      damage: 0,
+      isKill: false,
+      commander: false,
+    };
+    for (let i = 0; i < candidates.length; i = i + 1) {
+      if (nodesVisited >= (budget as number)) break;
+      const c = candidates[i];
+      if (c === undefined || c.targetId === null) continue;
+      const target = state.constructs.find((k) => (k.base.id as number) === (c.targetId as number));
+      if (target === undefined) continue;
+      const targetSquad = target.base.squadId as SquadId;
+      const freq = postureFrequency(model, targetSquad);
+      const scored = scoreAttackCandidate(
+        own,
+        target,
+        c.called,
+        freq.numer,
+        freq.denom,
+        catalog,
+        weights,
+      );
+      nodesVisited = nodesVisited + 1;
+      const targetIsLeader = (targetSquad as number) === leaderId;
+      const kingmakingPenalty = targetIsLeader ? kingmakingScale * scored.expectedDamage : 0;
+      const adjusted = scored.score - kingmakingPenalty;
+      const [nonce, r2] = nextRange(currentRng, 0, 1024);
+      currentRng = r2;
+      const composite = adjusted * 1024 + nonce;
+      if (c.called) {
+        const cur = calledBest.score * 1024;
+        if (composite > cur) {
+          calledBest = {
+            targetId: c.targetId,
+            score: adjusted,
+            damage: scored.expectedDamage,
+            isKill: scored.isKill,
+            commander: scored.targetIsCommander,
+          };
+        }
+      } else {
+        const cur = normalBest.score * 1024;
+        if (composite > cur) {
+          normalBest = {
+            targetId: c.targetId,
+            score: adjusted,
+            damage: scored.expectedDamage,
+            isKill: scored.isKill,
+            commander: scored.targetIsCommander,
+          };
+        }
+      }
+    }
+    rows.push({
+      constructId: own.base.id,
+      normalBest,
+      calledBest,
+      exposure: context.exposureByOwnId.get(own.base.id as number) ?? 0,
+    });
+    const chosenTarget = normalBest.targetId ?? calledBest.targetId;
+    if (chosenTarget !== null) {
+      damageByTarget.set(
+        chosenTarget as number,
+        (damageByTarget.get(chosenTarget as number) ?? 0) + Math.max(normalBest.damage, calledBest.damage),
+      );
+    }
+  }
+
+  const pool = context.poolTotal;
+  const spendPlan = allocatePool(rows, pool, weights, currentRng);
+  currentRng = spendPlan.rng;
+
+  const attacks: AttackPlot[] = [];
+  const postures: PostureAssignment[] = [];
+  const selectedIds: number[] = [];
+
+  for (const row of rows) {
+    const wantCalled = spendPlan.calledIds.has(row.constructId as number) && row.calledBest.targetId !== null;
+    const chosen = wantCalled ? row.calledBest : row.normalBest;
+    if (chosen.targetId !== null) {
+      attacks.push({
+        constructId: row.constructId,
+        targetId: chosen.targetId,
+        called: wantCalled,
+      });
+      selectedIds.push(row.constructId as number);
+    }
+    const posture: "FLAT" | "POSTURE" = spendPlan.postureIds.has(row.constructId as number)
+      ? "POSTURE"
+      : "FLAT";
+    postures.push({ constructId: row.constructId, posture });
+  }
+
+  attacks.sort((a, b) => (a.constructId as number) - (b.constructId as number));
+  postures.sort((a, b) => (a.constructId as number) - (b.constructId as number));
+
+  let damageOnLeader = 0;
+  let damageOnOthers = 0;
+  for (const [tid, dmg] of damageByTarget) {
+    const t = state.constructs.find((k) => (k.base.id as number) === tid);
+    if (t === undefined) continue;
+    if ((t.base.squadId as number) === leaderId) damageOnLeader = damageOnLeader + dmg;
+    else damageOnOthers = damageOnOthers + dmg;
+  }
+
+  const scoreTerms: Record<string, number> = {
+    calledCount: spendPlan.calledIds.size,
+    postureCount: spendPlan.postureIds.size,
+    poolSpent: spendPlan.spent,
+    leaderMargin: margin,
+    kingmakingScale,
+    damageOnLeader,
+    damageOnOthers,
+  };
+  const diagnostics: AiDiagnostics = {
+    tier,
+    nodesVisited,
+    nodeBudget: budget as number,
+    candidateCount,
+    selectedIds,
+    scoreTerms,
+  };
+  return {
+    ok: true,
+    value: {
+      choice: { squadId: squad, attacks, postures },
+      diagnostics,
+      rng: currentRng,
+    },
+  };
+}
+
+/* ------------------------------------------------------------------------- */
+/* Tier 3 movement — trace-schedule lookahead                                  */
+/* ------------------------------------------------------------------------- */
+
+/**
+ * Tier 3 movement adds `weights.beamDepth` future-round lookahead over the
+ * trace schedule. Positions that fall inside a future contraction's safe
+ * region receive a discounted safety bonus; positions outside receive a
+ * compounding penalty. Exposure / position utility / commander protection
+ * still come from `scoreMoveEndpoint` unchanged.
+ */
+function tier3MovePlot(
+  state: PublicState,
+  squad: SquadId,
+  catalog: Catalog,
+  rng: Rng,
+  weights: AiWeights,
+  budget: NodeBudget,
+  tier: AiTier,
+): AiResult<AiDecision<SquadMovePlots>> {
+  const context = buildSquadContext(state, catalog);
+  let nodesVisited = 0;
+  let candidateCount = 0;
+  const moves: MovePlot[] = [];
+  const selectedIds: number[] = [];
+  const scoreTerms: Record<string, number> = {};
+  let currentRng: Rng = rng;
+
+  const lookaheadRounds = Math.max(1, weights.beamDepth);
+  const futureSafeRegions = collectFutureSafeRegions(state, lookaheadRounds);
+
+  for (const own of context.ownConstructs) {
+    const candidates = generateMoveCandidates(state, own.base.id, catalog);
+    candidateCount = candidateCount + candidates.length;
+    if (candidates.length === 0) continue;
+    if (nodesVisited >= (budget as number)) {
+      moves.push({ constructId: own.base.id, path: [] });
+      selectedIds.push(own.base.id as number);
+      continue;
+    }
+    let bestScore = Number.NEGATIVE_INFINITY;
+    let bestIndex = -1;
+    for (let i = 0; i < candidates.length; i = i + 1) {
+      if (nodesVisited >= (budget as number)) break;
+      const c = candidates[i];
+      if (c === undefined) continue;
+      const baseScored = scoreMoveEndpoint(state, own, c.endPosition, catalog, weights);
+      nodesVisited = nodesVisited + 1;
+      const [nonce, r2] = nextRange(currentRng, 0, 1024);
+      currentRng = r2;
+      let lookaheadBonus = 0;
+      for (let k = 0; k < futureSafeRegions.length; k = k + 1) {
+        const region = futureSafeRegions[k];
+        if (region === undefined) continue;
+        const discount = k + 1;
+        if (pointInPolyLocal(c.endPosition, region)) {
+          lookaheadBonus = lookaheadBonus + Math.floor(weights.traceSafetyBonus / discount);
+        } else {
+          lookaheadBonus = lookaheadBonus - Math.floor(weights.traceExposurePenalty / discount);
+        }
+      }
+      const totalScore = baseScored.score + lookaheadBonus;
+      const composite = totalScore * 1024 + nonce;
+      if (composite > bestScore) {
+        bestScore = composite;
+        bestIndex = i;
+      }
+      scoreTerms["lookaheadBonus"] = (scoreTerms["lookaheadBonus"] ?? 0) + lookaheadBonus;
+      scoreTerms["exposure"] = (scoreTerms["exposure"] ?? 0) + baseScored.terms.exposure;
+    }
+    const chosen = candidates[bestIndex] ?? candidates[0];
+    if (chosen === undefined) continue;
+    moves.push({ constructId: own.base.id, path: chosen.path });
+    selectedIds.push(own.base.id as number);
+  }
+
+  const diagnostics: AiDiagnostics = {
+    tier,
+    nodesVisited,
+    nodeBudget: budget as number,
+    candidateCount,
+    selectedIds,
+    scoreTerms,
+  };
+  return {
+    ok: true,
+    value: {
+      choice: {
+        squadId: squad,
+        moves: moves.slice().sort((a, b) => (a.constructId as number) - (b.constructId as number)),
+      },
+      diagnostics,
+      rng: currentRng,
+    },
+  };
+}
+
+/**
+ * Collect safe regions for the current + next `lookaheadRounds` upcoming
+ * schedule entries whose round <= state.round + lookaheadRounds.
+ */
+function collectFutureSafeRegions(
+  state: PublicState,
+  lookaheadRounds: number,
+): readonly (readonly { readonly x: number; readonly y: number }[])[] {
+  const schedule = state.map.traceSchedule;
+  const out: (readonly { readonly x: number; readonly y: number }[])[] = [];
+  const untilRound = state.round + lookaheadRounds;
+  for (let i = 0; i < schedule.length; i = i + 1) {
+    const step = schedule[i];
+    if (step === undefined) continue;
+    if (step.round > untilRound) break;
+    out.push(step.safeRegion.map((v) => ({ x: v.x as unknown as number, y: v.y as unknown as number })));
+  }
+  return out;
+}
+
+function pointInPolyLocal(
+  p: { readonly x: unknown; readonly y: unknown },
+  polygon: readonly { readonly x: number; readonly y: number }[],
+): boolean {
+  const n = polygon.length;
+  if (n < 3) return false;
+  const px = p.x as number;
+  const py = p.y as number;
+  for (let i = 0; i < n; i = i + 1) {
+    const a = polygon[i];
+    const b = polygon[(i + 1) % n];
+    if (a === undefined || b === undefined) continue;
+    const cross = (b.x - a.x) * (py - a.y) - (b.y - a.y) * (px - a.x);
+    if (cross === 0) {
+      const xLo = a.x <= b.x ? a.x : b.x;
+      const xHi = a.x >= b.x ? a.x : b.x;
+      const yLo = a.y <= b.y ? a.y : b.y;
+      const yHi = a.y >= b.y ? a.y : b.y;
+      if (px >= xLo && px <= xHi && py >= yLo && py <= yHi) return true;
+    }
+  }
+  let inside = false;
+  for (let i = 0, j = n - 1; i < n; j = i, i = i + 1) {
+    const a = polygon[i];
+    const b = polygon[j];
+    if (a === undefined || b === undefined) continue;
+    const aAbove = a.y > py;
+    const bAbove = b.y > py;
+    if (aAbove !== bAbove) {
+      const cross = (px - a.x) * (b.y - a.y) - (py - a.y) * (b.x - a.x);
+      const denomSign = b.y - a.y > 0 ? 1 : -1;
+      if (cross * denomSign > 0) inside = !inside;
+    }
+  }
+  return inside;
 }
