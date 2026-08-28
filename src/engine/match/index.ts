@@ -79,6 +79,8 @@ export type {
 
 export { sortEventsCanonical } from "./events";
 
+export { resolveMovementPhase, type MovementResult } from "./movement";
+
 export {
   canonicalize,
   canonicalStateString,

@@ -164,5 +164,38 @@ export function makeDeployedSoloMatch(): MatchState {
   return deployed.value;
 }
 
+/**
+ * Deployed solo match with two squads placed close enough to interact in
+ * one round. Useful for collision / attack / range tests that need
+ * constructs within the base movement allowance of each other.
+ *
+ * Overrides the post-deployment positions of squads 0 and 1 to (-1, 5)
+ * and (1, 5). The positions are inside `simpleBounds` and above the
+ * internal wall cross (walls at y=0 and x=0 with y in [-4, 4]); once
+ * movement begins, positions are free to be anywhere inside the bounds
+ * (subject to walls, etc.).
+ */
+export function makeCloseSoloMatch(): MatchState {
+  const state = makeDeployedSoloMatch();
+  return withOverriddenPositions(state, [
+    [0, { x: -1024, y: 5 * 1024 }],
+    [1, { x: 1024, y: 5 * 1024 }],
+  ]);
+}
+
+function withOverriddenPositions(
+  state: MatchState,
+  overrides: readonly [number, { x: number; y: number }][],
+): MatchState {
+  const byId = new Map<number, { x: number; y: number }>();
+  for (const [sq, pos] of overrides) byId.set(sq, pos);
+  const constructs = state.constructs.map((c) => {
+    const pos = byId.get(c.squadId as number);
+    if (pos === undefined) return c;
+    return { ...c, position: { x: pos.x as unknown as never, y: pos.y as unknown as never } };
+  });
+  return { ...state, constructs };
+}
+
 /** Suppress unused-symbol lint until the pair helper is wired up. */
 export const _reserved = { squadId };
