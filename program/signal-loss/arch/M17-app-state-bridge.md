@@ -5,7 +5,7 @@
 > **Status:** planned for full v1
 
 ## Public API
-- Core navigation/preferences/collection stores
+- Core navigation/preferences/collection stores plus non-persisted MatchLaunchConfig and MatchResultPayload flow handoff
 - Build/setup and match stores partitioned into session-owned subdirectories
 - Typed Promise-based worker clients with cancellation by request ID
 

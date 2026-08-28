@@ -1,6 +1,6 @@
 # M01 — Toolchain and CI
 
-> **Path:** `root configuration and ./\.github/workflows/`
+> **Path:** root configuration files and `./.github/workflows/`
 > **Imports from:** —
 > **Status:** planned for full v1
 

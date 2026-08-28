@@ -5,7 +5,7 @@
 > **Status:** planned for full v1
 
 ## Public API
-- createMatch and resolveRound
+- createMatch, resolveMovementPhase, resolveAttackPhase, and resolveRound (the latter composes the same staged implementations)
 - legalDeployment, legalMovePlot, legalAttackPlot, exchangePreview, poolFor, and hashState
 - MatchState, SquadPlots, Event, MatchLog, and canonical serializer
 
