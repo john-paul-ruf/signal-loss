@@ -81,6 +81,22 @@ export { sortEventsCanonical } from "./events";
 
 export { resolveMovementPhase, type MovementResult } from "./movement";
 
+export { poolFor, countAlive, type PoolBreakdown } from "./pool";
+
+export {
+  applyMatrix,
+  computeShot,
+  effectiveAttackRange,
+  effectiveDamage,
+  exchangePreview,
+  OUTCOME_MATRIX,
+  resolveAttackStage,
+  type AttackResult,
+  type ExchangeCard,
+  type MatrixCell,
+  type ShotOutcome,
+} from "./attack";
+
 export {
   canonicalize,
   canonicalStateString,
