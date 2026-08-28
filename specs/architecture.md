@@ -1,6 +1,6 @@
 # Architecture — SIGNAL LOSS
 
-**Status:** draft 1 · phase `architecture`
+**Status:** approved · builder-confirmed 2026-08-28 · phase `architecture`
 **Derived from:** `specs/idea.md`, `specs/requirements.md`, `specs/design.md`
 **Owns:** stack, module boundaries, dependency flow, state model, codec format, determinism strategy, deployment
 **Does not own:** catalog values (content design), screen layout (Designer), schema tables (DB), implementation (Coder)
@@ -280,12 +280,9 @@ payload (bit-packed, big-endian bit order):
   - `measureArchetype` returns wall density, mean sightline length, and open-area
     fraction, checked against `map.archetypes.json`'s declared ranges — that is FR-10's
     "distinguishable by measurement, not by eye."
-  - **Trace overlays terrain, does not delete it (A-3).** The architecture assumes this
-    and it is the cheap option: the trace is a shrinking polygon evaluated as a
-    point-in-poly test at the trace step, and terrain is immutable for the whole match, so
-    the wall spatial index is built once. **See OQ-A1 — overturning A-3 costs an index
-    rebuild per contraction and invalidates AI cached pathing; it is a real but bounded
-    cost.**
+  - **Trace overlays terrain and does not delete it (A-3, confirmed).** The trace is a
+    shrinking polygon evaluated as a point-in-poly test at the trace step. Terrain is
+    immutable for the whole match, so the wall spatial index is built once.
 
 ### 3.7 `engine/match` — the round pipeline
 
@@ -420,7 +417,7 @@ serialiser is the definition of record.
 ### 5.2 Movement: substepping with a halt fixed point — **resolves OQ-7**
 
 ```
-N = MOVE_SUBSTEPS (tunable, initial 64)
+N = MOVE_SUBSTEPS (rules constant, confirmed at 64)
 positions ← current
 halted ← ∅
 for k in 1..N:
@@ -480,15 +477,15 @@ indexed by the commander's current dial position — data, not a formula in code
 then a data edit, not a code change). Commander-dead is a permanent flag on the squad, not
 a re-derivation, so the collapse is irreversible by construction (FR-17).
 
-### 5.5 Simultaneous elimination tiebreak — **proposes OQ-5**
+### 5.5 Simultaneous elimination tiebreak — **resolves OQ-5**
 When the last two or more squads are eliminated in the same round, placement is ordered by:
 1. Total integrity remaining across the squad **at the start of that round** (higher = better placement);
 2. then number of constructs alive at the start of that round;
 3. then total damage dealt across the match;
 4. then squad index (VECTOR=1 … NULLSET=5) — a guaranteed total order.
 
-Deterministic, documented, computable from state the player can already see.
-**Flagged for confirmation — this is a rules decision, not an architectural one.**
+Deterministic, documented, computable from state the player can already see, and
+builder-confirmed as the v1 rule.
 
 ---
 
@@ -722,7 +719,7 @@ else is a document.**
 | FR-18 Deterministic resolution | §4, §5.3; `exchangePreview` shares resolution's code path |
 | FR-19 Dials | `catalog` dial state machines; advance-only, no regression path exists |
 | FR-20 Trace | `map.traceSchedule` (public from round 1 by construction) + `applyTrace` |
-| FR-21 Elimination & placement | `checkElimination` + tiebreak §5.5 (**proposes OQ-5**) |
+| FR-21 Elimination & placement | `checkElimination` + tiebreak §5.5 (**resolves OQ-5**) |
 | FR-22/23 AI tiers + battery | `engine/ai` §7.3, node-bounded; `harness/behavior.ts` |
 | FR-24 Information contract | `PublicState` type + worker boundary §0.3, §3.8 |
 | FR-25 Resolution loss | `knownPositions` in engine state — AI is fogged too |
@@ -745,52 +742,25 @@ else is a document.**
 
 ---
 
-## 12. Open Architectural Questions
+## 12. Resolved Architectural Decisions
 
-- **OQ-A1 — Trace vs. terrain (blocks §3.6, mirrors requirements OQ-1).**
-  The architecture assumes A-3 (overlay). Cost of overturning: the wall spatial index and
-  the terrain canvas layer become per-contraction rebuilds (cheap, ~1ms), but AI cached
-  pathing and the reach-envelope cache invalidate on every contraction, and map
-  connectivity would need re-gating mid-match — the playability gate currently runs once.
-  **Bounded but real. Needs a decision before `match/trace` is built.**
+All architecture-gate questions were builder-confirmed on 2026-08-28:
 
-- **OQ-A2 — Resolution range source (requirements OQ-4).**
-  Architecture proposes: **chassis declares a base, mounts contribute additive modifiers,
-  effective range = base + Σ modifiers, clamped**, all data-driven. This satisfies FR-25's
-  "stated and inspectable" under any answer and costs nothing if content later puts the
-  value entirely on chassis (all mount modifiers = 0). **Recommend adopting; confirm.**
-
-- **OQ-A3 — `MOVE_SUBSTEPS` value.**
-  64 is the proposed initial. It trades halt-position precision against nothing
-  meaningful at 50 constructs (cost is linear and tiny). Higher is more "continuous"; the
-  real constraint is that it is a **rules constant** and changing it invalidates recorded
-  replays. Should be settled before the first public seed is shared. Needs a playtest read
-  on whether quantised halt positions are ever visibly wrong.
-
-- **OQ-A4 — Simultaneous-elimination tiebreak (requirements OQ-5).**
-  §5.5 proposes a rule. It is a *design* call the architecture merely needs *some* total
-  order for. **Confirm or replace.**
-
-- **OQ-A5 — Enumeration tractability (requirements OQ-6).**
-  Unanswerable by design; `harness/costing.ts` measures it. Architectural note: exhaustive
-  enumeration at 25–50 points is a combinatorial product of chassis × hardpoint fills ×
-  commander types. If it exceeds ~1e7 rosters, the harness needs parallel worker
-  processes (`node:cluster`) rather than a single process — a small change, but it should
-  be anticipated rather than discovered.
-
-- **OQ-A6 — Playback event-log size.**
-  `Event[]` for a 24-round, 50-construct match is on the order of a few thousand events.
-  Fine in memory; worth confirming whether the full match log is retained for the summary
-  screen (design.md §5.9 needs per-construct damage dealt/taken, which is an aggregate) or
-  whether a running aggregate suffices. **Leaning: retain the full log — it's small, and
-  it is the only honest source for a post-match round-by-round review.**
-
-- **OQ-A7 — Prebuilt roster authorship dependency.**
-  FR-5 requires prebuilts covering every chassis, mount family, and commander type at
-  every budget. That is content, blocked on the catalog, which requirements name as the
-  critical path. **The architecture is unblocked** (prebuilts are data validated by
-  shipped code), but the *product* is not shippable until content lands. Flagging so it
-  is not discovered at `deploy`.
+- **AD-1 — Trace vs. terrain:** the trace overlays immutable terrain; it never deletes or
+  modifies topology. This resolves requirements OQ-1.
+- **AD-2 — Resolution range:** chassis declares a base, mounts contribute additive
+  modifiers, and effective range is the clamped sum. This resolves requirements OQ-4.
+- **AD-3 — Movement precision:** `MOVE_SUBSTEPS` is fixed at **64** for v1. It is a rules
+  constant covered by `tunablesHash`; changing it invalidates recorded replays.
+- **AD-4 — Simultaneous elimination:** §5.5's total ordering is the v1 rule. This resolves
+  requirements OQ-5.
+- **AD-5 — Enumeration tractability:** `harness/costing.ts` measures the threshold. It
+  begins with a single process and switches to deterministic `node:cluster` workers when
+  the legal space exceeds approximately `1e7` rosters.
+- **AD-6 — Playback history:** retain the complete `Event[]` log for the match. Summary
+  aggregates are derived from that log rather than replacing it.
+- **AD-7 — Prebuilt rosters:** prebuilts remain a required catalog-content deliverable.
+  They do not block architecture or Forge decomposition, but they do block release.
 
 ---
 
