@@ -1,6 +1,6 @@
 # Data Persistence Design — SIGNAL LOSS
 
-**Status:** draft 1 · awaiting builder approval · phase `database`
+**Status:** approved · builder-confirmed 2026-08-28 · phase `database`
 
 **Derived from:** `./specs/requirements.md`, `./specs/architecture.md`
 

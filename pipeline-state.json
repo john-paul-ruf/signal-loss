@@ -3,7 +3,8 @@
     "idea",
     "requirements",
     "design",
-    "architecture"
+    "architecture",
+    "database"
   ],
   "overriddenPhases": []
 }
