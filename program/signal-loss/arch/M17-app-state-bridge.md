@@ -71,3 +71,147 @@ so far.
   over browser `localStorage`, falling back to an in-memory adapter with a
   persistence-unavailable flag), `useCollection` selector hook, `useCollectionBinding`.
 
+
+<!-- SESSION-08 -->
+
+## SESSION-08 arch delta — Match shell, board, plotting, playback shipped
+
+### M17 (src/app/bridge/**, src/app/store/match/**) — public surface, as shipped
+
+```ts
+// src/app/bridge/ai-client.ts
+export type AiClientRequest =
+  | Omit<AiDeployRequest, "id" | "version">
+  | Omit<AiMoveRequest,   "id" | "version">
+  | Omit<AiAttackRequest, "id" | "version">
+  | Omit<AiRosterRequest, "id" | "version">;
+
+export type AiCallResult =
+  | { kind: "ok"; response: WorkerResponse }
+  | { kind: "cancelled"; requestId: number }
+  | { kind: "error"; requestId: number; errorKind: WorkerErrorKind | "WORKER_DOWN" | "MESSAGE_MALFORMED"; message: string };
+
+export interface AiWorkerTarget {                    // Worker-shaped duck type — real workers, MessagePort, and in-process fakes satisfy it.
+  postMessage(msg: WorkerRequest): void;
+  addEventListener(kind: "message"|"error", handler): void;
+  removeEventListener(kind: "message"|"error", handler): void;
+  terminate?(): void;
+}
+export interface AiClientOptions { poolSize?: number; factory: () => AiWorkerTarget; }
+export interface AiClient {
+  postAiRequest(request: AiClientRequest): { requestId: number; result: Promise<AiCallResult>; cancel(): void };
+  dispose(): void;
+  inFlightCount(): number;
+}
+createAiClient(opts): AiClient;
+
+// src/app/store/match/index.ts
+type MatchModeId = "DEPLOYMENT"|"MOVEMENT_PLOT"|"MOVEMENT_PLAYBACK"|"ATTACK_PLOT"|"ATTACK_PLAYBACK"|"RESULT";
+type AiStatus =
+  | { kind: "IDLE" }
+  | { kind: "PENDING"; requestId: number; since: number }
+  | { kind: "READY_DEPLOY"; placements: readonly Placement[] }
+  | { kind: "READY"; plot: SquadMovePlots | SquadAttackPlot; diagnosticsSeed: string }
+  | { kind: "ERROR"; errorKind: string; message: string; requestId: number };
+interface HumanDraftState {
+  deploymentDrafts: Map<number, Vec2>; // rosterIndex → position
+  moveDrafts:       Map<number, readonly Vec2[]>; // constructId → waypoints
+  holdSet:          Set<number>;
+  attackDrafts:     Map<number, { targetId: ConstructId; called: boolean }>;
+  postureDrafts:    Map<number, Posture>;
+}
+interface SelectionState {
+  selectedConstructId: ConstructId | null;
+  inspectedConstructId: ConstructId | null;
+  hoveredTargetId:  ConstructId | null;
+  hoveredWaypoint:  Vec2 | null;
+  showEnemyReach:   boolean;
+  rulesDrawerOpen:  boolean;
+  rulesDrawerAnchor: string | null;
+}
+interface PlaybackState {
+  running: boolean; cursor: number; speed: 1|2|4;
+  events: readonly Event[];
+  beforeSnapshot: MatchState | null;
+  afterSnapshot:  MatchState | null;
+  stageKind: "MOVEMENT" | "ATTACK" | null;
+}
+interface MatchPresentation { highContrastSquads: boolean; showRangeMeasure: boolean; reducedMotion: boolean }
+interface LaunchSnapshot { humanSquadId: SquadId; aiSquadIds: [S,S,S,S]; config: MatchConfigDigest; seed: string }
+
+interface MatchStoreState { launch, catalog, engine, mode, drafts, ai, selection, playback, present, lastError, engineRevision }
+interface MatchStoreActions {
+  boot(config: MatchLaunchConfig, catalog: Catalog, map: GameMap): boolean;
+  // draft mutations (deployment / movement / attack / posture) never touch engine slice
+  applyDeployment():  boolean;   // deploy → transition to MOVEMENT_PLOT with playback events
+  resolveMovement():  boolean;   // movement stage → MOVEMENT_PLAYBACK
+  resolveAttack():    boolean;   // attack + trace + destruction + elimination + refill → ATTACK_PLAYBACK
+  playbackAdvance / stepBy / skip / setRunning / setSpeed / playbackFinish
+  selectConstruct / inspectConstruct / hoverTarget / hoverWaypoint / toggleEnemyReach
+  openRulesDrawer / closeRulesDrawer
+  setHighContrastSquads / setShowRangeMeasure / setReducedMotion
+  clearError
+}
+createMatchStore(): StoreApi<MatchStore>;
+buildHumanMovePlot(state, squad, drafts, catalog): SquadMovePlots;
+buildHumanAttackPlot(state, squad, drafts): SquadAttackPlot;
+countImplicitHolds(state, squad, drafts): number;
+everyConstructAccountedFor(state, squad, drafts): boolean;
+projectedPoolSpend(state, squad, drafts): { called, postures, total };
+```
+
+
+### Conventions and invariants (session-shipped decisions)
+
+- **Information contract (FR-24):** AI worker requests carry `PublicState` only. The
+  match store's `resolveMovement`/`resolveAttack` build committed `SquadMovePlots` and
+  `SquadAttackPlot` values from the human draft slice + the AI's READY slot payload.
+  Drafts NEVER appear as fields on `MatchState`. Structural asserts in
+  `tests/app/match/match-store.test.ts` prove the whitelist.
+- **Determinism (FR-29):** the AI worker client is a pure request/response
+  passthrough. Two calls with identical `(seed, streamLabel, ...)` produce
+  byte-identical request envelopes and, given the worker's determinism guarantee,
+  byte-identical responses. Cancellation is a caller-side concern only; the
+  eventual worker response is swallowed rather than dropped mid-flight.
+- **No timer / no wall clock:** every playback beat is a discrete engine `Event`.
+  Beat durations are looked up from a static per-kind table scaled by a
+  discrete speed multiplier (1×/2×/4×). The store carries no field named
+  `timer`, `deadline`, `elapsed`, `msRemaining`, `startTs`, or `timeout`
+  (asserted). Reduced-motion mode bypasses `setTimeout` entirely — the arrow
+  keys advance the cursor.
+- **No engine mutation during playback:** the playback slice's `cursor`
+  advances through the pre-committed event buffer; `engine` remains
+  identically referentially equal (asserted). `playbackFinish` swaps
+  `engine` for the pre-computed `afterSnapshot` in one set.
+- **Selector isolation:** pointer-only slice writes (hoverWaypoint,
+  hoverTarget, selectConstruct on the same id) do not touch the drafts,
+  ai, or engine slice. Asserted by identity comparisons on the whole
+  match store.
+- **Board rendering:** three stacked <canvas> layers share one camera
+  transform. Terrain redraws on map / engine-revision change; field
+  redraws on engine-revision; overlay redraws on pointer / selection /
+  playback cursor. Hit-testing is arithmetic (inverse camera + fx
+  distance), never pixel-read. `snapPointerToFx` rounds every pointer
+  position to integer fx so drafts stay hash-stable across replays.
+- **Squad separability:** each of the five squads has a distinct
+  (lightness, glyph, pattern, tag) tuple. `separabilityTriples()` proves
+  five distinct triples exist — meeting NFR-5's color-blind requirement
+  without any color channel.
+- **Reduced-motion parity (FR-26):** `toCard(event, i)` covers every
+  event kind — `everyKindCovered(kind): 1` is a TypeScript exhaustive
+  switch that fails to compile if a new kind ships without a card. A
+  runtime test iterates every kind and asserts `title` and `detail`
+  are non-empty.
+- **Rules drawer (FR-27):** opens with `?` or `F1` from every match
+  mode; closes with `Escape`. FocusTrap restores focus to the opener on
+  close. Glossary terms deep-link via `openRulesDrawer(anchor)` — the
+  drawer scrolls the anchor into view and focuses it on next render.
+- **No network / no persistence:** the match store writes NOTHING to
+  `localStorage`. The result handoff is a single `signal-loss:match-result`
+  DOM CustomEvent whose detail is the derived `MatchResultPayload`; the
+  core flow store subscribes.
+- **Confirm-commit modal (design.md §5.6):** movement commit surfaces
+  a ConfirmModal listing implicit HOLDs (constructs without a plotted
+  path or explicit HOLD). Ctrl+Enter opens the modal; the destructive
+  action is a second, explicit click.
+
