@@ -11,12 +11,20 @@ import type {
   RepositoryError,
   SavedRosterV1,
 } from "../../../platform/index";
+import { navigate } from "../../route-registry";
+import { requestComposerEdit } from "../../store/build/composer-context";
 import {
   constructCostOf,
   rosterSummary,
   type RosterSummary,
 } from "../../store/build/collection-model";
 import { exportRoster, importShareString, type ImportOutcome } from "../../store/build/share";
+
+/** Open the composer to edit (or, at `index === constructs.length`, append) a roster construct. */
+function openComposer(rosterId: SavedRosterV1["id"], index: number): void {
+  requestComposerEdit({ rosterId, constructIndex: index });
+  navigate("#/composer");
+}
 
 /**
  * Presentational collection screen (design.md §5.1). All persistence lives in
@@ -447,8 +455,22 @@ export function CollectionView(props: CollectionViewProps): React.ReactElement {
                         {snapshot.mounts.length} MOUNT(S)
                         {snapshot.commanderCode !== null ? " · ◆ CMD" : ""}
                       </div>
+                      <button
+                        type="button"
+                        onClick={() => openComposer(selected.id, i)}
+                        className="mt-2 w-full border border-line-2 py-1 text-[11px] uppercase tracking-[0.14em] text-ink-2 hover:border-sys hover:text-sys"
+                      >
+                        Edit in composer
+                      </button>
                     </div>
                   ))}
+                  <button
+                    type="button"
+                    onClick={() => openComposer(selected.id, selected.constructs.length)}
+                    className="border border-dashed border-line-2 bg-panel p-3 text-[13px] text-ink-3 hover:border-sys hover:text-sys"
+                  >
+                    + Add construct in composer
+                  </button>
                 </div>
               </div>
 

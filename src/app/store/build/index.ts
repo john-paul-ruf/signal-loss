@@ -37,3 +37,23 @@ export {
   type CollectionBinding,
   type CollectionProviderProps,
 } from "./collection-context";
+export {
+  draftCost,
+  draftFromConstruct,
+  draftToConstruct,
+  draftViolations,
+  isComposable,
+  mountAt,
+  mountMismatchReason,
+  removeMount,
+  setChassis,
+  setCommander,
+  setMount,
+  EMPTY_DRAFT,
+  type ComposerDraft,
+} from "./composer";
+export {
+  consumeComposerRequest,
+  requestComposerEdit,
+  type ComposerRequest,
+} from "./composer-context";

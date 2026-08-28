@@ -4,6 +4,7 @@
  * curve chart, hardpoint badges) plus the display-formatting helpers.
  */
 
+export { CommanderDeltaGrid, type CommanderDeltaGridProps } from "./CommanderDeltaGrid";
 export { CurveChart, type CurveChartProps } from "./CurveChart";
 export { DialPips, type DialPipsProps } from "./DialPips";
 export { DialStatGrid, type DialStatGridProps } from "./DialStatGrid";
