@@ -38,3 +38,17 @@ export {
   generatePostureCandidates,
   ownAliveConstructs,
 } from "./candidates";
+
+export {
+  buildSquadContext,
+  ownDialSummary,
+  scoreAttackCandidate,
+  scoreMoveEndpoint,
+  type AttackTerms,
+  type MoveTerms,
+  type ScoredAttack,
+  type ScoredMove,
+  type SquadContext,
+} from "./evaluate";
+
+export { aiAttackPlot, aiMovePlot } from "./policy";
