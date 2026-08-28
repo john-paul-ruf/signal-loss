@@ -1,0 +1,53 @@
+{
+  "name": "signal-loss",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "SIGNAL LOSS — deterministic simultaneous-turn browser tactics game.",
+  "engines": {
+    "node": ">=22"
+  },
+  "scripts": {
+    "dev": "vite",
+    "build": "tsc -p tsconfig.app.json --noEmit && tsc -p tsconfig.node.json --noEmit && vite build",
+    "preview": "vite preview",
+    "typecheck": "tsc -p tsconfig.app.json --noEmit && tsc -p tsconfig.node.json --noEmit",
+    "lint": "eslint .",
+    "test:unit": "vitest run",
+    "test:determinism": "vitest run --dir tests/determinism --passWithNoTests",
+    "test:playability": "vitest run --dir tests/playability --passWithNoTests",
+    "test:behavior": "vitest run --dir tests/behavior --passWithNoTests",
+    "test:costing": "vitest run --dir tests/costing --passWithNoTests",
+    "test:e2e": "playwright test",
+    "harness": "tsx harness/cli.ts"
+  },
+  "dependencies": {
+    "@fontsource/chakra-petch": "5.2.6",
+    "@fontsource/ibm-plex-mono": "5.2.6",
+    "react": "19.1.1",
+    "react-dom": "19.1.1",
+    "zustand": "5.0.8"
+  },
+  "devDependencies": {
+    "@axe-core/playwright": "4.10.2",
+    "@playwright/test": "1.55.1",
+    "@tailwindcss/vite": "4.1.14",
+    "@types/node": "22.15.34",
+    "@types/react": "19.1.10",
+    "@types/react-dom": "19.1.7",
+    "@vitejs/plugin-react": "4.7.0",
+    "eslint": "9.36.0",
+    "eslint-plugin-import": "2.31.0",
+    "eslint-plugin-react": "7.37.5",
+    "eslint-plugin-react-hooks": "5.2.0",
+    "globals": "15.15.0",
+    "tailwindcss": "4.1.14",
+    "tsx": "4.20.4",
+    "typescript": "5.7.3",
+    "typescript-eslint": "8.44.1",
+    "vite": "6.3.6",
+    "vite-plugin-pwa": "0.21.2",
+    "vitest": "3.2.4",
+    "workbox-window": "7.3.0"
+  }
+}

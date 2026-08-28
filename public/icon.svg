@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" role="img" aria-label="SIGNAL LOSS">
+  <rect width="512" height="512" fill="#04060A"/>
+  <g fill="none" stroke="#1C2733" stroke-width="1">
+    <path d="M0 128H512M0 256H512M0 384H512M128 0V512M256 0V512M384 0V512"/>
+  </g>
+  <g fill="none" stroke="#4DE1FF" stroke-opacity="0.35" stroke-width="1.5">
+    <circle cx="256" cy="256" r="196" stroke-dasharray="6 10"/>
+    <circle cx="256" cy="256" r="132" stroke-dasharray="2 8"/>
+  </g>
+  <path d="M256 96 424 400H88Z" fill="none" stroke="#A8FBFF" stroke-width="8" stroke-linejoin="miter"/>
+  <path d="M256 176 356 352H156Z" fill="#A8FBFF" fill-opacity="0.15" stroke="#A8FBFF" stroke-width="3"/>
+  <g fill="#A8FBFF">
+    <circle cx="256" cy="256" r="10"/>
+  </g>
+</svg>
