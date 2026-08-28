@@ -1,23 +1,16 @@
 import * as React from "react";
+import { BoardCanvas } from "../../board";
 
 /**
- * Deployment mode stub — Checkpoint 3 replaces this with the real
- * canvas + drag/select+click layer. Kept as a labeled slot for the
- * shell so Checkpoint 1 tests can render the full route tree.
+ * Deployment mode — the canvas + spawn overlay ships in Checkpoint 3.
+ * The board canvas already renders the terrain/spawn/wall layers from
+ * PublicState, so Checkpoint 2's contract is met here even before
+ * drag interaction lands.
  */
 export function DeploymentMode(): React.ReactElement {
   return (
-    <div
-      className="match-mode match-mode--deployment"
-      role="region"
-      aria-label="Deployment board"
-      data-testid="mode-deployment"
-    >
-      <p className="match-mode__title">DEPLOYMENT</p>
-      <p className="match-mode__hint">
-        Board rendering ships in Checkpoint 2; drag interaction in
-        Checkpoint 3.
-      </p>
+    <div className="match-mode match-mode--deployment" data-testid="mode-deployment">
+      <BoardCanvas />
     </div>
   );
 }
