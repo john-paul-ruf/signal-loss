@@ -116,6 +116,15 @@ export {
 } from "./resolve-round";
 
 export {
+  foldMatchLog,
+  makeMatchLog,
+  MATCH_LOG_VERSION,
+  type MatchLog,
+  type MatchLogError,
+  type MatchLogResult,
+} from "./replay";
+
+export {
   canonicalize,
   canonicalStateString,
   fnv1a64Hex,
