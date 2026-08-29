@@ -134,3 +134,92 @@ projectedPoolSpend(state, squad, drafts): { called, postures, total };
 | 2026-08-28 | SESSION-07 checkpoints 1–2 shipped the build-store bridge (`catalog`, `squad-identity`, `collection-model`, `share`, `collection-context`). Composer / setup+mapgen / result stores remain pending checkpoints 3–5. |
 | 2026-08-28 | SESSION-08 shipped `./src/app/bridge/ai-client.ts` (typed multiplexed AI worker client) and `./src/app/store/match/**` (partitioned match store with drafts asserted off of `MatchState`, event-only playback with no wall-clock, and DOM `CustomEvent` result handoff). |
 | 2026-08-28 | SESSION-07 retry 1 (targeting checkpoint 3) returned no parseable handoff; residual `ed7b664` added `composer.ts` / `composer-context.ts` unverified. `mapgen-client.ts` and the setup/result stores remain fully unstarted. |
+
+<!-- SESSION-01 -->
+### Core stores — flow provider seam (`./src/app/store/core/flow-context.tsx`, SESSION-01)
+
+Adds the app-lifetime React owner for the existing non-persisted `createFlowStore()`; no change to the `FlowStore` shape or the `MatchLaunchConfig` / `MatchResultPayload` contracts. Exported through the `./src/app/store/core/index.ts` facade (callers never deep-import the context path):
+
+- `FlowStoreProvider(props: { children; store?: StoreApi<FlowStore> })` — mounts exactly one store per provider (lazy `useRef`), or adopts an injected `store` for tests. `./src/app/main.tsx` wraps `<App />` in it, below the root `ErrorBoundary` and inside `React.StrictMode`, so every hash route shares one transient instance across a hash transition. StrictMode's double render does not leak a second store — the ref guard retains one.
+- `useFlowStore(selector, equal?)` — `useSyncExternalStore` selector hook mirroring `useMatchStore`; re-renders only when the selected slice changes by reference (or `equal`).
+- `useFlowStoreApi()` — imperative store handle; both hooks throw a named boundary error ("… outside FlowStoreProvider …") when called outside the provider rather than spinning up a second store.
+
+Invariant: the provider touches no browser storage / `CollectionRepository` / migrations (structurally asserted in `./tests/app/core/flow-context.test.tsx`). The backward-incompatible launch-field extension of `MatchLaunchConfig` is deferred to SESSION-03 so it lands atomically with all consumers.
+
+<!-- SESSION-02 -->
+### Map-generation client — `./src/app/bridge/mapgen-client.ts` (SESSION-02)
+
+Typed, cancellable, request-id-multiplexed client over `./src/workers/mapgen.worker.ts`, mirroring `ai-client.ts` transport but with a map-specific surface. The worker's typed error is the product-visible truth — the client never retries or relaxes generation.
+
+```ts
+export type MapGenCallResult =
+  | { kind: "ok"; response: MapGenResponse }
+  | { kind: "cancelled"; requestId: number }
+  | { kind: "error"; requestId: number;
+      errorKind: WorkerErrorKind | "WORKER_DOWN" | "MESSAGE_MALFORMED"; message: string };
+
+export interface MapWorkerTarget {           // Worker-shaped duck type; real Worker + in-process fakes satisfy it
+  postMessage(msg: WorkerRequest): void;
+  addEventListener(kind: "message"|"error", handler): void;
+  terminate?(): void;
+}
+export interface MapGenClientOptions { factory: () => MapWorkerTarget; }
+export interface MapGenClient {
+  request(input: Omit<MapGenRequest, "id"|"version">): { requestId: number; result: Promise<MapGenCallResult>; cancel(): void };
+  dispose(): void;
+  inFlightCount(): number;
+}
+createMapGenClient(options): MapGenClient;
+browserMapGenWorker(): MapWorkerTarget;      // Vite new Worker(new URL(..., import.meta.url), { type: "module" })
+```
+
+- `MAP_MAX_REGEN` arrives verbatim in `errorKind` — regeneration exhaustion stays distinguishable from `WORKER_DOWN` / `MESSAGE_MALFORMED` / protocol errors.
+- A missing-id message is treated as a downed worker (drops all outstanding); a well-formed response of an unexpected kind fails that one call as `MESSAGE_MALFORMED`.
+- Cancellation swallows the eventual response (`cancelled`); `dispose()` drains outstanding calls as `WORKER_DOWN` and terminates without throwing.
+- Vite bundles `mapgen.worker-*.js` from the browser factory (verified in `npm run build`).
+
+### Setup-domain model — `./src/app/store/build/setup-model.ts` (SESSION-02)
+
+Headless, injected preparation service. From one displayed seed it derives ONE accepted map + FOUR legal AI rosters and returns a typed `PreparedSetup` for SESSION-04. No React, no route, no flow-store write, no persistence, no network. Reaches map generation ONLY through `MapGenClient` and AI roster generation ONLY through `AiClient` (`asRosterOk`) — no direct engine `generateMap` / `generateAiRoster` call.
+
+```ts
+export interface SetupDraft { budget: Budget; aiTier: AiTier; selector: ArchetypeSelector; seed: string }
+makeSetupDraft(fields): SetupDraft;                 // frozen
+selectorForArchetype(choice: ArchetypeId | "any"): ArchetypeSelector;   // keeps "any" as engine selector
+validateSetupDraft(draft): readonly ("SEED_EMPTY"|"BUDGET_INVALID"|"AI_TIER_INVALID")[];
+
+export interface CryptoLike { getRandomValues<T extends ArrayBufferView|null>(a: T): T }
+createUserSeed(source: CryptoLike | null | undefined): SeedResult;   // ok | ENTROPY_UNAVAILABLE; never Math.random / clock
+
+export const AI_ROSTER_STREAM_LABELS =
+  ["ai.squad1.roster","ai.squad2.roster","ai.squad3.roster","ai.squad4.roster"] as const;
+
+export interface PreparedSetup {
+  seed: string; budget: Budget; aiTier: AiTier; selector: ArchetypeSelector;
+  mapResult: MapResult; aiRosters: readonly [Roster, Roster, Roster, Roster];
+}
+export interface SetupPreparationFailure {
+  stage: "MAP"|"AI_ROSTER"; streamLabel: string | null;
+  errorKind: WorkerErrorKind | "WORKER_DOWN" | "MESSAGE_MALFORMED" | "CANCELLED" | "UNEXPECTED_RESPONSE";
+  message: string;
+}
+export type SetupPreparationResult = { kind:"ok"; prepared: PreparedSetup } | { kind:"error"; failure: SetupPreparationFailure };
+export interface SetupGenerationClients { map: MapGenClient; ai: AiClient }
+
+prepareSetup(draft, catalog, clients): Promise<SetupPreparationResult>;
+
+export interface SetupGeneration { generationId: number; result: Promise<SetupPreparationResult>; cancel(): void }
+export interface SetupGenerationService {
+  prepare(draft, catalog): SetupGeneration;   // monotonic generationId; a cancelled stale run resolves CANCELLED
+  dispose(): void;                            // disposes BOTH worker clients
+  inFlightCount(): number;
+}
+createSetupGenerationService(clients): SetupGenerationService;
+```
+
+- Determinism: equal `(draft, catalog)` yields byte-identical prepared data; every MAP/AI request carries the same visible seed, budget, and catalog. Failure branch is checked map → squad1..4 in fixed order. No path retries with a derived or hidden seed.
+- Cancellation/race: `SetupGeneration.generationId` lets a screen disregard an earlier run; a late worker response for a cancelled generation resolves as `CANCELLED`, never as a newer result.
+
+### Facade — `./src/app/store/build/index.ts` (SESSION-02)
+
+Additive re-exports only: all `setup-model` public constructors / validators / seed helper / service / result+error types, plus `createMapGenClient` + `browserMapGenWorker` and the map-client types from `../../bridge/mapgen-client`. Worker internals, pending-call maps, and test fakes are not exported. No existing export changed.
