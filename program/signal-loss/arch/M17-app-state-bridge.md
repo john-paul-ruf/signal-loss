@@ -2,7 +2,7 @@
 
 > **Path:** `./src/app/store/`, `./src/app/bridge/`
 > **Imports from:** M12, M14, M15
-> **Status:** core stores shipped and verified in SESSION-02; the app-lifetime `FlowStoreProvider` seam over `createFlowStore()` shipped and verified in `match-setup-route` SESSION-01. Build stores shipped and verified through SESSION-07 checkpoints 1–2 of 5; AI-client bridge + match store shipped and verified in SESSION-08. A SESSION-07 retry landed an unverified composer draft store (`composer.ts`, `composer-context.ts`) — see Conventions below. The typed map-generation client and deterministic setup-preparation service shipped and verified in `match-setup-route` SESSION-02. `match-setup-route` SESSION-03 then shipped the complete transient launch contract and real five-roster match boot, and SESSION-04 shipped the routed setup handoff; both were verified.
+> **Status:** core stores shipped and verified in SESSION-02; the app-lifetime `FlowStoreProvider` seam over `createFlowStore()` shipped and verified in `match-setup-route` SESSION-01. Build stores shipped and verified through SESSION-07 checkpoints 1–2 of 5; AI-client bridge + match store shipped and verified in SESSION-08. A SESSION-07 retry landed an unverified composer draft store (`composer.ts`, `composer-context.ts`) — see Conventions below. The typed map-generation client and deterministic setup-preparation service shipped and verified in `match-setup-route` SESSION-02. `match-setup-route` SESSION-03 then shipped the complete transient launch contract and real five-roster match boot, and SESSION-04 shipped the routed setup handoff; both were verified. The `fix-match-start` cycle then wired the existing AI worker path into match entry (SESSION-01): the lazy `browserAiWorker` factory, the `ai-config` static-input validator, the `ai-deployment` per-squad coordinator, and a defensive all-`READY_DEPLOY` gate in `applyDeployment()` — all shipped and verified.
 >
 > Session numbers restart per feature: bare `SESSION-0N` below refers to the original `full-v1` build; this cycle's sessions are written `match-setup-route` SESSION-0N.
 
@@ -33,7 +33,7 @@
 
 A SESSION-07 retry aimed at checkpoint 3 returned no parseable handoff; Jikijitsu committed its in-lease work as residual `ed7b664`. It adds a pure `ComposerDraft` model (`chassisCode` / `commanderCode` / `mounts`) with `draftFromConstruct`, `draftToConstruct`, `draftCost`, `draftViolations` (via the engine's `validateConstruct`), `setChassis` / `setCommander` / `setMount` / `removeMount` / `mountAt` / `mountMismatchReason` / `isComposable`, plus a `composer-context.ts` request channel (`requestComposerEdit({rosterId, constructIndex})` / `consumeComposerRequest()`) that `CollectionView`'s new edit button uses to hand off to `#/composer`. No typecheck, lint, or test result was reported for this retry — treat as an unverified starting point, not a shipped surface.
 
-### AI-client bridge — `./src/app/bridge/ai-client.ts` (SESSION-08)
+### AI-client bridge — `./src/app/bridge/ai-client.ts` (SESSION-08; `browserAiWorker` factory added in `fix-match-start` SESSION-01)
 
 ```ts
 export type AiClientRequest =
@@ -60,6 +60,7 @@ export interface AiClient {
   inFlightCount(): number;
 }
 createAiClient(opts): AiClient;
+browserAiWorker(): AiWorkerTarget;   // Vite module-worker factory for ai.worker.ts; lazy — createAiClient builds no worker until the first request (SSR-safe)
 ```
 
 ### Match store — `./src/app/store/match/` (SESSION-08, extended by `match-setup-route` SESSION-03)
@@ -90,7 +91,7 @@ interface MatchStoreState { launch, catalog, engine, mode, drafts, ai, selection
 interface MatchStoreActions {
   boot(config: MatchLaunchConfig, catalog: Catalog, legacyMap?: GameMap): boolean;
   // draft mutations (deployment / movement / attack / posture) never touch engine slice
-  applyDeployment():  boolean;   // deploy → transition to MOVEMENT_PLOT with playback events
+  applyDeployment():  boolean;   // gated on all four AI READY_DEPLOY; deploy → MOVEMENT_PLOT with playback events
   resolveMovement():  boolean;   // movement stage → MOVEMENT_PLAYBACK
   resolveAttack():    boolean;   // attack + trace + destruction + elimination + refill → ATTACK_PLAYBACK
   playbackAdvance / stepBy / skip / setRunning / setSpeed / playbackFinish
@@ -106,6 +107,14 @@ countImplicitHolds(state, squad, drafts): number;
 everyConstructAccountedFor(state, squad, drafts): boolean;
 projectedPoolSpend(state, squad, drafts): { called, postures, total };
 ```
+
+### Match AI deployment — `./src/app/store/match/ai-config.ts`, `ai-deployment.ts` (`fix-match-start` SESSION-01)
+
+Wire the existing AI worker path into match entry. Both modules are worker-side input/coordination, not engine rule state; no clock, random, network, or React import.
+
+- `ai-config.ts` — `resolveMatchAiConfig(): MatchAiConfig` (`{ weights: AiWeights; deploymentNodeBudget: NodeBudget }`) validates the bundled static AI input `./data/ai.weights.json` at the browser boundary and fails loudly on malformed / missing / extra values. The coefficients are a worker-side input to the pure AI functions, distinct from M02's catalog/tunables. `deploymentNodeBudget` is small because `aiDeploy` reads `nodeBudget` as candidate samples per construct.
+- `ai-deployment.ts` — `startAiDeployment(input): AiDeploymentRun` posts one `AI_DEPLOY` request per launch AI squad, each built ONLY from that squad's `publicView(...)` projection (FR-24 information boundary), marks the slot `PENDING`, validates the returned placements through the engine facade's `legalDeployment` before marking `READY_DEPLOY`, and cancels / suppresses stale results.
+- **`applyDeployment()` defensive gate** — `./src/app/store/match/match-store.ts` refuses to call the engine unless every launch AI squad slot is `READY_DEPLOY`, surfacing `FR-12:AI_DEPLOYMENT_NOT_READY` (missing / idle / pending) or a preserved AI failure (errored) without touching engine / mode / drafts / revision. `CommandBar`'s button gate (M19) is UX; this store gate is the safety boundary; the engine remains final authority.
 
 ### Map-generation client — `./src/app/bridge/mapgen-client.ts` (`match-setup-route` SESSION-02)
 
@@ -193,6 +202,7 @@ Additive re-exports only: all `setup-model` public constructors / validators / s
 | Build stores (verified) | `./src/app/store/build/` (`catalog.ts`, `app-info.ts`, `squad-identity.ts`, `collection-model.ts`, `share.ts`, `collection-context.tsx`, `setup-model.ts`, `index.ts` setup facade) |
 | Composer store (residual, unverified) | `./src/app/store/build/composer.ts`, `./src/app/store/build/composer-context.ts` |
 | Match store (verified) | `./src/app/store/match/` (real `[human, ai1, ai2, ai3, ai4]` boot plus defensive complete-launch snapshot) |
+| Match AI deployment (verified) | `./src/app/store/match/ai-config.ts`, `ai-deployment.ts` (`fix-match-start` SESSION-01) |
 | AI-client bridge | `./src/app/bridge/ai-client.ts` |
 | Map-generation client (verified) | `./src/app/bridge/mapgen-client.ts` (shipped in `match-setup-route` SESSION-02) |
 
@@ -223,17 +233,5 @@ Additive re-exports only: all `setup-model` public constructors / validators / s
 | 2026-08-28 | `match-setup-route` SESSION-02 shipped the typed map-worker client (`./src/app/bridge/mapgen-client.ts`), the deterministic cancellable setup-preparation service (`./src/app/store/build/setup-model.ts`), and additive setup-facade re-exports from `./src/app/store/build/index.ts`. Map generation only via `MapGenClient`, AI rosters only via `AiClient`. Verified: 20 setup-generation tests, 122 build/core consumer tests, typecheck, lint, build. This supersedes the prior "`mapgen-client.ts` … fully unstarted" note above. |
 | 2026-08-28 | `match-setup-route` SESSION-03 retry shipped the complete transient `MatchLaunchConfig`, the real five-roster `MatchStore.boot`, defensive launch/result snapshots, and one-time `MatchScreen` boot with a truthful missing-launch recovery path. Verified: 62 targeted core/match tests, typecheck, lint, build. |
 | 2026-08-28 | `match-setup-route` SESSION-04 shipped `MatchSetup`: a self-registering `#/setup` route, legal human roster selection, visible-seed deterministic generation and review, and DEPLOY handoff to the shared FlowStore. Verified: 3 setup-screen tests, Chromium/Firefox/WebKit direct-route regression, typecheck, lint, build. |
-
-<!-- SESSION-01 -->
-### M17 — App state and bridge (SESSION-01 delta)
-
-New public surfaces added to wire the existing AI worker path into match start:
-
-- **`src/app/bridge/ai-client.ts`** — adds `browserAiWorker(): AiWorkerTarget`, the Vite module-worker factory for `ai.worker.ts` (analogous to `browserMapGenWorker`). Worker creation stays lazy: `createAiClient` still constructs no worker until the first request, so importing the bridge in SSR builds nothing.
-- **`src/app/store/match/ai-config.ts`** (new module) — validates the bundled static AI input `data/ai.weights.json` at the browser boundary and exposes `resolveMatchAiConfig(): MatchAiConfig` (`{ weights: AiWeights; deploymentNodeBudget: NodeBudget }`). Fails loudly on malformed/missing/extra values. These coefficients are a worker-side input, not engine catalog/rule state.
-- **`src/app/store/match/ai-deployment.ts`** (new module) — `startAiDeployment(input): AiDeploymentRun` coordinator. For each launch AI squad it posts one `AI_DEPLOY` request built only from `publicView(...)` (information boundary preserved), marks the slot pending, validates the returned placements through the engine facade's `legalDeployment` before marking ready, and cancels stale results. No clock/random/network/React import.
-- **`src/app/store/match/match-store.ts`** — `applyDeployment()` gains a defensive pre-engine gate: it refuses to call the engine unless every launch AI squad slot is `READY_DEPLOY`, surfacing `FR-12:AI_DEPLOYMENT_NOT_READY` (missing/idle/pending) or a preserved `AI_FAILED` detail (errored) without touching engine/mode/drafts/revision.
-- **`src/app/screens/match/MatchScreen.tsx`** — mounts a match-lifetime `AiDeploymentController` inside `MatchStoreProvider`; on the DEPLOYMENT phase it spins one `createAiClient({ poolSize: 4, factory: browserAiWorker })` and one `startAiDeployment` run keyed on engine revision + mode (not the mutable `ai` map), disposing on phase change / unmount (StrictMode-safe).
-
-M19 (`CommandBar.tsx`) now gates BEGIN MATCH (button + `Ctrl/Cmd+Enter`) on the shared human-complete-AND-all-AI-`READY_DEPLOY` predicate and shows `WAITING FOR AI DEPLOYMENT` / `AI DEPLOYMENT FAILED` status (`data-testid="deploy-ai-status"`).
+| 2026-08-29 | `fix-match-start` SESSION-01 wired the existing AI worker path into match entry: `browserAiWorker()` lazy Vite factory in `ai-client.ts`, new `ai-config.ts` (`resolveMatchAiConfig` validating `./data/ai.weights.json`) and `ai-deployment.ts` (`startAiDeployment` per-squad `AI_DEPLOY` coordinator via `publicView` + engine `legalDeployment`), and a defensive all-`READY_DEPLOY` `applyDeployment()` gate surfacing `FR-12:AI_DEPLOYMENT_NOT_READY`. The `MatchScreen` controller mount (M20) and `CommandBar` readiness gate (M19) are recorded in their own modules. Verified: 55 focused checks, typecheck, lint, build. |
 
