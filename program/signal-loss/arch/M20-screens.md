@@ -66,3 +66,8 @@ Every screen self-registers through `M21`'s route discovery by exporting a `rout
 | 2026-08-28 | `fix-deployment-placement` SESSION-01 repaired `DeploymentMode`'s human deployment interaction at the board/screen boundary: derived human-spawn affordance, selected-or-next-unplaced placement, reposition/unplace, live rejection reasons, and a render-only `DeploymentBoardState` view-model passed to `BoardCanvas`. No engine, map-generation, or match-state change; the full `MOVEMENT_PLOT` transition still awaits out-of-lease in-match AI deployment orchestration (M15/M17). |
 | 2026-08-29 | `fix-match-start` SESSION-01 mounted a match-lifetime `AiDeploymentController` in `MatchScreen`: on `DEPLOYMENT` it runs one per-squad `startAiDeployment` over a `browserAiWorker` client keyed on engine revision + mode, disposed on phase change / unmount. This supplies the in-match AI deployment orchestration the row above noted was still out-of-lease, completing the real `DEPLOYMENT → MOVEMENT_PLOT` transition. |
 | 2026-08-29 | `fix-match-start` SESSION-02 routed `DeploymentMode` live placement legality through the new `./src/app/screens/match/deployment-placement.ts` (`classifyDeploymentPlacement` → engine `legalDeployment()`, ignoring only `PARTIAL_DEPLOYMENT`), so near-but-not-equal footprint overlaps are rejected before `BEGIN MATCH` instead of only exact duplicates. |
+
+<!-- SESSION-01 -->
+## M20 — Screens delta
+
+- `MatchScreen` owns one match-lifetime AI controller for deployment, movement, and attack. Every `MOVEMENT_PLOT` and `ATTACK_PLOT` committed phase identity starts four worker decisions; phase change/unmount cancels and disposes the prior family before the next setup, while AI slot writes do not restart a run.

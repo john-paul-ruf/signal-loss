@@ -235,3 +235,12 @@ Additive re-exports only: all `setup-model` public constructors / validators / s
 | 2026-08-28 | `match-setup-route` SESSION-04 shipped `MatchSetup`: a self-registering `#/setup` route, legal human roster selection, visible-seed deterministic generation and review, and DEPLOY handoff to the shared FlowStore. Verified: 3 setup-screen tests, Chromium/Firefox/WebKit direct-route regression, typecheck, lint, build. |
 | 2026-08-29 | `fix-match-start` SESSION-01 wired the existing AI worker path into match entry: `browserAiWorker()` lazy Vite factory in `ai-client.ts`, new `ai-config.ts` (`resolveMatchAiConfig` validating `./data/ai.weights.json`) and `ai-deployment.ts` (`startAiDeployment` per-squad `AI_DEPLOY` coordinator via `publicView` + engine `legalDeployment`), and a defensive all-`READY_DEPLOY` `applyDeployment()` gate surfacing `FR-12:AI_DEPLOYMENT_NOT_READY`. The `MatchScreen` controller mount (M20) and `CommandBar` readiness gate (M19) are recorded in their own modules. Verified: 55 focused checks, typecheck, lint, build. |
 
+
+<!-- SESSION-01 -->
+## M17 — App state and bridge delta
+
+- `AiStatus` now distinguishes `READY_DEPLOY`, `READY_MOVE`, and `READY_ATTACK`; movement and attack resolution require the exact matching ready kind for all four launch AI squads.
+- The match-store public state adds append-only `eventHistory: readonly Event[]` and match-lifetime `opponentModel: OpponentModel`. Deployment events enter history immediately; movement and attack events enter once in `playbackFinish()`. Only finished attack playback folds public `POSTURE_REVEAL` events into the opponent model.
+- Movement and attack resolution populate immutable playback `beforeSnapshot` / `afterSnapshot` values without replacing `engine` or bumping `engineRevision`. `playbackFinish()` alone applies `afterSnapshot`, advances the mode/revision, and records history/model updates. A zero-event playback is complete when it has an `afterSnapshot`.
+- The match-store facade exports `startAiPhase()`, the framework-free movement/attack worker coordinator. It sends four per-squad `PublicState` requests using round-qualified canonical stream labels and tier-specific validated node budgets, validates matching response and legality, and supports whole-run cancellation.
+
