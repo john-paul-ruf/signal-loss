@@ -24,6 +24,7 @@ import { soloRoster, testCatalog } from "../../fixtures/matches/simple-match";
 import { buildSimpleMap } from "../../fixtures/maps/simple";
 import { squadId } from "../../../src/engine";
 import type { SavedRosterV1 } from "../../../src/platform/index";
+import type { AiStatus } from "../../../src/app/store/match";
 
 function bootStore(): ReturnType<typeof createMatchStore> {
   const store = createMatchStore();
@@ -124,5 +125,73 @@ describe("CommandBar — AI deployment gate", () => {
     // The shared predicate is the store guard the keyboard path also calls —
     // it refuses to commit an incomplete AI set even when bypassed.
     expect(store.getState().applyDeployment()).toBe(false);
+  });
+});
+
+describe("CommandBar — phase readiness and playback truth", () => {
+  function setPhaseAi(
+    store: ReturnType<typeof createMatchStore>,
+    mode: "MOVEMENT_PLOT" | "ATTACK_PLOT",
+    kinds: readonly AiStatus["kind"][],
+  ): void {
+    const ai = new Map<number, AiStatus>();
+    kinds.forEach((kind, index) => {
+      const squad = squadId(index + 1);
+      if (kind === "READY_MOVE") {
+        ai.set(index + 1, { kind, plot: { squadId: squad, moves: [] }, diagnosticsSeed: "ready" });
+      } else if (kind === "READY_ATTACK") {
+        ai.set(index + 1, { kind, plot: { squadId: squad, attacks: [], postures: [] }, diagnosticsSeed: "ready" });
+      } else if (kind === "ERROR") {
+        ai.set(index + 1, { kind, requestId: 1, errorKind: "DOWN", message: "worker down" });
+      } else if (kind === "PENDING") {
+        ai.set(index + 1, { kind, requestId: 1, since: 0 });
+      } else {
+        ai.set(index + 1, { kind: "IDLE" });
+      }
+    });
+    store.setState({ mode, ai });
+  }
+
+  it("requires every slot to match the current movement or attack readiness kind", () => {
+    const store = bootStore();
+    setPhaseAi(store, "MOVEMENT_PLOT", ["READY_MOVE", "READY_MOVE", "PENDING", "READY_MOVE"]);
+    expect(render(store)).toContain("WAITING FOR AI MOVEMENT");
+    expect(commitButton(render(store))).toContain("disabled");
+    setPhaseAi(store, "MOVEMENT_PLOT", ["READY_MOVE", "READY_MOVE", "READY_MOVE", "READY_MOVE"]);
+    expect(commitButton(render(store))).not.toContain("disabled");
+
+    setPhaseAi(store, "ATTACK_PLOT", ["READY_ATTACK", "READY_MOVE", "READY_ATTACK", "READY_ATTACK"]);
+    expect(render(store)).toContain("WAITING FOR AI ATTACK");
+    setPhaseAi(store, "ATTACK_PLOT", ["READY_ATTACK", "READY_ATTACK", "ERROR", "READY_ATTACK"]);
+    expect(render(store)).toContain("AI ATTACK FAILED");
+    setPhaseAi(store, "ATTACK_PLOT", ["READY_ATTACK", "READY_ATTACK", "READY_ATTACK", "READY_ATTACK"]);
+    expect(commitButton(render(store))).not.toContain("disabled");
+  });
+
+  it("labels playing, paused, and zero-event complete playback truthfully", () => {
+    const store = bootStore();
+    const snapshot = store.getState().engine!;
+    store.setState({
+      mode: "MOVEMENT_PLAYBACK",
+      playback: {
+        running: false,
+        cursor: 0,
+        speed: 1,
+        events: [],
+        beforeSnapshot: snapshot,
+        afterSnapshot: snapshot,
+        stageKind: "MOVEMENT",
+      },
+    });
+    expect(render(store)).toContain("COMPLETE");
+    expect(commitButton(render(store))).not.toContain("disabled");
+    expect(render(store)).toContain("CONTINUE");
+
+    const event = { kind: "MATCH_COMPLETE", round: 1, winner: null, reason: "SIMULTANEOUS" } as const;
+    store.setState({ playback: { ...store.getState().playback, events: [event], running: false } });
+    expect(render(store)).toContain("PAUSED");
+    expect(render(store)).not.toContain("PLAYING…");
+    store.setState({ playback: { ...store.getState().playback, running: true } });
+    expect(render(store)).toContain("PLAYING");
   });
 });

@@ -16,37 +16,56 @@ export function PlaybackMode(): React.ReactElement {
   const stepBy = useMatchStore((s) => s.playbackStepBy);
   const skip = useMatchStore((s) => s.playbackSkip);
   const setRunning = useMatchStore((s) => s.playbackSetRunning);
-  const setSpeed = useMatchStore((s) => s.playbackSetSpeed);
   const reducedMotion = useMatchStore((s) => s.present.reducedMotion);
+  const [activeProgress, setActiveProgress] = React.useState(0);
+  const hasRemainingEvents = React.useRef(false);
+  hasRemainingEvents.current = playback.cursor < playback.events.length;
 
-  // Animation tick — advances the cursor at the current beat's
-  // duration. Reduced motion skips this — cards are advanced by
-  // keyboard.
   React.useEffect(() => {
-    if (!playback.running) return;
-    if (reducedMotion) return;
+    setRunning(!reducedMotion && hasRemainingEvents.current);
+  }, [reducedMotion, setRunning]);
+
+  React.useEffect(() => {
+    if (!playback.running || reducedMotion) {
+      setActiveProgress(0);
+      return undefined;
+    }
     if (playback.cursor >= playback.events.length) {
       setRunning(false);
-      return;
+      setActiveProgress(0);
+      return undefined;
     }
     const beat = playback.events[playback.cursor];
-    if (beat === undefined) return;
-    const ms = beatDurationMs(beat, playback.speed);
-    const t = setTimeout(() => advance(), ms);
-    return () => clearTimeout(t);
-  }, [playback, advance, setRunning, reducedMotion]);
+    if (beat === undefined) return undefined;
+    const duration = beatDurationMs(beat, playback.speed);
+    const started = performance.now();
+    let frame = 0;
+    const tick = (now: number): void => {
+      const progress = Math.min(1, (now - started) / duration);
+      setActiveProgress(progress);
+      if (progress >= 1) {
+        setActiveProgress(0);
+        advance();
+      } else {
+        frame = requestAnimationFrame(tick);
+      }
+    };
+    frame = requestAnimationFrame(tick);
+    return () => cancelAnimationFrame(frame);
+  }, [playback.cursor, playback.events, playback.running, playback.speed, advance, setRunning, reducedMotion]);
 
-  // Reduced-motion keyboard: right arrow advances one card.
   React.useEffect(() => {
-    if (!reducedMotion) return undefined;
     function onKey(e: KeyboardEvent): void {
-      const tag = (e.target as HTMLElement | null)?.tagName ?? "";
-      if (tag === "INPUT" || tag === "TEXTAREA") return;
+      if (e.repeat || isEditableTarget(e.target)) return;
       if (e.key === "ArrowRight") {
+        setRunning(false);
         stepBy(1);
         e.preventDefault();
-      } else if (e.key === "ArrowLeft") {
+      } else if (reducedMotion && e.key === "ArrowLeft") {
         stepBy(-1);
+        e.preventDefault();
+      } else if (!reducedMotion && (e.key === " " || e.code === "Space")) {
+        setRunning(!playback.running && playback.cursor < playback.events.length);
         e.preventDefault();
       } else if (e.key === "s" || e.key === "S") {
         skip();
@@ -55,7 +74,7 @@ export function PlaybackMode(): React.ReactElement {
     }
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
-  }, [reducedMotion, stepBy, skip]);
+  }, [reducedMotion, stepBy, skip, setRunning, playback.running, playback.cursor, playback.events.length]);
 
   const cards = React.useMemo(
     () => playback.events.slice(0, playback.cursor).map((e, i) => toCard(e, i)),
@@ -69,25 +88,10 @@ export function PlaybackMode(): React.ReactElement {
           totalEvents={playback.events.length}
           cursor={playback.cursor}
           cards={cards}
-          onAdvance={() => stepBy(1)}
-          onRewind={() => stepBy(-1)}
-          onSkip={skip}
         />
       ) : (
-        <BoardCanvas />
+        <BoardCanvas playbackProgress={activeProgress} />
       )}
-      <PlaybackTransport
-        running={playback.running}
-        cursor={playback.cursor}
-        total={playback.events.length}
-        speed={playback.speed}
-        reducedMotion={reducedMotion}
-        onPlay={() => setRunning(true)}
-        onPause={() => setRunning(false)}
-        onStep={() => stepBy(1)}
-        onSkip={skip}
-        onSpeed={setSpeed}
-      />
     </div>
   );
 }
@@ -96,9 +100,6 @@ interface ReducedMotionStackProps {
   readonly totalEvents: number;
   readonly cursor: number;
   readonly cards: readonly ReturnType<typeof toCard>[];
-  readonly onAdvance: () => void;
-  readonly onRewind: () => void;
-  readonly onSkip: () => void;
 }
 
 function ReducedMotionStack(props: ReducedMotionStackProps): React.ReactElement {
@@ -113,103 +114,18 @@ function ReducedMotionStack(props: ReducedMotionStackProps): React.ReactElement 
       </p>
       <ol className="reduced-motion-stack__list">
         {props.cards.map((c) => (
-          <li key={c.key} className="reduced-motion-stack__card">
+          <li key={c.key} className="reduced-motion-stack__card" tabIndex={0}>
             <strong>{c.title}</strong>
             <p>{c.detail}</p>
           </li>
         ))}
       </ol>
-      <div className="reduced-motion-stack__controls">
-        <button type="button" onClick={props.onRewind} disabled={props.cursor === 0}>
-          ← Previous
-        </button>
-        <button
-          type="button"
-          onClick={props.onAdvance}
-          disabled={props.cursor >= props.totalEvents}
-          data-testid="rm-advance"
-        >
-          Next →
-        </button>
-        <button type="button" onClick={props.onSkip}>Skip to end</button>
-      </div>
     </section>
   );
 }
 
-interface PlaybackTransportProps {
-  readonly running: boolean;
-  readonly cursor: number;
-  readonly total: number;
-  readonly speed: 1 | 2 | 4;
-  readonly reducedMotion: boolean;
-  readonly onPlay: () => void;
-  readonly onPause: () => void;
-  readonly onStep: () => void;
-  readonly onSkip: () => void;
-  readonly onSpeed: (s: 1 | 2 | 4) => void;
-}
-
-function PlaybackTransport(props: PlaybackTransportProps): React.ReactElement {
-  const done = props.cursor >= props.total;
-  return (
-    <footer
-      className="playback-transport"
-      role="toolbar"
-      aria-label="Playback transport"
-      data-testid="playback-transport"
-    >
-      <span className="playback-transport__count">
-        {props.cursor} / {props.total}
-      </span>
-      {!props.reducedMotion ? (
-        <>
-          {props.running ? (
-            <button type="button" onClick={props.onPause} data-testid="pb-pause">Pause</button>
-          ) : (
-            <button
-              type="button"
-              onClick={props.onPlay}
-              disabled={done}
-              data-testid="pb-play"
-            >
-              Play
-            </button>
-          )}
-          <button
-            type="button"
-            onClick={props.onStep}
-            disabled={done}
-            data-testid="pb-step"
-          >
-            Step
-          </button>
-        </>
-      ) : null}
-      <button
-        type="button"
-        onClick={props.onSkip}
-        disabled={done}
-        data-testid="pb-skip"
-      >
-        Skip to end
-      </button>
-      {!props.reducedMotion ? (
-        <fieldset className="playback-transport__speed">
-          <legend>Speed</legend>
-          {[1, 2, 4].map((s) => (
-            <label key={s}>
-              <input
-                type="radio"
-                name="pb-speed"
-                checked={props.speed === s}
-                onChange={() => props.onSpeed(s as 1 | 2 | 4)}
-              />
-              {s}×
-            </label>
-          ))}
-        </fieldset>
-      ) : null}
-    </footer>
-  );
+function isEditableTarget(target: EventTarget | null): boolean {
+  const element = target as HTMLElement | null;
+  if (element === null) return false;
+  return element.isContentEditable || ["INPUT", "TEXTAREA", "SELECT", "BUTTON"].includes(element.tagName);
 }

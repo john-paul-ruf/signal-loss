@@ -9,7 +9,23 @@ import type { Event } from "../../../engine";
  * so a player who skipped can still read what happened.
  */
 export function RoundLog(): React.ReactElement {
-  const events = useMatchStore((s) => s.playback.events);
+  const history = useMatchStore((s) => s.eventHistory);
+  const playback = useMatchStore((s) => s.playback);
+  const mode = useMatchStore((s) => s.mode);
+  const events = React.useMemo(
+    () => [
+      ...history,
+      ...((mode === "MOVEMENT_PLAYBACK" || mode === "ATTACK_PLAYBACK")
+        ? playback.events.slice(0, playback.cursor)
+        : []),
+    ],
+    [history, mode, playback.events, playback.cursor],
+  );
+  const listRef = React.useRef<HTMLOListElement | null>(null);
+  React.useEffect(() => {
+    const list = listRef.current;
+    if (list !== null) list.scrollTop = list.scrollHeight;
+  }, [events.length]);
   if (events.length === 0) {
     return (
       <section className="round-log round-log--empty" aria-label="Round log">
@@ -21,7 +37,7 @@ export function RoundLog(): React.ReactElement {
   return (
     <section className="round-log" aria-label="Round log">
       <header className="round-log__header">ROUND LOG</header>
-      <ol className="round-log__list" role="log">
+      <ol className="round-log__list" role="log" ref={listRef}>
         {events.map((e, i) => (
           <li key={`${i}-${e.kind}`} className="round-log__item" data-kind={e.kind}>
             {describeEvent(e)}

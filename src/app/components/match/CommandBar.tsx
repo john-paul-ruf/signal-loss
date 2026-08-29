@@ -2,6 +2,7 @@ import * as React from "react";
 import { useMatchStore, countImplicitHolds } from "../../store/match";
 import type { MatchStoreError } from "../../store/match";
 import { ConfirmModal } from "../shared/ConfirmModal";
+import { PlaybackTransport } from "./PlaybackTransport";
 
 /**
  * Command bar (design.md §5.4). Right-hand button is the phase's
@@ -24,7 +25,7 @@ export function CommandBar(): React.ReactElement {
   const resolveAttack = useMatchStore((s) => s.resolveAttack);
   const playbackFinish = useMatchStore((s) => s.playbackFinish);
   const playbackDone = useMatchStore(
-    (s) => s.playback.events.length > 0 && s.playback.cursor >= s.playback.events.length,
+    (s) => s.playback.afterSnapshot !== null && s.playback.cursor >= s.playback.events.length,
   );
   const clearError = useMatchStore((s) => s.clearError);
   const [confirmOpen, setConfirmOpen] = React.useState<null | "MOVE" | "ATTACK">(null);
@@ -57,6 +58,19 @@ export function CommandBar(): React.ReactElement {
       : aiDeploymentReady
         ? null
         : "WAITING FOR AI DEPLOYMENT";
+  const requiredPhaseKind = mode === "MOVEMENT_PLOT"
+    ? "READY_MOVE"
+    : mode === "ATTACK_PLOT"
+      ? "READY_ATTACK"
+      : null;
+  const aiPhaseReady = requiredPhaseKind !== null && launch !== null &&
+    aiSlots.every((slot) => slot?.kind === requiredPhaseKind);
+  const phaseFailed = requiredPhaseKind !== null && anyAiFailed;
+  const phaseStatus = phaseFailed
+    ? `AI ${mode === "MOVEMENT_PLOT" ? "MOVEMENT" : "ATTACK"} FAILED`
+    : aiPhaseReady
+      ? null
+      : `WAITING FOR AI ${mode === "MOVEMENT_PLOT" ? "MOVEMENT" : "ATTACK"}`;
 
   // Ctrl+Enter fires the mode's commit action.
   React.useEffect(() => {
@@ -67,10 +81,10 @@ export function CommandBar(): React.ReactElement {
       if (tag === "INPUT" || tag === "TEXTAREA") return;
       if (mode === "MOVEMENT_PLOT") {
         e.preventDefault();
-        openMoveConfirm();
+        if (aiPhaseReady) openMoveConfirm();
       } else if (mode === "ATTACK_PLOT") {
         e.preventDefault();
-        setConfirmOpen("ATTACK");
+        if (aiPhaseReady) setConfirmOpen("ATTACK");
       } else if (mode === "DEPLOYMENT") {
         e.preventDefault();
         // Same gate as the button — the keyboard path cannot bypass it.
@@ -85,7 +99,7 @@ export function CommandBar(): React.ReactElement {
     }
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
-  }, [mode, applyDeployment, playbackFinish, playbackDone, deploymentReady]);
+  }, [mode, applyDeployment, playbackFinish, playbackDone, deploymentReady, aiPhaseReady]);
 
   function openMoveConfirm(): void {
     setConfirmOpen("MOVE");
@@ -119,6 +133,7 @@ export function CommandBar(): React.ReactElement {
           type="button"
           className="command-bar__commit"
           onClick={openMoveConfirm}
+          disabled={!aiPhaseReady}
           data-testid="commit-movement"
         >
           COMMIT MOVEMENT ⌃⏎
@@ -132,6 +147,7 @@ export function CommandBar(): React.ReactElement {
           type="button"
           className="command-bar__commit"
           onClick={() => setConfirmOpen("ATTACK")}
+          disabled={!aiPhaseReady}
           data-testid="commit-attack"
         >
           COMMIT ATTACK ⌃⏎
@@ -149,7 +165,7 @@ export function CommandBar(): React.ReactElement {
           disabled={!playbackDone}
           data-testid="playback-continue"
         >
-          {playbackDone ? "CONTINUE →" : "PLAYING…"}
+          {playbackDone ? "CONTINUE →" : "WAIT FOR PLAYBACK"}
         </button>
       );
       hint = "Playback does not affect the result.";
@@ -163,7 +179,7 @@ export function CommandBar(): React.ReactElement {
   return (
     <div className="command-bar" role="toolbar" aria-label="Match commands">
       <div className="command-bar__hint" aria-live="polite">
-        {hint}
+        {(mode === "MOVEMENT_PLAYBACK" || mode === "ATTACK_PLAYBACK") ? <PlaybackTransport /> : hint}
       </div>
       {lastError !== null ? (
         <div className="command-bar__error" role="alert" data-testid="command-error">
@@ -190,6 +206,11 @@ export function CommandBar(): React.ReactElement {
             data-testid="deploy-ai-status"
           >
             {aiStatus}
+          </span>
+        ) : null}
+        {requiredPhaseKind !== null && phaseStatus !== null ? (
+          <span className="command-bar__status" role="status" data-testid="phase-ai-status">
+            {phaseStatus}
           </span>
         ) : null}
         {button}

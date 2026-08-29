@@ -11,6 +11,7 @@ export { SquadRail, railKeybindingSelectId } from "./SquadRail";
 export { InspectorPanel } from "./InspectorPanel";
 export { RoundLog, describeEvent } from "./RoundLog";
 export { CommandBar } from "./CommandBar";
+export { PlaybackTransport } from "./PlaybackTransport";
 export { RulesDrawer } from "./RulesDrawer";
 export { ExchangeCard } from "./ExchangeCard";
 export { AttackLedger } from "./AttackLedger";

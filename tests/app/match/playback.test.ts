@@ -14,6 +14,7 @@ import { soloRoster, testCatalog } from "../../fixtures/matches/simple-match";
 import { buildSimpleMap } from "../../fixtures/maps/simple";
 import type { SavedRosterV1 } from "../../../src/platform/index";
 import { squadId } from "../../../src/engine";
+import { matchSelectors } from "../../../src/app/store/match";
 
 function makeEvent(kind: Event["kind"]): Event {
   switch (kind) {
@@ -168,5 +169,27 @@ describe("playback cursor — no engine mutation", () => {
     // Skip and re-verify.
     store.getState().playbackSkip();
     expect(store.getState().engine).toBe(before);
+  });
+
+  it("treats a valid zero-event buffer as done and skip reveals the full prefix", () => {
+    const store = createMatchStore();
+    const snapshot = {} as never;
+    store.setState({
+      playback: {
+        running: false,
+        cursor: 0,
+        speed: 1,
+        events: [],
+        beforeSnapshot: snapshot,
+        afterSnapshot: snapshot,
+        stageKind: "MOVEMENT",
+      },
+    });
+    expect(matchSelectors.selectPlaybackDone(store.getState())).toBe(true);
+    const events = [makeEvent("MOVED"), makeEvent("HALTED")];
+    store.setState({ playback: { ...store.getState().playback, events } });
+    expect(visibleEvents(store.getState().playback)).toEqual([]);
+    store.getState().playbackSkip();
+    expect(visibleEvents(store.getState().playback)).toEqual(events);
   });
 });
