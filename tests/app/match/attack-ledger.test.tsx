@@ -81,6 +81,6 @@ describe("ExchangeCard — reads engine exchangePreview", () => {
     expect(html).toContain('data-testid="cell-called-flat"');
     expect(html).toContain('data-testid="cell-called-posture"');
     // Normal into posture is 0 for any base damage — that's the FR-18 promise.
-    expect(html).toMatch(/data-testid="cell-normal-posture"[^>]*>0</);
+    expect(html).toMatch(/data-testid="cell-normal-posture"[^>]*><strong>0<\/strong>/);
   });
 });

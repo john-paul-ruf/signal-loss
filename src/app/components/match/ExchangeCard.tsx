@@ -1,7 +1,8 @@
 import * as React from "react";
-import { useMatchStore } from "../../store/match";
-import type { ConstructId } from "../../../engine";
-import { exchangePreview } from "../../../engine";
+import { matchSelectors, useMatchStore } from "../../store/match";
+import type { ConstructId, Fx } from "../../../engine";
+import { fxToInt } from "../../../engine";
+import { buildAttackExchangeModel, outcomeReason, type AttackOutcomeCell } from "./attack-model";
 
 /**
  * Exchange card (design.md §5.7). Renders the 2×2 outcome matrix for
@@ -18,20 +19,21 @@ export interface ExchangeCardProps {
 export function ExchangeCard(props: ExchangeCardProps): React.ReactElement {
   const engine = useMatchStore((s) => s.engine);
   const catalog = useMatchStore((s) => s.catalog);
-  const card = React.useMemo(() => {
-    if (engine === null || catalog === null) return null;
-    return exchangePreview(engine, props.attackerId, props.targetId, props.called, catalog);
-  }, [engine, catalog, props.attackerId, props.targetId, props.called]);
+  const publicState = useMatchStore(matchSelectors.selectHumanPublicView);
+  const model = React.useMemo(() => {
+    if (engine === null || catalog === null || publicState === null) return null;
+    return buildAttackExchangeModel(engine, publicState, props.attackerId, props.targetId, catalog);
+  }, [engine, catalog, publicState, props.attackerId, props.targetId]);
 
-  if (card === null) {
+  if (model === null) {
     return (
       <div className="exchange-card exchange-card--empty" aria-label="Exchange card">
         <p>Select a target to preview.</p>
       </div>
     );
   }
-  const inRange = card.vsFlat.reason === "OK" || card.vsPosture.reason === "OK";
-  const losOk = card.vsFlat.reason !== "NO_LOS" && card.vsPosture.reason !== "NO_LOS";
+  const currentRow = props.called ? model.called : model.normal;
+  const reference = currentRow.flat.outcome;
   return (
     <section
       className="exchange-card"
@@ -43,9 +45,12 @@ export function ExchangeCard(props: ExchangeCardProps): React.ReactElement {
           #{props.attackerId as number} → #{props.targetId as number}
         </span>
         <span>
-          RANGE {card.vsFlat.dist as number} / {card.vsFlat.range as number} · LOS {losOk ? "✓" : "✗"}
+          RANGE {formatFx(reference.dist)} / {formatFx(reference.range)} · LOS {reference.reason === "NO_LOS" ? "✗" : "✓"}
         </span>
       </header>
+      <p className={model.isTargetConfirmed ? "exchange-card__position" : "exchange-card__position exchange-card__position--ghost"}>
+        {model.positionLabel}
+      </p>
       <table className="exchange-card__matrix">
         <thead>
           <tr>
@@ -55,60 +60,36 @@ export function ExchangeCard(props: ExchangeCardProps): React.ReactElement {
           </tr>
         </thead>
         <tbody>
-          <tr>
+          <tr className={props.called ? undefined : "exchange-card__row--declared"}>
             <th scope="row">NORMAL</th>
-            <td data-testid="cell-normal-flat">
-              {formatDamage(card.vsFlat.landed && !props.called ? card.vsFlat.damage : normalIntoFlat(card))}
-            </td>
-            <td data-testid="cell-normal-posture">0</td>
+            <OutcomeCell testId="cell-normal-flat" cell={model.normal.flat} />
+            <OutcomeCell testId="cell-normal-posture" cell={model.normal.posture} />
           </tr>
-          <tr>
+          <tr className={props.called ? "exchange-card__row--declared" : undefined}>
             <th scope="row">CALLED · 1pt</th>
-            <td data-testid="cell-called-flat">
-              {formatDamage(calledDamage(card, "FLAT"))}
-            </td>
-            <td data-testid="cell-called-posture">
-              {formatDamage(calledDamage(card, "POSTURE"))}
-            </td>
+            <OutcomeCell testId="cell-called-flat" cell={model.called.flat} />
+            <OutcomeCell testId="cell-called-posture" cell={model.called.posture} />
           </tr>
         </tbody>
       </table>
-      {!inRange ? (
-        <p className="exchange-card__reason" role="alert">
-          {card.vsFlat.reason === "OUT_OF_RANGE"
-            ? `OUT OF RANGE ${card.vsFlat.dist as number} / ${card.vsFlat.range as number}`
-            : card.vsFlat.reason === "NO_LOS"
-            ? "NO LINE OF SIGHT"
-            : card.vsFlat.reason}
-        </p>
-      ) : null}
+      <p className="exchange-card__reason" role={reference.landed ? undefined : "alert"}>
+        {outcomeReason(reference)} · {model.isTargetConfirmed ? "CURRENT POSITION" : "AT LAST CONFIRMED POSITION"}
+      </p>
     </section>
   );
 }
 
-function normalIntoFlat(card: NonNullable<ReturnType<typeof exchangePreview>>): number {
-  // The stored card uses the `called` flag we passed in; but we always
-  // want to display both rows. Recompute here with an integer floor.
-  const base = card.vsFlat.baseDamage;
-  return base > 0 ? base : 0;
+function OutcomeCell(props: { readonly testId: string; readonly cell: AttackOutcomeCell }): React.ReactElement {
+  return (
+    <td data-testid={props.testId}>
+      <strong>{props.cell.outcome.damage}</strong>
+      <span>{outcomeReason(props.cell.outcome)}</span>
+      <span>DIAL {props.cell.dial.from} → {props.cell.dial.to}</span>
+    </td>
+  );
 }
 
-function calledDamage(
-  card: NonNullable<ReturnType<typeof exchangePreview>>,
-  posture: "FLAT" | "POSTURE",
-): number {
-  // Compute called damage against the given posture from base damage
-  // (same formula as engine's applyMatrix).
-  const base = card.vsFlat.baseDamage;
-  if (base <= 0) return 0;
-  if (posture === "FLAT") {
-    const raw = Math.floor((base * 3) / 2);
-    return raw < 1 ? 1 : raw;
-  }
-  const raw = Math.floor(base / 2);
-  return raw < 1 ? 1 : raw;
-}
-
-function formatDamage(n: number): string {
-  return n <= 0 ? "0" : `${n}`;
+function formatFx(value: Fx): string {
+  const units = fxToInt(value);
+  return Number.isInteger(units) ? String(units) : units.toFixed(1);
 }
