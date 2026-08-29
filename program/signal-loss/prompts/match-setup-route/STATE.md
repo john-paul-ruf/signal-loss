@@ -17,7 +17,7 @@
 |---|---|---|---|---|---|---|---|
 | 01 | App-Level Flow Provider | M17, M21, M22 | `./src/app/store/core/flow-context.tsx`<br>`./src/app/store/core/index.ts`<br>`./src/app/main.tsx`<br>`./tests/app/core/flow-context.test.tsx` | done | 3 | 2026-08-28 | Added app-lifetime FlowStoreProvider seam over the existing transient createFlowStore(); FlowStore shape and MatchLaunchConfig/MatchResultPayload contracts unchanged for SESSION-03 to extend atomically. |
 | 02 | Deterministic Setup Preparation | M02, M12, M15, M17, M22 | `./src/app/bridge/mapgen-client.ts`<br>`./src/app/store/build/setup-model.ts`<br>`./src/app/store/build/index.ts`<br>`./tests/app/setup-generation/**` | done | 3 | 2026-08-28 | Deterministic setup preparation: typed map-worker client (mapgen-client.ts), setup-domain model + cancellable createSetupGenerationService (setup-model.ts), narrow build facade re-exports. Map gen only via MapGenClient, AI rosters only via AiClient. 20 new tests. |
-| 03 | Launch Contract and Match Consumption | M12, M17, M20, M22 | `./src/app/store/core/flow-store.ts`<br>`./src/app/store/match/match-store.ts`<br>`./src/app/store/match/types.ts`<br>`./src/app/screens/match/MatchScreen.tsx`<br>`./src/app/screens/match/ResultMode.tsx`<br>`./tests/app/core/flow-store.test.ts`<br>`./tests/app/match/match-store.test.ts`<br>`./tests/app/match/match-launch.test.tsx` | in-progress | 0 | — | Human-authorized fresh retry after the prior API error; no feature checkpoint commit exists, so resume from checkpoint 1. |
+| 03 | Launch Contract and Match Consumption | M12, M17, M20, M22 | `./src/app/store/core/flow-store.ts`<br>`./src/app/store/match/match-store.ts`<br>`./src/app/store/match/types.ts`<br>`./src/app/screens/match/MatchScreen.tsx`<br>`./src/app/screens/match/ResultMode.tsx`<br>`./tests/app/core/flow-store.test.ts`<br>`./tests/app/match/match-store.test.ts`<br>`./tests/app/match/match-launch.test.tsx` | done | 3 | 2026-08-28 | Extended transient launch data and made #/match consume it into a five-roster match. |
 | 04 | Routed Match Setup Screen | M02, M07, M17, M19, M20, M22 | `./src/app/components/setup/**`<br>`./src/app/screens/setup/**`<br>`./tests/app/setup-screen/**`<br>`./tests/e2e/setup/**` | pending | — | — | Adds the self-registering route, controls, preview/reveal, launch action, and direct-link regression coverage. |
 
 ## Wave Plan
@@ -102,3 +102,12 @@ flowchart TD
 
 - **Authorization:** Human instruction: `unblock, go, retry`.
 - **Recovery:** Start a fresh worker at checkpoint 1. The prior attempt has no parseable handoff and no checkpoint commit under this feature lease.
+
+### SESSION-03 — done (retry)
+
+- **Notes:** Extended transient launch data and made #/match consume it into a five-roster match.
+- **Delivered:** Complete setup payload, real human+four-AI boot tuple, defensive launch snapshot/result handoff, and one-time match-route boot/fallback.
+- **Verification:** npx vitest run ./tests/app/core/flow-store.test.ts ./tests/app/match → 62 pass; npm run typecheck, lint, build → pass.
+- **Surprises:** Retained a legacy launch adapter only for existing pre-session consumers/tests; new launch payloads exclusively consume the prepared map and four AI rosters.
+- **Follow-up:** SESSION-04 should write CompleteMatchLaunchConfig to the app FlowStore; MatchScreen resolves catalog and boots the supplied payload once.
+- **Files touched:** `./src/app/store/core/flow-store.ts`, `./src/app/store/match/match-store.ts`, `./src/app/store/match/types.ts`, `./src/app/screens/match/MatchScreen.tsx`, `./src/app/screens/match/ResultMode.tsx`, `./tests/app/core/flow-store.test.ts`, `./tests/app/match/match-store.test.ts`, `./tests/app/match/match-launch.test.tsx`
