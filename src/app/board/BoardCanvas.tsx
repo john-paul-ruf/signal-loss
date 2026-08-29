@@ -1,6 +1,7 @@
 import * as React from "react";
 import { useMatchStore, matchSelectors } from "../store/match";
-import type { ConstructId, PublicState, Vec2 } from "../../engine";
+import type { Catalog, ConstructId, MatchState, Vec2 } from "../../engine";
+import { currentDialState } from "../../engine";
 import type { Camera } from "./camera";
 import { boundsAabb, fitCamera, snapPointerToFx } from "./camera";
 import {
@@ -8,6 +9,7 @@ import {
   buildConstructScene,
   extractShotLines,
 } from "./scene";
+import { pathLengthFx } from "./input";
 import { paintTerrain } from "./layers/terrain-layer";
 import { paintField } from "./layers/field-layer";
 import { paintOverlay, type OverlayDeploymentOptions } from "./layers/overlay-layer";
@@ -49,13 +51,22 @@ export interface DeploymentBoardState {
 export interface BoardCanvasProps {
   /**
    * The interaction receiver — called when the pointer moves or a
-   * click lands on the overlay canvas. The receiver's job is to
-   * translate `(worldPoint, event)` into the mode-specific action
-   * (deployment placement, path append, target selection, …).
+   * click lands on the overlay canvas. The receiver gets the snapped
+   * world point, the raw DOM event, and the board hit computed from
+   * that same pointer position (`constructId` null when the pointer is
+   * over empty terrain, or for `leave`). Its job is to translate that
+   * into the mode-specific action (deployment placement, path append,
+   * selection, inspection, …) — the board never assigns meaning to a
+   * hit itself.
    *
    * If omitted the board renders read-only.
    */
-  readonly onPointerAction?: (kind: PointerActionKind, world: Vec2, event: React.PointerEvent<HTMLCanvasElement>) => void;
+  readonly onPointerAction?: (
+    kind: PointerActionKind,
+    world: Vec2,
+    event: React.PointerEvent<HTMLCanvasElement>,
+    hit: { readonly constructId: ConstructId | null },
+  ) => void;
   /**
    * Optional deployment presentation. When present the terrain layer marks
    * the observer's spawn and the overlay draws staged markers + a hover
@@ -70,6 +81,8 @@ export function BoardCanvas(props: BoardCanvasProps): React.ReactElement {
   const engine = useMatchStore((s) => s.engine);
   const catalog = useMatchStore((s) => s.catalog);
   const engineRevision = useMatchStore((s) => s.engineRevision);
+  const mode = useMatchStore((s) => s.mode);
+  const moveDrafts = useMatchStore((s) => s.drafts.moveDrafts);
   const selectionSlice = useMatchStore((s) => s.selection);
   const playback = useMatchStore((s) => s.playback);
   const present = useMatchStore(matchSelectors.selectPresent);
@@ -162,8 +175,17 @@ export function BoardCanvas(props: BoardCanvasProps): React.ReactElement {
       selection === null
         ? null
         : scenes.find((s) => s.id === selection) ?? null;
-    // Draft path is set by the mode via the store; we read it here.
-    const draftPath = readDraftPath(selection, pv);
+    // Draft path + movement allowance are derived from store + engine
+    // truth; the mode edits the draft via the store, the board reads it.
+    const draftPath = readDraftPath(selection, engine, catalog, moveDrafts);
+    // In MOVEMENT_PLOT the selection ring's reach is the construct's
+    // movement allowance; every other mode keeps the attack-range ring.
+    const reachFx =
+      selectionSc === null
+        ? 0
+        : mode === "MOVEMENT_PLOT"
+          ? draftPath.allowance
+          : selectionSc.rangeFx;
     const deploymentOptions: OverlayDeploymentOptions | null =
       deployment === null
         ? null
@@ -186,7 +208,7 @@ export function BoardCanvas(props: BoardCanvasProps): React.ReactElement {
                 cid: selectionSc.id,
                 position: selectionSc.position,
                 footprintFx: selectionSc.footprintFx,
-                reachFx: selectionSc.rangeFx,
+                reachFx,
               },
         hoveredWaypoint: selectionSlice.hoveredWaypoint,
         path: draftPath.path,
@@ -201,6 +223,9 @@ export function BoardCanvas(props: BoardCanvasProps): React.ReactElement {
   }, [
     pv,
     catalog,
+    engine,
+    mode,
+    moveDrafts,
     camera,
     selectionSlice.selectedConstructId,
     selectionSlice.hoveredWaypoint,
@@ -218,9 +243,17 @@ export function BoardCanvas(props: BoardCanvasProps): React.ReactElement {
         const x = event.clientX - rect.left;
         const y = event.clientY - rect.top;
         const world = snapPointerToFx(camera, x, y);
-        props.onPointerAction(kind, world, event);
+        // Resolve the construct under the pointer from the SAME event, so
+        // the mode receives snapped-world + hit together. `leave` carries
+        // no position, so no hit is computed.
+        let constructId: ConstructId | null = null;
+        if (kind !== "leave" && pv !== null && catalog !== null) {
+          const scenes = buildConstructScene(pv, catalog);
+          constructId = pickConstruct(camera, pv.constructs, x, y, largestFootprintFx(scenes));
+        }
+        props.onPointerAction(kind, world, event, { constructId });
       },
-    [props, camera],
+    [props, camera, pv, catalog],
   );
 
   return (
@@ -241,22 +274,7 @@ export function BoardCanvas(props: BoardCanvasProps): React.ReactElement {
         aria-hidden="true"
         onPointerMove={onPointer("move")}
         onPointerLeave={onPointer("leave")}
-        onClick={(e) => {
-          // Convert to a synthetic pointer event so the receiver gets the
-          // same shape.
-          onPointer("click")(e as unknown as React.PointerEvent<HTMLCanvasElement>);
-          // Also select the construct under the pointer if any.
-          const rect = overlayRef.current?.getBoundingClientRect();
-          if (rect === undefined || pv === null || catalog === null) return;
-          const px = e.clientX - rect.left;
-          const py = e.clientY - rect.top;
-          const scenes = buildConstructScene(pv, catalog);
-          const cid = pickConstruct(camera, pv.constructs, px, py, largestFootprintFx(scenes));
-          if (cid !== null) {
-            // Selection is best-effort — modes may override this.
-            void cid;
-          }
-        }}
+        onClick={(e) => onPointer("click")(e as unknown as React.PointerEvent<HTMLCanvasElement>)}
         onDoubleClick={(e) => onPointer("double-click")(e as unknown as React.PointerEvent<HTMLCanvasElement>)}
       />
       <AccessibleBoardTree />
@@ -278,15 +296,28 @@ function resizeCanvas(canvas: HTMLCanvasElement, cam: Camera): void {
   }
 }
 
+/**
+ * Derive the selected construct's movement overlay facts from store +
+ * engine truth: the engine-normalized draft path from `moveDrafts`, its
+ * exact fx length, and the construct's current movement allowance. No
+ * value is written back — this is a pure read for the overlay painter.
+ */
 function readDraftPath(
   selection: ConstructId | null,
-  pv: PublicState,
+  engine: MatchState | null,
+  catalog: Catalog | null,
+  moveDrafts: ReadonlyMap<number, readonly Vec2[]>,
 ): { path: readonly Vec2[]; length: number; allowance: number } {
-  // Placeholder: draft path handling lives in Checkpoint 3's movement
-  // mode; the overlay renderer accepts an empty path here.
-  void selection;
-  void pv;
-  return { path: [], length: 0, allowance: 0 };
+  if (selection === null || engine === null || catalog === null) {
+    return { path: [], length: 0, allowance: 0 };
+  }
+  const construct = engine.constructs.find((c) => c.id === selection);
+  if (construct === undefined) return { path: [], length: 0, allowance: 0 };
+  const dial = currentDialState(construct, catalog);
+  const allowance = dial === undefined ? 0 : (dial.movementAllowance as number);
+  const draft = moveDrafts.get(selection as number) ?? [];
+  const path = draft.length >= 2 ? draft : [];
+  return { path, length: pathLengthFx(path), allowance };
 }
 
 function largestFootprintFx(scenes: readonly { footprintFx: number }[]): number {
