@@ -24,5 +24,10 @@
     "deployTraceBonus": 12,
     "deploySamples": 8
   },
-  "deploymentNodeBudget": 64
+  "deploymentNodeBudget": 64,
+  "plotNodeBudgets": {
+    "1": 1000,
+    "2": 50000,
+    "3": 500000
+  }
 }

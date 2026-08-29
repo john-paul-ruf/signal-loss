@@ -14,13 +14,14 @@
  * not a movement search budget.
  */
 
-import { nodeBudget, type AiWeights, type NodeBudget } from "../../../engine";
+import { nodeBudget, type AiTier, type AiWeights, type NodeBudget } from "../../../engine";
 import aiWeightsDoc from "../../../../data/ai.weights.json";
 
 /** The validated static AI input the match-entry deployment run consumes. */
 export interface MatchAiConfig {
   readonly weights: AiWeights;
   readonly deploymentNodeBudget: NodeBudget;
+  readonly plotNodeBudgets: Readonly<Record<AiTier, NodeBudget>>;
 }
 
 /** Every required `AiWeights` coefficient — the document must carry exactly these. */
@@ -90,7 +91,7 @@ function resolve(): MatchAiConfig {
   if (doc === null || typeof doc !== "object") fail("document root must be an object.");
   const rec = doc as Record<string, unknown>;
   for (const key of Object.keys(rec)) {
-    if (key !== "weights" && key !== "deploymentNodeBudget") {
+    if (key !== "weights" && key !== "deploymentNodeBudget" && key !== "plotNodeBudgets") {
       fail(`unexpected top-level key \`${key}\`.`);
     }
   }
@@ -99,7 +100,24 @@ function resolve(): MatchAiConfig {
   if (typeof budget !== "number" || !Number.isInteger(budget) || budget < 1) {
     fail("`deploymentNodeBudget` must be a positive integer.");
   }
-  return { weights, deploymentNodeBudget: nodeBudget(budget) };
+  const rawPlotBudgets = rec["plotNodeBudgets"];
+  if (rawPlotBudgets === null || typeof rawPlotBudgets !== "object") {
+    fail("`plotNodeBudgets` must be an object.");
+  }
+  const plotBudgetRecord = rawPlotBudgets as Record<string, unknown>;
+  const keys = Object.keys(plotBudgetRecord);
+  if (keys.length !== 3 || keys.some((key) => key !== "1" && key !== "2" && key !== "3")) {
+    fail("`plotNodeBudgets` must contain exactly tiers 1, 2, and 3.");
+  }
+  const plotNodeBudgets = {} as Record<1 | 2 | 3, NodeBudget>;
+  for (const tier of [1, 2, 3] as const) {
+    const value = plotBudgetRecord[String(tier)];
+    if (typeof value !== "number" || !Number.isInteger(value) || value < 1) {
+      fail(`plot node budget for tier ${tier} must be a positive integer.`);
+    }
+    plotNodeBudgets[tier] = nodeBudget(value);
+  }
+  return { weights, deploymentNodeBudget: nodeBudget(budget), plotNodeBudgets };
 }
 
 let cached: MatchAiConfig | null = null;
