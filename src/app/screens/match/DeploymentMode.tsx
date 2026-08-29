@@ -113,6 +113,9 @@ export function DeploymentMode(): React.ReactElement {
         }}
       />
       <aside className="deployment-hud" aria-label="Deployment">
+        <h2 className="deployment-hud__title" data-testid="deploy-title">
+          YOUR SPAWN · VECTOR
+        </h2>
         <p className="deployment-hud__count" data-testid="deploy-count">
           {placedCount} / {own.length} PLACED
         </p>

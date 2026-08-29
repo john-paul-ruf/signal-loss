@@ -28,6 +28,17 @@ export function CommandBar(): React.ReactElement {
   const clearError = useMatchStore((s) => s.clearError);
   const [confirmOpen, setConfirmOpen] = React.useState<null | "MOVE" | "ATTACK">(null);
 
+  // Deployment commit gate: every human roster index must carry a draft
+  // position before BEGIN MATCH is offered. The engine remains the final
+  // authority on a complete-but-illegal placement (applyDeployment).
+  const humanConstructCount =
+    engine !== null && launch !== null
+      ? engine.constructs.filter((c) => c.squadId === launch.humanSquadId).length
+      : 0;
+  const deploymentUnplaced = countUnplaced(humanConstructCount, drafts.deploymentDrafts);
+  const deploymentComplete =
+    engine !== null && launch !== null && humanConstructCount > 0 && deploymentUnplaced === 0;
+
   // Ctrl+Enter fires the mode's commit action.
   React.useEffect(() => {
     function onKey(e: KeyboardEvent): void {
@@ -43,7 +54,8 @@ export function CommandBar(): React.ReactElement {
         setConfirmOpen("ATTACK");
       } else if (mode === "DEPLOYMENT") {
         e.preventDefault();
-        applyDeployment();
+        // Same gate as the button — the keyboard path cannot bypass it.
+        if (deploymentComplete) applyDeployment();
       } else if (
         (mode === "MOVEMENT_PLAYBACK" || mode === "ATTACK_PLAYBACK") &&
         playbackDone
@@ -54,7 +66,7 @@ export function CommandBar(): React.ReactElement {
     }
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
-  }, [mode, applyDeployment, playbackFinish, playbackDone]);
+  }, [mode, applyDeployment, playbackFinish, playbackDone, deploymentComplete]);
 
   function openMoveConfirm(): void {
     setConfirmOpen("MOVE");
@@ -74,6 +86,7 @@ export function CommandBar(): React.ReactElement {
           type="button"
           className="command-bar__commit"
           onClick={applyDeployment}
+          disabled={!deploymentComplete}
           data-testid="commit-deployment"
         >
           BEGIN MATCH ⌃⏎
@@ -141,7 +154,18 @@ export function CommandBar(): React.ReactElement {
           </button>
         </div>
       ) : null}
-      <div className="command-bar__actions">{button}</div>
+      <div className="command-bar__actions">
+        {mode === "DEPLOYMENT" && !deploymentComplete ? (
+          <span
+            className="command-bar__status"
+            role="status"
+            data-testid="deploy-remaining"
+          >
+            {deploymentUnplaced} CONSTRUCT{deploymentUnplaced === 1 ? "" : "S"} UNPLACED
+          </span>
+        ) : null}
+        {button}
+      </div>
       <ConfirmModal
         open={confirmOpen === "MOVE"}
         title="COMMIT MOVEMENT"
@@ -177,6 +201,15 @@ export function CommandBar(): React.ReactElement {
       </ConfirmModal>
     </div>
   );
+}
+
+/** Count human roster indices in `[0, count)` that have no draft position. */
+function countUnplaced(count: number, drafts: ReadonlyMap<number, unknown>): number {
+  let unplaced = 0;
+  for (let i = 0; i < count; i = i + 1) {
+    if (!drafts.has(i)) unplaced = unplaced + 1;
+  }
+  return unplaced;
 }
 
 function formatError(err: MatchStoreError): string {

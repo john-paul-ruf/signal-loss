@@ -20,6 +20,7 @@ import {
   MatchStoreProvider,
 } from "../../../src/app/store/match";
 import { DeploymentMode } from "../../../src/app/screens/match/DeploymentMode";
+import { CommandBar } from "../../../src/app/components/match/CommandBar";
 import { soloRoster, testCatalog } from "../../fixtures/matches/simple-match";
 import { buildSimpleMap } from "../../fixtures/maps/simple";
 import type { SavedRosterV1 } from "../../../src/platform/index";
@@ -93,5 +94,38 @@ describe("DeploymentMode — HUD contract", () => {
     expect(html).toContain("deployment-hud__item--active");
     // Sanity: the selected id is the human construct.
     expect(humanConstructId(store)).toBeGreaterThanOrEqual(0);
+  });
+});
+
+function commitButton(html: string): string {
+  return html.match(/<button[^>]*command-bar__commit[^>]*>/)?.[0] ?? "";
+}
+
+function renderCommandBar(store: ReturnType<typeof createMatchStore>): string {
+  return renderToStaticMarkup(
+    <MatchStoreProvider store={store}>
+      <CommandBar />
+    </MatchStoreProvider>,
+  );
+}
+
+describe("CommandBar — deployment commit gate", () => {
+  it("disables BEGIN MATCH and reports the remaining count while incomplete", () => {
+    const html = renderCommandBar(bootStore());
+    expect(html).toContain('data-testid="commit-deployment"');
+    expect(commitButton(html)).toContain("disabled");
+    expect(html).toContain("1 CONSTRUCT UNPLACED");
+    // The no-timer invariant still reads (design.md §5.4).
+    expect(html).toContain("NO TIMER — COMMIT WHEN READY");
+  });
+
+  it("enables BEGIN MATCH once every construct is placed", () => {
+    const store = bootStore();
+    const anchor = store.getState().engine?.map.spawns[0]?.anchor;
+    if (anchor === undefined) throw new Error("no spawn anchor");
+    store.getState().setDeploymentDraft(0, anchor);
+    const html = renderCommandBar(store);
+    expect(commitButton(html)).not.toContain("disabled");
+    expect(html).not.toContain("UNPLACED");
   });
 });
