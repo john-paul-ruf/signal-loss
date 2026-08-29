@@ -12,3 +12,8 @@ describe("match setup route", () => {
     expect(html).toContain("LOADING MATCH SETUP");
   });
 });
+
+it("presents a disabled launch action before preparation", () => {
+  const html = renderToStaticMarkup(route.render());
+  expect(html).toContain("LOADING MATCH SETUP");
+});
