@@ -2,7 +2,7 @@
 
 > **Path:** `./src/app/screens/`
 > **Imports from:** M12, M14, M17–M19
-> **Status:** boot / codex / collection shipped and verified in SESSION-07 checkpoints 1–2; match modes shipped and verified in SESSION-08. A SESSION-07 retry (`ed7b664`) landed unverified composer files at checkpoint 3's location, but the worker returned no parseable handoff, so checkpoint 3 is **not** complete — see Pending routes. The `#/setup` route is now owned by the `match-setup-route` cycle: its route module (`match-setup-route` SESSION-04) was not launched and its launch-contract dependency (`match-setup-route` SESSION-03) was blocked, so `#/setup` remains unstarted even though its M17 dependencies now exist. Standalone result (`#/result`) remains unstarted, pending a further SESSION-07 retry.
+> **Status:** boot / codex / collection shipped and verified in SESSION-07 checkpoints 1–2; match modes shipped and verified in SESSION-08. A SESSION-07 retry (`ed7b664`) landed unverified composer files at checkpoint 3's location, but the worker returned no parseable handoff, so checkpoint 3 is **not** complete — see Pending routes. `match-setup-route` SESSION-03 extended match consumption and SESSION-04 shipped and verified the self-registering `#/setup` route. Standalone result (`#/result`) remains unstarted, pending a further SESSION-07 retry.
 
 ## Public API
 
@@ -17,17 +17,22 @@ Every screen self-registers through `M21`'s route discovery by exporting a `rout
 ### Match modes — SESSION-08
 
 - `screens/match/route.tsx` — id `"match"`, path `"#/match"`.
-- `MatchScreen` creates a `MatchStore` instance per mount, provides context, and switches modes.
+- `MatchScreen` creates a `MatchStore` instance per mount, consumes the shared flow-store launch payload once after resolving the catalog, and switches modes. An absent or rejected payload renders a `#/setup` recovery link rather than a playable fallback.
 - `DeploymentMode` — board + spawn-region click placement, HUD progress + reason.
 - `MovementMode` — board + waypoint clicks / HOLD (H) / Backspace / Esc / 1-9 select; engine `legalMovePlot` is authority.
 - `AttackMode` — board + `AttackLedger` with inline `ExchangeCard`s; pointer picks nearest enemy as target.
 - `PlaybackMode` — full-motion or reduced-motion cards (arrow keys); event-only.
 - `ResultMode` — derives `MatchResultPayload` and dispatches `signal-loss:match-result` event for the flow store.
 
+### Setup route — `match-setup-route` SESSION-04
+
+- `screens/setup/route.tsx` self-registers id `"match-setup"` at `#/setup`; `MatchSetup` mounts the collection binding, owns its setup worker clients, and disposes them on unmount.
+- The screen requires a legal saved/prebuilt human roster and concrete visible seed before generation. It renders the accepted map and four generated AI rosters, then writes `CompleteMatchLaunchConfig` to the shared FlowStore before navigating to `#/match`.
+- Direct `#/setup` regression passed in Chromium, Firefox, and WebKit; no route-registry edit was required.
+
 ### Pending routes
 
 - `#/composer` — keyboard-complete construct composer (design.md §5.2 locked map: Tab regions, arrows in lists, Enter mount/select, Backspace unmount, C commander, / search). Reuses `DialStatGrid` for the commander before / after delta overlay and `applyCommanderType` from the engine. Linked from boot and the collection nav. **Residual, unverified:** a SESSION-07 retry landed `Composer.tsx` / `ComposerView.tsx` / `route.tsx` at `./src/app/screens/build/composer/` (commit `ed7b664`), plus a `CollectionView` "edit" button wired to `requestComposerEdit` + `navigate("#/composer")`, but the worker that produced them returned no parseable handoff — no checkpoint declared, no typecheck/lint/test result reported for this retry. Treat this code as an unverified starting point for the next retry, not a shipped checkpoint.
-- `#/setup` — its M17 dependencies now exist: the typed mapgen worker client (`./src/app/bridge/mapgen-client.ts`, over worker entry `./src/workers/mapgen.worker.ts` / protocol `./src/workers/protocol.ts`) and the headless preparation service (`./src/app/store/build/setup-model.ts`) shipped in `match-setup-route` SESSION-02. The route module itself is unstarted — owned by `match-setup-route` SESSION-04, which was not launched this cycle. On DEPLOY it must write an extended `MatchLaunchConfig` (with `aiRosters`) to the core flow store, but that launch-field extension is owned by `match-setup-route` SESSION-03, which was blocked at 0 checkpoints, so SESSION-04's target contract does not yet exist.
 - `#/result` — standalone hydration + actions; must subscribe to (or replace) the match store's `signal-loss:match-result` DOM `CustomEvent` handoff. Roster hydration keyed by `rosterId` when the result screen mounts (the current `ResultMode` emits an empty `constructs` array under the roster shape). Fully unstarted.
 
 ## Internal Structure
@@ -36,7 +41,8 @@ Every screen self-registers through `M21`'s route discovery by exporting a `rout
 |---|---|---|
 | Entry / build | `./src/app/screens/boot/`, `./src/app/screens/build/`, `./src/app/screens/codex/` | shipped, verified |
 | Composer | `./src/app/screens/build/composer/` (`Composer.tsx`, `ComposerView.tsx`, `route.tsx`) | residual, unverified — pending SESSION-07 retry |
-| Setup / result | `./src/app/screens/setup/`, `./src/app/screens/result/` | unstarted — `#/setup` owned by `match-setup-route` SESSION-04 (not launched; blocked behind SESSION-03); `#/result` pending SESSION-07 retry |
+| Setup | `./src/app/screens/setup/` | shipped and verified by `match-setup-route` SESSION-04 |
+| Result | `./src/app/screens/result/` | unstarted — pending SESSION-07 retry |
 | Match | `./src/app/screens/match/` | shipped, verified |
 
 ## Conventions and Invariants
@@ -56,4 +62,4 @@ Every screen self-registers through `M21`'s route discovery by exporting a `rout
 | 2026-08-28 | SESSION-07 checkpoints 1–2 shipped boot (`#/`), codex (`#/codex`), and collection (`#/build`). Composer / setup / standalone result remain pending checkpoints 3–5. |
 | 2026-08-28 | SESSION-08 shipped `./src/app/screens/match/**` — the five match modes and the `MatchScreen` provider — with `signal-loss:match-result` DOM `CustomEvent` handoff to the core flow store. |
 | 2026-08-28 | SESSION-07 retry 1 (targeting checkpoint 3) returned no parseable handoff; Jikijitsu committed the in-lease residual `ed7b664`, which includes `./src/app/screens/build/composer/**`. Recorded here as unverified residual, not a completed checkpoint. Setup / standalone result are still fully unstarted. |
-| 2026-08-28 | `match-setup-route` cycle: no screen shipped under M20. The `#/setup` route's dependencies (mapgen client + preparation service) landed in M17 via `match-setup-route` SESSION-02; the launch-contract extension (SESSION-03) was blocked at 0 checkpoints and the routed setup screen (SESSION-04) was not launched, so `#/setup` remains unstarted. |
+| 2026-08-28 | `match-setup-route` SESSION-03 retry updated `MatchScreen` to consume the complete transient launch once and expose a missing-launch recovery path. SESSION-04 then shipped `./src/app/screens/setup/**`: the self-registering `#/setup` route, deterministic preparation/review flow, and deployment handoff to `#/match`; direct-route regression passed across all three Playwright browsers. |

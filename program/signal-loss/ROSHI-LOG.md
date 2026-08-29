@@ -198,3 +198,41 @@ To be folded in by a human; Roshi does not edit `./FORGE.md`, `./MU.md`, `./ENSO
 ### Roshi entry
 
 First `match-setup-route` cycle: reconciled 5 arch files (M17, M19, M20, M21, M22). Folded M17's two mid-run staples into one coherent description and resolved a live contradiction — `mapgen-client.ts`, marked "fully unstarted, pending a SESSION-07 retry," is in fact shipped and verified by `match-setup-route` SESSION-02, per git. Re-attributed the `#/setup` route and setup component/test subtrees from stale "SESSION-07 retry" wording to their true owners (`match-setup-route` SESSION-03/04, blocked/not-launched), and recorded SESSION-01's sanctioned `main.tsx` provider-mount shell edit. Module registry unchanged — no new boundary. Two recurring Robe-targeted observations reached count-of-4 (git-commit pathspec scoping; crash-vs-blocked classification) but remain human-fold recommendations for `./JIKIJITSU.md` / `./MU.md`; nothing folded into `./FORGE-CONFIG.md`. One new count-of-1 observation: feature-qualify session references in `arch/` now that the program runs more than one feature.
+
+---
+
+## 2026-08-28 — Cycle 5 · SIGNAL LOSS / match-setup-route (retry continuation)
+
+### What ran
+
+The authorized fresh retry completed `match-setup-route` SESSION-03 from its prior transport failure, then completed dependent SESSION-04. SESSION-03 reached 3/3 checkpoints, shipping the complete transient launch contract and real five-roster match consumption. SESSION-04, launched with Enso after that dependency completed, reached 4/4 checkpoints, shipping the self-registering `#/setup` route and its deterministic prepare/review/deploy flow. The feature is now 4/4 complete; the continuation reported seven checkpoint commits, clean leases, and no residual gap.
+
+### What I reconciled
+
+- Read the retry Final Report, full `STATE.md`, every `./program/signal-loss/arch/*.md` record, `./program/signal-loss/FORGE-CONFIG.md`, and all four prior Roshi entries. Grounded the reconciliation in the checkpoint commits `d555bcd` through `78806e7`, their recorded completion commits, and the on-disk app and test tree.
+- Rewrote the `<!-- SESSION-03 -->` staple in `./program/signal-loss/arch/M17-app-state-bridge.md` into its coherent core-store, match-store, and invariant sections. The prior temporary launch-payload-gap / duplicate-human text is resolved: `CompleteMatchLaunchConfig` now carries the prepared data transiently, `MatchStore.boot` creates `[human, ai1, ai2, ai3, ai4]`, snapshots the consumed payload, and `MatchScreen` provides a truthful recovery path when it cannot boot.
+- Reconciled the stale blocked/not-launched status of the setup surface across `./program/signal-loss/arch/M19-ui-components.md`, `./program/signal-loss/arch/M20-screens.md`, and `./program/signal-loss/arch/M22-verification-tests.md`. These now describe the delivered setup controls, roster picker, map and AI review, self-registration, deployment handoff, targeted launch tests, and three-browser direct-route regression once each.
+- **Module registry:** unchanged. All delivered paths remain within the existing M17, M19, M20, and M22 `Owns` contracts. `./program/signal-loss/FORGE-CONFIG.md` remains unchanged.
+
+### What I did NOT promote to a convention
+
+The Final Report's granularity feedback reported no scope, context, or lease issue. No program convention crossed the evidence threshold, and none was added to `./program/signal-loss/FORGE-CONFIG.md`.
+
+- **Route UI-dominant sessions to Enso at spawn time.** The successful Enso-at-spawn SESSION-04 is a second cycle of evidence for the routing practice (following full-v1 SESSION-07's mid-flight correction), but one successful retry does not yet establish a three-cycle program rule. Count: **2**.
+- The feature-qualified session-reference observation remains at **1**: this continuation uses the same second feature, rather than supplying another multi-feature-cycle observation.
+
+### Proposed for the framework
+
+To be folded in by a human; Roshi does not edit `./FORGE.md`, `./MU.md`, `./ENSO.md`, or `./JIKIJITSU.md`.
+
+- **Scope `git commit` pathspec, not only `git add`.** Cycles observed: **4**. Candidate home: `./JIKIJITSU.md` orchestration envelope or `./MU.md` checkpoint-commit protocol.
+- **Distinguish "session crashed" from "session declared blocked," and label the result accordingly.** Cycles observed: **4**. Candidate home: `./JIKIJITSU.md` spawn/await/result-classification.
+- **Route UI-dominant sessions to Enso at spawn time, not by mid-flight delegation.** Cycles observed: **2**. Candidate home: `./JIKIJITSU.md` spawn-time routing heuristic or Forge's per-session worker-mix hint.
+- **Cap combined visual working set per session at what one context can hold.** Cycles observed: **1**. Candidate home: `./FORGE.md` decomposition heuristics.
+- **Carve a shared-style owner before concurrent UI leases.** Cycles observed: **1**. Candidate home: `./FORGE.md` decomposition.
+- **Escalate retry strategy after two consecutive non-declarative failures on the same session.** Cycles observed: **1**. Candidate home: `./JIKIJITSU.md` retry policy.
+- **Feature-qualify session references in `arch/` for multi-feature programs.** Cycles observed: **1**. Candidate home: `arch/`-authoring convention / mid-run arch-append instruction.
+
+### Roshi entry
+
+Retry completion reconciled four arch files (M17, M19, M20, M22) and removed M17's SESSION-03 staple. The former temporary launch-payload gap, blocked `#/setup` ownership, and absent test-record wording are resolved to the shipped, verified state. Module registry and `./program/signal-loss/FORGE-CONFIG.md` remain unchanged. No convention was promoted; the Enso-at-spawn observation advances to count-of-2, while the two count-of-4 Robe recommendations remain recommendations only.
