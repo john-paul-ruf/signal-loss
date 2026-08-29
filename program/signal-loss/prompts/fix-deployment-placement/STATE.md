@@ -15,7 +15,7 @@
 
 | # | Session | Modules | Owns | Status | Checkpoint | Completed | Notes |
 |---|---|---|---|---|---|---|---|
-| 01 | Restore Deployment Placement Interaction | M18, M19, M20, M22 | `./src/app/board/BoardCanvas.tsx`; `./src/app/board/layers/overlay-layer.ts`; `./src/app/board/layers/terrain-layer.ts`; `./src/app/components/match/CommandBar.tsx`; `./src/app/components/match/match-shell.css`; `./src/app/screens/match/DeploymentMode.tsx`; `./tests/app/match/deployment-mode.test.tsx`; `./tests/e2e/match/deployment-placement.spec.ts` | in-progress | 0/3 | — | The current valid click path works only inside squad `0`'s derived spawn, which the UI does not identify; draft positions are not rendered and the commit button is not gated. |
+| 01 | Restore Deployment Placement Interaction | M18, M19, M20, M22 | `./src/app/board/BoardCanvas.tsx`; `./src/app/board/layers/overlay-layer.ts`; `./src/app/board/layers/terrain-layer.ts`; `./src/app/components/match/CommandBar.tsx`; `./src/app/components/match/match-shell.css`; `./src/app/screens/match/DeploymentMode.tsx`; `./tests/app/match/deployment-mode.test.tsx`; `./tests/e2e/match/deployment-placement.spec.ts` | done | 3/3 | 2026-08-28 | Human deployment repaired: YOUR SPAWN affordance + dim, staged/hover markers, select+click and next-unplaced placement, visible reasons/unplace, and BEGIN MATCH gated on a complete human roster (button + Ctrl/Cmd+Enter). Full MOVEMENT_PLOT transition blocked by missing in-match AI deployment orchestration (out of lease) — engine correctly rejects unplaced AI squads with no partial commit. |
 
 ## Wave Plan
 
@@ -69,3 +69,35 @@ flowchart TD
 | Keep complete-but-illegal validation in the engine | Wall/footprint/cross-placement legality and simultaneous reveal already have a single authoritative implementation in M09; the UI must not duplicate rule logic. |
 
 ## Handoff Notes (Jikijitsu writes here after each session — from Mu's handoff JSON, verbatim)
+
+### SESSION-01
+
+```json
+{
+  "session": "01",
+  "status": "done",
+  "checkpoint": 3,
+  "notes": "Human deployment repaired: YOUR SPAWN affordance + dim, staged/hover markers, select+click and next-unplaced placement, visible reasons/unplace, and BEGIN MATCH gated on a complete human roster (button + Ctrl/Cmd+Enter). Full MOVEMENT_PLOT transition blocked by missing in-match AI deployment orchestration (out of lease) — engine correctly rejects unplaced AI squads with no partial commit.",
+  "delivered": "Board: optional render-only DeploymentBoardState into BoardCanvas → terrain draws the observer's solid YOUR SPAWN·VECTOR region and dims outside it while enemy regions stay empty dashed outlines; overlay draws staged draft markers (active-ringed) and a valid(solid)/invalid(dashed+✕) hover preview — shape not colour. DeploymentMode: selected-construct-or-next-unplaced placement, in-spawn + duplicate-spot rejection with live reasons, reposition/unplace editing, live count/instruction, and a semantic YOUR SPAWN heading. CommandBar: BEGIN MATCH disabled with 'N CONSTRUCTS UNPLACED' until every human roster index is drafted; keyboard commit guarded by the same predicate; NO TIMER hint preserved. applyDeployment left as the final engine authority. Drafts stay in HumanDraftState only.",
+  "verification": "npx vitest run (deployment-mode, shell, board-camera, board-scene, match-store) → 40 pass; npx playwright test deployment-placement.spec.ts --project=chromium --firefox --webkit → 3 pass; npm run typecheck, npm run lint, npm run build → all green. Click points derived from live geometry via generateMap(seed 8592953eb8ce193f7fcdc987660b5fab) + fitCamera; squad-0 three-point layout confirmed 0 violations by legalDeployment. Inspected the actual deployment render (1440×900).",
+  "surprises": "BLOCKING for the transition, OUT OF LEASE: the app never populates AI deployment slots — no code posts an AI_DEPLOY request (the only postAiRequest is setup's AI_ROSTER; there is no in-match AI turn orchestration). So BEGIN MATCH at 3/3 human always returns FR-12:PARTIAL_DEPLOYMENT for squads 1-4 and stays in DEPLOYMENT — verified live. This lives in M15 (src/workers) / M17 (src/app/store/match/match-store.ts, src/app/bridge), none in this Owns set (match-store.ts is a Read). The e2e therefore asserts the in-lease invariant (gate enforced, engine is final authority, no partial commit, no crash) and accepts either the transition or the surfaced rejection. Minor cosmetics (pre-existing / out of lease, field-layer.ts is a Read): the field layer renders not-yet-deployed constructs stacked at world origin during deployment, and the floating deployment HUD overlaps the top-right enemy spawn outline.",
+  "followUp": "To make BEGIN MATCH actually start the match, wire in-match AI deployment: on entering DEPLOYMENT, post an AI_DEPLOY request per AI squad (bridge/ai-client already types AiDeployRequest/asDeployOk and ai.worker handles AI_DEPLOY) and feed results to markAiReadyDeploy — an M15/M17 session. Once that lands, this e2e's step 5 will naturally take the movement branch with no test change. Consider (M18 field-layer) suppressing own-construct render at their default origin during deployment so only staged markers show.",
+  "filesTouched": [
+    "src/app/board/BoardCanvas.tsx",
+    "src/app/board/layers/overlay-layer.ts",
+    "src/app/board/layers/terrain-layer.ts",
+    "src/app/components/match/CommandBar.tsx",
+    "src/app/components/match/match-shell.css",
+    "src/app/screens/match/DeploymentMode.tsx",
+    "tests/app/match/deployment-mode.test.tsx",
+    "tests/e2e/match/deployment-placement.spec.ts"
+  ],
+  "blockedReason": null,
+  "layoutClasses": ["desktop"],
+  "evidence": [
+    { "shot": "deployment.png", "note": "1440×900: solid YOUR SPAWN·VECTOR region upper-left with two staged ▲ markers inside; enemy spawns are empty dashed outlines; HUD reads 2/3 PLACED with placed coords and active UNPLACED row. Interaction and gating render correctly." }
+  ],
+  "a11yNotes": "Deployment status/instructions/reasons/count and the YOUR SPAWN heading are semantic text (role=alert on reason, role=status on remaining), so legality never depends on colour; hover preview uses solid-vs-dashed+✕ shape cues. No focus trap, aria-hidden, or inert introduced. Caveat: the canvas spawn label is mirrored by the HUD heading but there is no per-region focusable spawn target in the accessible tree — a candidate for a future a11y pass.",
+  "delegatedTo": "enso"
+}
+```
