@@ -71,3 +71,9 @@ Every screen self-registers through `M21`'s route discovery by exporting a `rout
 ## M20 — Screens delta
 
 - `MatchScreen` owns one match-lifetime AI controller for deployment, movement, and attack. Every `MOVEMENT_PLOT` and `ATTACK_PLOT` committed phase identity starts four worker decisions; phase change/unmount cancels and disposes the prior family before the next setup, while AI slot writes do not restart a run.
+
+<!-- SESSION-05 -->
+## M20 — Screens
+
+- `#/result` self-registers through `./src/app/screens/result/route.tsx`, handles missing transient results, and owns cancellable same/new-seed rematch lifecycle.
+- `ResultMode` derives exactly one summary from final state, launch snapshot, human squad, and complete event history; failures remain visible without navigation.

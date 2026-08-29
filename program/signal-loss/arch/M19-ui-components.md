@@ -96,3 +96,9 @@
 - `./src/app/components/match/attack-model.ts` is the pure attack-presentation boundary. It builds an app-only hypothetical `MatchState` whose construct positions are replaced by the human observer's `PublicState` positions, then obtains the normal and called rows through two engine `exchangePreview()` calls. The hypothetical state is never persisted or sent across a worker/replay boundary.
 - Ghost exchange data is computed only at the last-confirmed public position and remains labeled `POSITION UNCONFIRMED`; authoritative enemy coordinates are never consulted for preview range or LOS.
 - The module also owns pure exact-hit routing, pool balance/guarded called and posture toggles, and committed-human playback-spend derivation used by M19/M20 attack surfaces.
+
+<!-- SESSION-05 -->
+## M19 — UI components
+
+- `./src/app/components/result/` renders the complete semantic match summary, exact accessible pool rows, CSS/SVG efficiency plot, visible/copyable roster strings, typed clipboard feedback, and rematch action service boundaries.
+

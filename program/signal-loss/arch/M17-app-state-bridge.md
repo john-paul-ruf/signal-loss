@@ -251,3 +251,10 @@ Additive re-exports only: all `setup-model` public constructors / validators / s
 `./src/app/store/core/result-summary.ts` exports `deriveMatchResultSummary(completedState, launchConfig, humanSquadId, completeHistory)` and its plain result contract. The pure derivation reports outcome, recorded standings, construct statistics, human pool totals and per-round event-derived accounting, final state hash, and all reproducibility inputs. It throws `MatchResultSummaryError` for incomplete states/history, a missing human squad, or disagreement between history and engine pool aggregates.
 
 Ladder entries use `WINNER`, `ELIMINATED`, or `SURVIVED_AT_END`. `SURVIVED_AT_END` means the human-loss stop rule ended the match while that AI squad remained alive: both placement and elimination round are `null`, and stable squad-ID ordering is display-only rather than a fabricated standing.
+
+<!-- SESSION-05 -->
+## M17 — App state and bridge
+
+- `MatchResultPayload` is now the authoritative `MatchResultSummary`; the core facade exports the summary derivation/types and complete-launch type guard.
+- Completed summaries are written directly to the app-lifetime flow store before navigation. Same-seed and regenerated launches remain transient and never touch collection persistence.
+
