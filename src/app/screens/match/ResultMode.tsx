@@ -1,38 +1,39 @@
 import * as React from "react";
 import { useMatchStore } from "../../store/match";
-import type { MatchResultPayload } from "../../store/core";
-import type { LaunchSnapshot } from "../../store/match";
-import type { MatchState } from "../../../engine";
-import { hashState } from "../../../engine";
+import { deriveMatchResultSummary, useFlowStoreApi } from "../../store/core";
 
 /**
- * Result mode — derives the shared MatchResultPayload from the
- * committed engine state and posts it via a DOM custom event. The
- * core flow store subscribes to the event and stores the payload for
- * Session 07's result screen to render. The match store itself never
- * persists to localStorage — this handoff is transient per the
- * flow-store contract (database.md §8).
- *
- * A ref guards the effect so re-mounting the result mode doesn't
- * re-emit the payload.
+ * Terminal handoff. The authoritative summary is derived once, written to
+ * the app-lifetime flow store, and only then exposed through the result route.
  */
 export function ResultMode(): React.ReactElement {
   const engine = useMatchStore((s) => s.engine);
   const launch = useMatchStore((s) => s.launch);
-  const winner = engine?.winner ?? null;
-  const eliminations = engine?.eliminationOrder ?? [];
+  const history = useMatchStore((s) => s.eventHistory);
+  const flow = useFlowStoreApi();
   const written = React.useRef(false);
+  const [error, setError] = React.useState<string | null>(null);
 
   React.useEffect(() => {
     if (written.current) return;
-    if (engine === null || launch === null) return;
-    if (engine.phase !== "COMPLETE") return;
-    const payload = derivePayload(engine, launch);
-    window.dispatchEvent(
-      new CustomEvent("signal-loss:match-result", { detail: payload }),
-    );
-    written.current = true;
-  }, [engine, launch]);
+    if (engine === null || launch === null || engine.phase !== "COMPLETE") {
+      setError("The completed match state is unavailable.");
+      return;
+    }
+    try {
+      const summary = deriveMatchResultSummary(
+        engine,
+        launch.input,
+        launch.humanSquadId,
+        history,
+      );
+      flow.getState().setLastResult(summary);
+      written.current = true;
+      window.location.hash = "#/result";
+    } catch (cause) {
+      setError(cause instanceof Error ? cause.message : String(cause));
+    }
+  }, [engine, flow, history, launch]);
 
   return (
     <div
@@ -42,47 +43,12 @@ export function ResultMode(): React.ReactElement {
       data-testid="mode-result"
     >
       <p className="match-mode__title">MATCH COMPLETE</p>
-      {winner === null ? (
-        <p>No winner — simultaneous elimination.</p>
-      ) : (
-        <p>Winner: squad {winner as number}</p>
+      {error === null ? <p role="status">Preparing match summary…</p> : (
+        <div role="alert">
+          <p>Match summary could not be prepared: {error}</p>
+          <p><a href="#/setup">Return to setup</a> · <a href="#/build">Build zone</a></p>
+        </div>
       )}
-      <ol className="match-mode__eliminations">
-        {eliminations.map((e) => (
-          <li key={e.squadId as number}>
-            Squad {e.squadId as number} · placement {e.placement} · round {e.round}
-          </li>
-        ))}
-      </ol>
-      <p>
-        <a href="#/result">See full summary →</a>
-      </p>
     </div>
   );
-}
-
-function derivePayload(
-  engine: MatchState,
-  launch: LaunchSnapshot,
-): MatchResultPayload {
-  const humanElim = engine.eliminationOrder.find(
-    (e) => (e.squadId as number) === (launch.humanSquadId as number),
-  );
-  const outcome: MatchResultPayload["outcome"] =
-    engine.winner === launch.humanSquadId
-      ? "victory"
-      : engine.winner === null
-      ? "stalemate"
-      : "defeat";
-  return {
-    config: launch.input,
-    outcome,
-    rounds: engine.round,
-    humanEliminationRound: humanElim?.round ?? null,
-    finalStateHash: hashState(engine),
-    share: {
-      rosterCode: launch.input.human.shareString,
-      seed: launch.seed,
-    },
-  };
 }

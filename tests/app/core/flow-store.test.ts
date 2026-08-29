@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 import {
   createFlowStore,
   type MatchLaunchConfig,
-  type MatchResultPayload,
+  type MatchResultSummary,
 } from "../../../src/app/store/core/index";
 import { buildSimpleMap } from "../../fixtures/maps/simple";
 
@@ -27,13 +27,15 @@ const launch: MatchLaunchConfig = {
   resolvedArchetypeId: "arena" as never,
 };
 
-const result: MatchResultPayload = {
-  config: launch,
+const result: MatchResultSummary = {
   outcome: "victory",
-  rounds: 6,
+  roundsElapsed: 1,
+  humanPlacement: 1,
   humanEliminationRound: null,
   finalStateHash: "abcd1234",
-  share: { rosterCode: "SL1-...", seed: "seed-abc" },
+  ladder: [], constructs: [],
+  humanPool: { granted: 2, spent: 1, wasted: 1, calledShots: 1, postures: 0, rounds: [{ round: 1, granted: 2, spent: 1, wasted: 1, calledShots: 1, postures: 0 }] },
+  reproducibility: { seed: "seed-abc", budget: 50, resolvedArchetypeId: "arena" as never, aiTier: 2, humanRosterShareString: "SL1-human", aiRosterShareStrings: ["SL1-ai1", "SL1-ai2", "SL1-ai3", "SL1-ai4"] },
 };
 
 describe("app/core/flow-store", () => {

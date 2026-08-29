@@ -42,3 +42,17 @@ export {
   useFlowStoreApi,
   type FlowStoreProviderProps,
 } from "./flow-context";
+
+export {
+  deriveMatchResultSummary,
+  MatchResultSummaryError,
+  type ConstructResultEntry,
+  type HumanPoolResult,
+  type MatchOutcome,
+  type MatchReproducibility,
+  type MatchResultSummary,
+  type MatchResultSummaryErrorCode,
+  type PoolRoundResult,
+  type SquadResultEntry,
+  type SquadResultStatus,
+} from "./result-summary";

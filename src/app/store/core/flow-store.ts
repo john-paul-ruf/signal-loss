@@ -9,6 +9,7 @@ import type {
   PrebuiltId,
   Roster,
 } from "../../../engine";
+import type { MatchResultSummary } from "./result-summary";
 
 /**
  * Non-persisted flow store — carries `MatchLaunchConfig` from the setup
@@ -73,17 +74,7 @@ export function isCompleteMatchLaunchConfig(
  * render. `share` carries the seed + rosters codec strings; the payload
  * intentionally carries nothing personal.
  */
-export interface MatchResultPayload {
-  readonly config: MatchLaunchConfig;
-  readonly outcome: "victory" | "defeat" | "stalemate";
-  readonly rounds: number;
-  readonly humanEliminationRound: number | null;
-  readonly finalStateHash: string;
-  readonly share: {
-    readonly rosterCode: string;
-    readonly seed: string;
-  };
-}
+export type MatchResultPayload = MatchResultSummary;
 
 /**
  * Flow store — pointers to the currently-in-flight launch and the most
