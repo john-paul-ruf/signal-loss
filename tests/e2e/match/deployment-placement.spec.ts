@@ -20,6 +20,9 @@ import type { Fx, Vec2 } from "../../../src/engine";
  *     commit
  *   - BEGIN MATCH hands off to the engine as the final authority and the match
  *     advances to MOVEMENT_PLOT with no partial commit and no runtime crash
+ *   - the first deployed human marker can be SELECTED on the canvas without
+ *     drafting a waypoint, a legal terrain click plots a real path, and the
+ *     committed move resolves to a positive-distance `MOVED` in the round log
  *
  * In-match AI deployment is now wired (M15 workers / M17 store): the match
  * screen posts one deployment request per AI squad on entry, so BEGIN MATCH
@@ -57,12 +60,26 @@ const SPAWN_POINTS: readonly Vec2[] = [
 /** The map center (0,0) is inside bounds but outside every corner spawn. */
 const MAP_CENTER: Vec2 = { x: 0 as Fx, y: 0 as Fx };
 
+/**
+ * A movement waypoint for the construct deployed at `SPAWN_POINTS[0]`.
+ * 2048 fx straight toward the box interior from the marker: beyond the
+ * 1024-fx footprint (so it reads as empty terrain, not a re-selection),
+ * ≥1846 fx from every other deployed construct (no accidental hit),
+ * inside `spawn 0`'s wall-free 4096×4096 box, and well within the
+ * ≥5120 dial-0 allowance of every STRIKE FORCE construct — verified
+ * against `generateMap(SEED,…)` + `legalMovePlot` (0 violations). It
+ * therefore commits without clamp or rejection to a positive `MOVED`.
+ */
+const MOVE_TARGET: Vec2 = { x: -30208 as Fx, y: -28160 as Fx };
+
 const FORBIDDEN = [
   "getSnapshot should be cached",
   "Maximum update depth",
   "FR-12:PARTIAL_DEPLOYMENT",
   "FR-12:AI_DEPLOYMENT_NOT_READY",
   "Engine rejected DEPLOY",
+  "Engine rejected MOVE",
+  "FR-14",
   "WORKER_DOWN",
 ];
 
@@ -170,8 +187,50 @@ test.describe("deployment placement — real setup → match", () => {
     await expect(page.getByTestId("command-error")).toHaveCount(0);
     await expect(page.getByTestId("mode-deployment")).toHaveCount(0);
 
-    // No partial-deployment, worker, or React external-store failure at any
-    // point in the flow.
+    // 6 — canvas SELECTION. Click the first deployed human marker. This must
+    // select + inspect the construct WITHOUT drafting a waypoint: the HUD
+    // names a selected construct, its rail row stays UNPLOTTED, and the
+    // plotted length stays zero (proving the click did not append a point).
+    await clickWorld(board, point0);
+    await expect(page.getByTestId("mv-selected")).toHaveText(/allowance \d+/);
+    const selectedRow = page.locator(".squad-rail__row--selected");
+    await expect(selectedRow).toHaveCount(1);
+    await expect(selectedRow.locator(".squad-rail__state")).toHaveText("UNPLOTTED");
+    await expect(page.getByTestId("mv-length")).toHaveText(/^0 \/ \d+$/);
+
+    // 7 — legal WAYPOINT. Click a stable, wall-free point outside the marker
+    // hit radius but inside the construct's allowance. The HUD now reports a
+    // positive path length and the selected rail row reports a plotted path.
+    await clickWorld(board, MOVE_TARGET);
+    await expect(page.getByTestId("mv-length")).toHaveText(/^[1-9]\d* \/ \d+$/);
+    await expect(selectedRow.locator(".squad-rail__state")).toHaveText(/^PLOTTED /);
+
+    // 8 — COMMIT through the real confirmation dialog → movement playback.
+    await page.getByTestId("commit-movement").click();
+    await page
+      .locator(".sl-modal")
+      .getByRole("button", { name: "COMMIT MOVEMENT" })
+      .click();
+    await expect(page.getByTestId("mode-playback")).toBeVisible({ timeout: 30_000 });
+    await expect(page.getByTestId("mode-movement")).toHaveCount(0);
+    // The engine accepted the move — no MOVE rejection surfaced.
+    await expect(page.getByTestId("command-error")).toHaveCount(0);
+
+    // 9 — the round log records a positive-distance MOVED for the human
+    // construct rather than an implicit HOLD (the engine's real outcome).
+    const movedItems = page.locator('[data-kind="MOVED"]');
+    await expect(movedItems.first()).toBeVisible({ timeout: 30_000 });
+    const movedTexts = await movedItems.allTextContents();
+    const movedDistances = movedTexts.map((text) =>
+      Number(text.match(/moved (\d+)/)?.[1] ?? "0"),
+    );
+    expect(
+      movedDistances.some((distance) => distance > 0),
+      movedTexts.join(" | "),
+    ).toBe(true);
+
+    // No partial-deployment, worker, movement-rejection, or React
+    // external-store failure at any point in the flow.
     const offending = failures.filter((text) =>
       FORBIDDEN.some((needle) => text.includes(needle)),
     );
