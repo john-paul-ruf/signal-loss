@@ -15,7 +15,7 @@ const result: MatchResultSummary = {
 describe("ResultSummary", () => {
   it("gives every authoritative fact a semantic home", () => {
     const html = renderToStaticMarkup(<ResultSummary result={result} />);
-    for (const truth of ["2ND OF 5", "placement unresolved", "Damage dealt", "8", "Wasted", "Called shots", "seed", "hash-1", "human-share", "ai-4", "NO PROGRESSION"]) expect(html).toContain(truth);
+    for (const truth of ["2ND", "OF 5", "PLACEMENT UNRESOLVED", "Damage dealt", "8", "Wasted", "CALLED SHOTS", "seed", "hash-1", "human-share", "ai-4", "NO PROGRESSION"]) expect(html).toContain(truth);
     expect(html.match(/<table/g)?.length).toBe(2);
   });
 });
