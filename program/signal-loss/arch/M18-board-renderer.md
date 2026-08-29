@@ -88,3 +88,10 @@ AccessibleBoardTree: focusable DOM equivalent for every construct (own / enemy /
 | 2026-08-28 | Genesis/Forge contract recorded; implementation pending. |
 | 2026-08-28 | SESSION-08 shipped `./src/app/board/**` — camera + three-layer canvas scene + arithmetic hit-testing + squad identity + path input + reach overlay + accessible tree + event-card playback with compile-time exhaustive kind coverage. |
 | 2026-08-28 | `fix-deployment-placement` SESSION-01 added a render-only deployment presentation path: optional `DeploymentBoardState` on `BoardCanvas` threaded to `paintTerrain` (solid `YOUR SPAWN·VECTOR` region + outside dim) and `paintOverlay` (staged markers with active ring + shape-cued valid/invalid hover preview). Non-deployment output byte-for-byte unchanged; drafts remain M17-local. |
+
+<!-- SESSION-02 -->
+### M18 — Board renderer delta
+
+- `projectPlaybackFrame(beforeSnapshot, catalog, observer, events, completedCursor, activeProgress)` is the pure presentation projection for event-driven board playback. It derives construct, shot, movement-stub, posture, dial, trace, destruction, elimination, and completion facts from the pre-resolution snapshot and event prefix while retaining public ghost positions for unconfirmed enemies.
+- `BoardCanvas` accepts optional presentation-only `playbackProgress`; playback frames never write to the match store or engine state.
+

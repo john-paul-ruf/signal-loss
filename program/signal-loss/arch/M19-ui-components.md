@@ -83,3 +83,9 @@
 | 2026-08-28 | `match-setup-route` SESSION-04 shipped `./src/app/components/setup/**`: deterministic setup controls, legal roster picker, map preview, and AI-roster reveal. Setup-screen and direct-route browser coverage passed; result components remain pending a SESSION-07 retry. |
 | 2026-08-28 | `fix-deployment-placement` SESSION-01 extended `CommandBar` to gate `BEGIN MATCH` (button + `Ctrl/Cmd+Enter`) on a complete human deployment roster, surfacing `N CONSTRUCTS UNPLACED` until every human roster index is drafted; `applyDeployment()` remains the final engine authority for complete-but-illegal placements. |
 | 2026-08-29 | `fix-match-start` SESSION-01 extended `CommandBar`'s `DEPLOYMENT` gate to also require every launch AI squad at `READY_DEPLOY` before `BEGIN MATCH` enables (mouse + `Ctrl/Cmd+Enter` share the predicate), showing `WAITING FOR AI DEPLOYMENT` / `AI DEPLOYMENT FAILED` via `data-testid="deploy-ai-status"`; `applyDeployment()` remains final engine authority. |
+
+<!-- SESSION-02 -->
+### M19 — UI components delta
+
+- `PlaybackTransport` is the command-bar transport surface for truthful playing, paused, complete, cursor, speed, step, and skip states; reduced-motion playback exposes previous/next/skip controls and focusable information-complete event cards.
+

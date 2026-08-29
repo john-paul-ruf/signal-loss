@@ -163,3 +163,9 @@ foldMatchLog(log, catalog, map): MatchLogResult;
 |---|---|
 | 2026-08-28 | Genesis/Forge contract recorded; implementation pending. |
 | 2026-08-28 | SESSION-04 retry 1 shipped `./src/engine/match/**` with plain cloneable `MatchState`, deployment reveal, 64-substep symmetric movement, one-implementation exchange preview + resolve, permanent `commanderDead` flag, trace/destruction/AD-4-tiebroken elimination, `resolveRound` composition, canonical FNV-1a-64 state hashing, `MatchLog v1` fold with fail-loud catalog/tunables hash guards. 88 new match/view tests including 120-permutation invariance on movement, attack, `resolveRound`, and `foldMatchLog`. |
+
+<!-- SESSION-02 -->
+### M09 — Match resolution delta
+
+- `MovedEvent` now requires `plottedPath: readonly Vec2[]`, the exact engine-normalized polyline used during resolution. This is presentation-only event data: it is not copied into `MatchState`, does not participate in rule computation, and does not alter canonical state hashes.
+

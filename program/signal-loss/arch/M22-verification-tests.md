@@ -70,3 +70,8 @@ Subtrees present after SESSION-08:
 | 2026-08-28 | `fix-deployment-placement` SESSION-01 shipped `./tests/app/match/deployment-mode.test.tsx` (static deployment contract: instruction/count, staged coordinate + unplace, selected/active semantics, and the command-bar disabled/enabled gate — part of the 40-pass focused Vitest run) and `./tests/e2e/match/deployment-placement.spec.ts` (setup→deployment placement, invalid-center `OUT OF SPAWN REGION`, and commit-gating regression; 3 pass across Chromium/Firefox/WebKit; seed `8592953eb8ce193f7fcdc987660b5fab`). |
 | 2026-08-29 | `fix-match-start` SESSION-01 added `./tests/app/match/{ai-deployment.test.ts,command-bar.test.tsx,match-start.test.ts}` (per-squad coordinator, store all-`READY_DEPLOY` gate, UI readiness gate — part of a 55-pass focused run) and extended `./tests/e2e/match/deployment-placement.spec.ts` to the real five-squad deployment→`MOVEMENT_PLOT` flow across Chromium/Firefox/WebKit. |
 | 2026-08-29 | `fix-match-start` SESSION-02 added `./tests/app/match/deployment-placement.test.ts` and extended `deployment-mode.test.tsx` for engine-backed footprint-overlap rejection (10-pass focused run). |
+
+<!-- SESSION-02 -->
+### M22 — Browser support delta
+
+- `./tests/e2e/match/support/real-match.ts` owns the release Tier 1 deterministic setup, deployment, canvas world projection, positive movement plot, and runtime-failure collection helpers for SESSION-04/SESSION-05 real-match browser coverage.
