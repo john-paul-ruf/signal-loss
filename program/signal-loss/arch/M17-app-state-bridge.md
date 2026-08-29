@@ -244,3 +244,10 @@ Additive re-exports only: all `setup-model` public constructors / validators / s
 - Movement and attack resolution populate immutable playback `beforeSnapshot` / `afterSnapshot` values without replacing `engine` or bumping `engineRevision`. `playbackFinish()` alone applies `afterSnapshot`, advances the mode/revision, and records history/model updates. A zero-event playback is complete when it has an `afterSnapshot`.
 - The match-store facade exports `startAiPhase()`, the framework-free movement/attack worker coordinator. It sends four per-squad `PublicState` requests using round-qualified canonical stream labels and tier-specific validated node budgets, validates matching response and legality, and supports whole-run cancellation.
 
+
+<!-- SESSION-04 -->
+### M17 delta — authoritative result summary
+
+`./src/app/store/core/result-summary.ts` exports `deriveMatchResultSummary(completedState, launchConfig, humanSquadId, completeHistory)` and its plain result contract. The pure derivation reports outcome, recorded standings, construct statistics, human pool totals and per-round event-derived accounting, final state hash, and all reproducibility inputs. It throws `MatchResultSummaryError` for incomplete states/history, a missing human squad, or disagreement between history and engine pool aggregates.
+
+Ladder entries use `WINNER`, `ELIMINATED`, or `SURVIVED_AT_END`. `SURVIVED_AT_END` means the human-loss stop rule ended the match while that AI squad remained alive: both placement and elimination round are `null`, and stable squad-ID ordering is display-only rather than a fabricated standing.

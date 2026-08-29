@@ -169,3 +169,9 @@ foldMatchLog(log, catalog, map): MatchLogResult;
 
 - `MovedEvent` now requires `plottedPath: readonly Vec2[]`, the exact engine-normalized polyline used during resolution. This is presentation-only event data: it is not copied into `MatchState`, does not participate in rule computation, and does not alter canonical state hashes.
 
+
+<!-- SESSION-04 -->
+### M09 delta — exactly-once pool waste
+
+`resolveAttackStage()` is the sole owner of completed-round pool spend and waste accounting, including the terminal round. `advanceRoundAndRefill()` only resets `poolSpent`, grants and records the next round's pool, increments surviving constructs' `roundsAlive`, and emits the next round's `POOL_REFILL` events; it never recounts the prior round's unused pool.
+
