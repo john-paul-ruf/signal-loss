@@ -1,0 +1,28 @@
+{
+  "weights": {
+    "damageWeight": 10,
+    "killBonus": 40,
+    "commanderBonus": 24,
+    "commanderProtection": 30,
+    "traceSafetyBonus": 18,
+    "traceExposurePenalty": 22,
+    "exposurePenalty": 8,
+    "poolWastePenalty": 5,
+    "postureCost": 4,
+    "calledCost": 4,
+    "positionUtility": 6,
+    "kingmakingPenalty": 12,
+    "postureRateNumer": 3,
+    "postureRateDenom": 10,
+    "calledRateNumer": 2,
+    "calledRateDenom": 5,
+    "postureExposureNumer": 1,
+    "postureExposureDenom": 4,
+    "beamWidth": 6,
+    "beamDepth": 2,
+    "deployCoverBonus": 4,
+    "deployTraceBonus": 12,
+    "deploySamples": 8
+  },
+  "deploymentNodeBudget": 64
+}

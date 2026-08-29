@@ -367,6 +367,22 @@ export function createAiClient(options: AiClientOptions): AiClient {
 }
 
 /* ------------------------------------------------------------------------- */
+/* Browser worker factory                                                    */
+/* ------------------------------------------------------------------------- */
+
+/**
+ * Spawn a real AI worker in the browser using Vite's module-worker pattern
+ * (mirrors `browserMapGenWorker`). Kept out of `createAiClient` so importing
+ * the bridge in SSR never constructs a `Worker`; the match screen passes this
+ * factory only inside a mount effect.
+ */
+export function browserAiWorker(): AiWorkerTarget {
+  return new Worker(new URL("../../workers/ai.worker.ts", import.meta.url), {
+    type: "module",
+  });
+}
+
+/* ------------------------------------------------------------------------- */
 /* Narrowing helpers used by the store                                       */
 /* ------------------------------------------------------------------------- */
 
