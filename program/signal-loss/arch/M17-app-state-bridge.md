@@ -2,7 +2,7 @@
 
 > **Path:** `./src/app/store/`, `./src/app/bridge/`
 > **Imports from:** M12, M14, M15
-> **Status:** core stores shipped and verified in SESSION-02; the app-lifetime `FlowStoreProvider` seam over `createFlowStore()` shipped and verified in `match-setup-route` SESSION-01. Build stores shipped and verified through SESSION-07 checkpoints 1–2 of 5; AI-client bridge + match store shipped and verified in SESSION-08. A SESSION-07 retry landed an unverified composer draft store (`composer.ts`, `composer-context.ts`) — see Conventions below. The typed map-generation client and deterministic setup-preparation service shipped and verified in `match-setup-route` SESSION-02. `match-setup-route` SESSION-03 then shipped the complete transient launch contract and real five-roster match boot, and SESSION-04 shipped the routed setup handoff; both were verified. The `fix-match-start` cycle then wired the existing AI worker path into match entry (SESSION-01): the lazy `browserAiWorker` factory, the `ai-config` static-input validator, the `ai-deployment` per-squad coordinator, and a defensive all-`READY_DEPLOY` gate in `applyDeployment()` — all shipped and verified.
+> **Status:** core stores shipped and verified in SESSION-02; the app-lifetime `FlowStoreProvider` seam over `createFlowStore()` shipped and verified in `match-setup-route` SESSION-01. Build stores shipped and verified through SESSION-07 checkpoints 1–2 of 5; AI-client bridge + match store shipped and verified in SESSION-08. A SESSION-07 retry landed an unverified composer draft store (`composer.ts`, `composer-context.ts`) — see Conventions below. The typed map-generation client and deterministic setup-preparation service shipped and verified in `match-setup-route` SESSION-02. `match-setup-route` SESSION-03 then shipped the complete transient launch contract and real five-roster match boot, and SESSION-04 shipped the routed setup handoff; both were verified. `fix-match-start` wired deployment AI and its defensive readiness gate. `complete-match-loop` SESSION-01/04/05 completed phase AI, deferred playback authority, append-only history/opponent modeling, authoritative result derivation, and direct transient result/rematch flow.
 >
 > Session numbers restart per feature: bare `SESSION-0N` below refers to the original `full-v1` build; this cycle's sessions are written `match-setup-route` SESSION-0N.
 
@@ -13,7 +13,7 @@
 - `createCollectionStore(repository)` — a Zustand vanilla store carrying loaded `PersistedStateV1`, `lastError`, boot flag, `persistenceUnavailable`, `corrupt` + `corruptRaw`. Actions: `boot`, `refresh`, `saveConstructCreate`, `saveConstructUpdate`, `saveRosterCreate`, `saveRosterUpdate`, `renameEntity`, `duplicateEntity`, `deleteEntity`, `savePreferences`, `resetCorruptStore`, `markExternallyChanged`. Every action returns a boolean success value; a failed write leaves state prior-version intact.
 - `createNavigationStore({initialPath?, requestNavigation?})` — `currentPath` + `navigationCount`; `navigate(path)` publishes via the callback and `hashChanged(path)` accepts inbound hash events.
 - `createPreferencesStore()` — mirror of `PersistedStateV1.preferences` plus a `resolvedReducedMotion` derived value that resolves persisted preference over the OS media query.
-- `createFlowStore()` — non-persisted `pendingLaunch: MatchLaunchConfig`, `lastResult: MatchResultPayload`, `requestedEntity`. `MatchLaunchConfig` and `MatchResultPayload` are handoff CONTRACTS between the setup/result flow and the match flow; they are transient by design and MUST NOT be persisted via `CollectionRepository`. `match-setup-route` SESSION-03 extended the contract atomically with every consumer: `CompleteMatchLaunchConfig` carries the saved/prebuilt human source, engine-ready human roster and share string, four generated AI rosters and share strings, accepted map, concrete seed, budget, AI tier, selector, and resolved archetype id. A legacy shape remains only to make pre-launch callers fail with a structured create error; new setup code must write the complete shape.
+- `createFlowStore()` — non-persisted `pendingLaunch: MatchLaunchConfig`, `lastResult: MatchResultSummary`, `requestedEntity`. Launch and result values are transient handoff contracts and MUST NOT be persisted via `CollectionRepository`. `CompleteMatchLaunchConfig` carries the saved/prebuilt human source, engine-ready human roster/share string, four generated AI rosters/share strings, accepted map, concrete seed, budget, AI tier, selector, and resolved archetype id. `complete-match-loop` SESSION-05 made the authoritative summary the result payload and writes it directly before `#/result` navigation; same-seed/new-seed rematches replace only transient launch state.
 - **App-lifetime flow provider seam** — `./src/app/store/core/flow-context.tsx` (`match-setup-route` SESSION-01) gives the existing transient `createFlowStore()` a single React owner, exported through the `./src/app/store/core/index.ts` facade (callers never deep-import the context path):
   - `FlowStoreProvider(props: { children; store?: StoreApi<FlowStore> })` — mounts exactly one store per provider (lazy `useRef`) or adopts an injected `store` for tests. `./src/app/main.tsx` wraps `<App />` in it, below the root `ErrorBoundary` and inside `React.StrictMode`, so every hash route shares one transient instance across a hash transition. StrictMode's double render does not leak a second store — the ref guard retains one.
   - `useFlowStore(selector, equal?)` — `useSyncExternalStore` selector hook mirroring `useMatchStore`; re-renders only when the selected slice changes by reference (or `equal`).
@@ -71,7 +71,8 @@ type AiStatus =
   | { kind: "IDLE" }
   | { kind: "PENDING"; requestId: number; since: number }
   | { kind: "READY_DEPLOY"; placements: readonly Placement[] }
-  | { kind: "READY"; plot: SquadMovePlots | SquadAttackPlot; diagnosticsSeed: string }
+  | { kind: "READY_MOVE"; plot: SquadMovePlots; diagnosticsSeed: string }
+  | { kind: "READY_ATTACK"; plot: SquadAttackPlot; diagnosticsSeed: string }
   | { kind: "ERROR"; errorKind: string; message: string; requestId: number };
 interface HumanDraftState {
   deploymentDrafts: Map<number, Vec2>;              // rosterIndex → position
@@ -87,7 +88,8 @@ interface PlaybackState   { running; cursor; speed: 1|2|4; events; beforeSnapsho
 interface MatchPresentation { highContrastSquads; showRangeMeasure; reducedMotion }
 interface LaunchSnapshot    { humanSquadId; aiSquadIds: [S,S,S,S]; config: MatchConfigDigest; input: CompleteMatchLaunchConfig; seed }
 
-interface MatchStoreState { launch, catalog, engine, mode, drafts, ai, selection, playback, present, lastError, engineRevision }
+interface MatchStoreState { launch, catalog, engine, mode, drafts, ai, selection, playback, present,
+                            eventHistory, opponentModel, lastError, engineRevision }
 interface MatchStoreActions {
   boot(config: MatchLaunchConfig, catalog: Catalog, legacyMap?: GameMap): boolean;
   // draft mutations (deployment / movement / attack / posture) never touch engine slice
@@ -106,7 +108,14 @@ buildHumanAttackPlot(state, squad, drafts): SquadAttackPlot;
 countImplicitHolds(state, squad, drafts): number;
 everyConstructAccountedFor(state, squad, drafts): boolean;
 projectedPoolSpend(state, squad, drafts): { called, postures, total };
+startAiPhase(input): AiPhaseRun;
 ```
+
+Movement and attack resolution require all four launch AI slots at the exact phase-ready kind. `startAiPhase()` sends four per-squad `PublicState` requests using round-qualified canonical stream labels and validated tier budgets, validates response kind and engine legality, and supports whole-run cancellation. Resolution stores immutable `beforeSnapshot` / `afterSnapshot` playback authority without replacing `engine` or incrementing `engineRevision`; `playbackFinish()` alone applies the after-snapshot and appends events exactly once. Deployment events enter `eventHistory` immediately; completed movement/attack playback appends later, and only completed attack playback folds public `POSTURE_REVEAL` facts into the match-lifetime `opponentModel`. A zero-event playback is complete when its after-snapshot exists.
+
+### Authoritative result summary — `./src/app/store/core/result-summary.ts` (`complete-match-loop` SESSION-04/05)
+
+`deriveMatchResultSummary(completedState, launchConfig, humanSquadId, completeHistory)` is the single pure result contract. It reports outcome, recorded standings, construct statistics, human pool totals and per-round event-derived accounting, final state hash, and reproducibility inputs, throwing `MatchResultSummaryError` for incomplete state/history, a missing human squad, or history/engine aggregate disagreement. Ladder entries are `WINNER`, `ELIMINATED`, or `SURVIVED_AT_END`; survivors after the human-loss stop rule have `placement` and `eliminationRound` set to `null`, never fabricated from display order.
 
 ### Match AI deployment — `./src/app/store/match/ai-config.ts`, `ai-deployment.ts` (`fix-match-start` SESSION-01)
 
@@ -210,12 +219,12 @@ Additive re-exports only: all `setup-model` public constructors / validators / s
 
 - **Narrow Zustand selectors.** Private plots stay in human-local match state and never enter AI messages.
 - **Do not mirror engine rules in reducers; call the engine.** The build stores route legality through `validateRoster`; the match store routes commitment through `resolveMovementPhase` / `resolveAttackPhase`.
-- **Information contract (FR-24):** AI worker requests carry `PublicState` only. The match store's `resolveMovement` / `resolveAttack` build committed `SquadMovePlots` and `SquadAttackPlot` values from the human draft slice + the AI's `READY` slot payload. **Drafts NEVER appear as fields on `MatchState`** — structural asserts in `./tests/app/match/match-store.test.ts` prove the whitelist.
+- **Information contract (FR-24):** AI worker requests carry `PublicState` only. The match store's `resolveMovement` / `resolveAttack` build committed plots from the human draft slice plus exact `READY_MOVE` / `READY_ATTACK` AI slots. **Drafts NEVER appear as fields on `MatchState`** — structural asserts in `./tests/app/match/match-store.test.ts` prove the whitelist.
 - **Determinism (FR-29):** the AI worker client is a pure request/response passthrough. Two calls with identical `(seed, streamLabel, ...)` produce byte-identical request envelopes and, given the worker's determinism guarantee, byte-identical responses. Cancellation is a caller-side concern only; the eventual worker response is swallowed rather than dropped mid-flight.
 - **No timer / no wall clock on playback.** Every playback beat is a discrete engine `Event`. Beat durations are looked up from a static per-kind table scaled by a discrete speed multiplier (1× / 2× / 4×). The store carries no field named `timer`, `deadline`, `elapsed`, `msRemaining`, `startTs`, or `timeout` (asserted). Reduced-motion mode bypasses `setTimeout` entirely — the arrow keys advance the cursor.
 - **No engine mutation during playback.** The playback slice's `cursor` advances through the pre-committed event buffer; `engine` remains identically referentially equal (asserted). `playbackFinish` swaps `engine` for the pre-computed `afterSnapshot` in one `set`.
 - **Selector isolation.** Pointer-only slice writes (`hoverWaypoint`, `hoverTarget`, `selectConstruct` on the same id) do not touch the drafts, ai, or engine slice — asserted by identity comparisons on the whole match store.
-- **No network / no persistence in the match store.** The store writes NOTHING to `localStorage`. The result handoff is a single `signal-loss:match-result` DOM `CustomEvent` whose detail is the derived `MatchResultPayload`; the core flow store subscribes.
+- **No network / no persistence in the match store.** The store writes NOTHING to `localStorage`. `ResultMode` derives one authoritative summary from final state, launch snapshot, human squad, and complete event history, writes it directly to the app-lifetime flow store, then navigates. No DOM event or test-only injection participates.
 - **Complete transient launch.** `MatchStore.boot` accepts a complete payload directly, builds exactly `[human, ai1, ai2, ai3, ai4]`, and snapshots a structured clone of that input for result sharing. A legacy payload requires the legacy map parameter and retains the former duplicate-human adaptation solely for existing pre-launch consumers; `MatchSetup` never uses that path. Missing or rejected payloads leave the match unbooted with a truthful error.
 - **Route handoff.** The setup screen owns the worker clients for its mounted lifetime, cancels stale generation, and disposes both clients on unmount. On DEPLOY it encodes the human and four AI rosters, writes `CompleteMatchLaunchConfig` to the shared FlowStore, then navigates to `#/match`; `MatchScreen` resolves the catalog and attempts that payload once, otherwise offering a `#/setup` recovery link.
 - **`preloadMigrationModule()` at app boot.** Must be called once at app boot before creating any `CollectionRepository` — the `CollectionProvider` awaits it.
@@ -234,27 +243,4 @@ Additive re-exports only: all `setup-model` public constructors / validators / s
 | 2026-08-28 | `match-setup-route` SESSION-03 retry shipped the complete transient `MatchLaunchConfig`, the real five-roster `MatchStore.boot`, defensive launch/result snapshots, and one-time `MatchScreen` boot with a truthful missing-launch recovery path. Verified: 62 targeted core/match tests, typecheck, lint, build. |
 | 2026-08-28 | `match-setup-route` SESSION-04 shipped `MatchSetup`: a self-registering `#/setup` route, legal human roster selection, visible-seed deterministic generation and review, and DEPLOY handoff to the shared FlowStore. Verified: 3 setup-screen tests, Chromium/Firefox/WebKit direct-route regression, typecheck, lint, build. |
 | 2026-08-29 | `fix-match-start` SESSION-01 wired the existing AI worker path into match entry: `browserAiWorker()` lazy Vite factory in `ai-client.ts`, new `ai-config.ts` (`resolveMatchAiConfig` validating `./data/ai.weights.json`) and `ai-deployment.ts` (`startAiDeployment` per-squad `AI_DEPLOY` coordinator via `publicView` + engine `legalDeployment`), and a defensive all-`READY_DEPLOY` `applyDeployment()` gate surfacing `FR-12:AI_DEPLOYMENT_NOT_READY`. The `MatchScreen` controller mount (M20) and `CommandBar` readiness gate (M19) are recorded in their own modules. Verified: 55 focused checks, typecheck, lint, build. |
-
-
-<!-- SESSION-01 -->
-## M17 — App state and bridge delta
-
-- `AiStatus` now distinguishes `READY_DEPLOY`, `READY_MOVE`, and `READY_ATTACK`; movement and attack resolution require the exact matching ready kind for all four launch AI squads.
-- The match-store public state adds append-only `eventHistory: readonly Event[]` and match-lifetime `opponentModel: OpponentModel`. Deployment events enter history immediately; movement and attack events enter once in `playbackFinish()`. Only finished attack playback folds public `POSTURE_REVEAL` events into the opponent model.
-- Movement and attack resolution populate immutable playback `beforeSnapshot` / `afterSnapshot` values without replacing `engine` or bumping `engineRevision`. `playbackFinish()` alone applies `afterSnapshot`, advances the mode/revision, and records history/model updates. A zero-event playback is complete when it has an `afterSnapshot`.
-- The match-store facade exports `startAiPhase()`, the framework-free movement/attack worker coordinator. It sends four per-squad `PublicState` requests using round-qualified canonical stream labels and tier-specific validated node budgets, validates matching response and legality, and supports whole-run cancellation.
-
-
-<!-- SESSION-04 -->
-### M17 delta — authoritative result summary
-
-`./src/app/store/core/result-summary.ts` exports `deriveMatchResultSummary(completedState, launchConfig, humanSquadId, completeHistory)` and its plain result contract. The pure derivation reports outcome, recorded standings, construct statistics, human pool totals and per-round event-derived accounting, final state hash, and all reproducibility inputs. It throws `MatchResultSummaryError` for incomplete states/history, a missing human squad, or disagreement between history and engine pool aggregates.
-
-Ladder entries use `WINNER`, `ELIMINATED`, or `SURVIVED_AT_END`. `SURVIVED_AT_END` means the human-loss stop rule ended the match while that AI squad remained alive: both placement and elimination round are `null`, and stable squad-ID ordering is display-only rather than a fabricated standing.
-
-<!-- SESSION-05 -->
-## M17 — App state and bridge
-
-- `MatchResultPayload` is now the authoritative `MatchResultSummary`; the core facade exports the summary derivation/types and complete-launch type guard.
-- Completed summaries are written directly to the app-lifetime flow store before navigation. Same-seed and regenerated launches remain transient and never touch collection persistence.
-
+| 2026-08-29 | `complete-match-loop` SESSION-01 added exact phase-ready AI coordination, deferred before/after playback authority, append-only history, and opponent-model folding; SESSION-04 added the authoritative event-checked result derivation; SESSION-05 made that summary the direct transient flow payload for result navigation/rematches. |

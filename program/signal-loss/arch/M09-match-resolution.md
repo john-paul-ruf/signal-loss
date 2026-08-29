@@ -74,7 +74,12 @@ currentDialState(construct, catalog): DialState | undefined;
 effectiveDialLength(construct, catalog): number;
 
 // events.ts — canonical order below is definition of record
-type Event = DEPLOYMENT_REVEAL | POOL_REFILL | MOVED | HALTED | POSTURE_REVEAL
+interface MovedEvent {
+  kind: "MOVED";
+  plottedPath: readonly Vec2[]; // exact engine-normalized polyline; presentation-only
+  // …canonical movement facts
+}
+type Event = DEPLOYMENT_REVEAL | POOL_REFILL | MovedEvent | HALTED | POSTURE_REVEAL
            | SHOT | DEFENSE_INFO | DAMAGE_APPLIED | DIAL_ADVANCED
            | TRACE_DAMAGE | DESTROYED | ELIMINATED | MATCH_COMPLETE;
 sortEventsCanonical(events): readonly Event[];
@@ -153,6 +158,8 @@ foldMatchLog(log, catalog, map): MatchLogResult;
 - **Refills:** Round 1 refill is performed by `applyDeployments`. Round N≥2 refill is performed by `advanceRoundAndRefill` at end of round N−1's attack phase.
 - **Deployment reveal:** simultaneous public — `applyDeployments` records EVERY squad's `confirmedRound=1` for EVERY construct. From round 2 onward, resolution loss takes over via M10's `updateKnownPositions`. `applyDeploymentsWithEvents` returns `DEPLOYMENT_REVEAL + POOL_REFILL` for the round-1 log; plain `applyDeployments` returns just the state.
 - **Event canonical order:** DEPLOYMENT_REVEAL, POOL_REFILL, MOVED/HALTED (interleaved by construct id / substep), POSTURE_REVEAL, SHOT, DEFENSE_INFO, DAMAGE_APPLIED, DIAL_ADVANCED, TRACE_DAMAGE, DESTROYED, ELIMINATED, MATCH_COMPLETE. `sortEventsCanonical` is definition of record; `Event[]` is complete enough for animated and reduced-motion playback.
+- **Movement event fidelity:** every `MOVED` event carries the exact engine-normalized `plottedPath`, including any unwalked halt stub. It is presentation-only event data: never copied into `MatchState`, never consulted by resolution, and excluded from canonical state hashes.
+- **Exactly-once pool accounting:** `resolveAttackStage()` alone records completed-round spend and waste, including the terminal round. `advanceRoundAndRefill()` only resets `poolSpent`, grants the next pool, increments surviving constructs' `roundsAlive`, and emits the next round's `POOL_REFILL`; it never recounts the prior round.
 - **Hash of record (FR-29):** `hashState = fnv1a64Hex(canonicalStateString(state))`. `canonicalize` rejects non-integer numbers, non-finite numbers, Map/Set, functions, symbols, undefined, bigint, and non-plain objects at serialization time — invariant breaks surface early.
 - **Wall index (attack):** rebuilt per-call in `attack.ts` via `buildWallIndex` with a `BOARD_SIZE / 40` fx cell size. Deterministic and sorted-by-id; safe to rebuild each phase.
 - **Test-fixture caveat:** `makeCloseSoloMatch` is only for tests. Production UI must respect the FR-12 spawn-region constraint at deployment time — the engine deliberately allows post-deployment positions anywhere in bounds.
@@ -163,15 +170,4 @@ foldMatchLog(log, catalog, map): MatchLogResult;
 |---|---|
 | 2026-08-28 | Genesis/Forge contract recorded; implementation pending. |
 | 2026-08-28 | SESSION-04 retry 1 shipped `./src/engine/match/**` with plain cloneable `MatchState`, deployment reveal, 64-substep symmetric movement, one-implementation exchange preview + resolve, permanent `commanderDead` flag, trace/destruction/AD-4-tiebroken elimination, `resolveRound` composition, canonical FNV-1a-64 state hashing, `MatchLog v1` fold with fail-loud catalog/tunables hash guards. 88 new match/view tests including 120-permutation invariance on movement, attack, `resolveRound`, and `foldMatchLog`. |
-
-<!-- SESSION-02 -->
-### M09 — Match resolution delta
-
-- `MovedEvent` now requires `plottedPath: readonly Vec2[]`, the exact engine-normalized polyline used during resolution. This is presentation-only event data: it is not copied into `MatchState`, does not participate in rule computation, and does not alter canonical state hashes.
-
-
-<!-- SESSION-04 -->
-### M09 delta — exactly-once pool waste
-
-`resolveAttackStage()` is the sole owner of completed-round pool spend and waste accounting, including the terminal round. `advanceRoundAndRefill()` only resets `poolSpent`, grants and records the next round's pool, increments surviving constructs' `roundsAlive`, and emits the next round's `POOL_REFILL` events; it never recounts the prior round's unused pool.
-
+| 2026-08-29 | `complete-match-loop` SESSION-02 added the exact normalized `plottedPath` to `MovedEvent` for truthful playback without changing rule state or hashes; SESSION-04 made `resolveAttackStage()` the sole completed-round pool spend/waste owner, including terminal rounds. |

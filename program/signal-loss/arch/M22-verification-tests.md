@@ -2,7 +2,7 @@
 
 > **Path:** `./tests/`
 > **Imports from:** modules under test
-> **Status:** partial. Every session shipped and verified its owned test subtree through SESSION-08. Battery `.test.ts` script directories under `./tests/{determinism,playability,behavior,costing}/` remain intentionally empty (real coverage lives under `./tests/harness/**`); build-zone e2e specs were authored in SESSION-07 but remain unrun. A SESSION-07 retry additionally landed unverified composer unit/e2e specs — see Internal Structure. `match-setup-route` added and verified provider, setup-generation, launch-consumption, setup-screen, and setup-browser coverage across its completed four sessions.
+> **Status:** partial. Every completed feature session shipped and verified its owned test subtree. The `complete-match-loop` final repository gates pass at 94 files / 877 unit tests, but production-preview browser acceptance is blocked before setup by M14's existing migration preload/bundle limitation; the same new combat and full-loop flows passed under Vite development serving. Battery `.test.ts` script directories under `./tests/{determinism,playability,behavior,costing}/` remain intentionally empty (real coverage lives under `./tests/harness/**`); build-zone e2e specs and the SESSION-07 composer residual remain unverified.
 
 ## Public API
 
@@ -21,7 +21,7 @@ Subtrees present after SESSION-08:
 | Engine — Build | `./tests/engine/build/` (~38 tests) | SESSION-01 |
 | Engine — Codec | `./tests/engine/codec/` (bitstream, construct, roster) | SESSION-02 |
 | Engine — Map | `./tests/engine/map/` (analysis-grid, gate, generate, generators, measure, spatial-index, trace, types — 112 tests) | SESSION-03 |
-| Engine — Match | `./tests/engine/match/` (88 new tests including 120-permutation invariance) | SESSION-04 retry 1 |
+| Engine — Match | `./tests/engine/match/` (base 88-test shipment plus exact movement-path and exactly-once pool-accounting regressions) | SESSION-04 retry 1 + `complete-match-loop` SESSION-02/04 |
 | Engine — View | `./tests/engine/view/` (public projection, resolution loss) | SESSION-04 retry 1 |
 | Engine — AI | `./tests/engine/ai/` (three tiers, budget, opponent-model smoothing) | SESSION-05 |
 | Engine — Facade | `./tests/engine/facade/` | SESSION-05 |
@@ -30,12 +30,13 @@ Subtrees present after SESSION-08:
 | Harness batteries | `./tests/harness/` (55 self-tests; content / seeds / report / runner / determinism / playability / behavior / costing / all / cli) | SESSION-06 |
 | Verification reports | `./docs/verification/` | SESSION-06 |
 | Platform | `./tests/platform/` (capability, clipboard, collection-repository) | SESSION-02 |
-| App core | `./tests/app/core/` (collection-store, flow-store, navigation-store, preferences-store, shared-components — SESSION-02; `flow-context.test.tsx` — provider/SSR + no-storage structural asserts, `match-setup-route` SESSION-01; `flow-store.test.ts` — complete-launch contract, `match-setup-route` SESSION-03) | SESSION-02 + `match-setup-route` SESSION-01/03 |
+| App core | `./tests/app/core/` (collection/flow/navigation/preferences/shared, provider/SSR, complete launch, plus `result-summary.test.ts` authoritative result/accounting contract) | SESSION-02 + `match-setup-route` SESSION-01/03 + `complete-match-loop` SESSION-04/05 |
 | App setup-generation | `./tests/app/setup-generation/` (`mapgen-client.test.ts` — 7 tests; `setup-model.test.ts` — 13 tests) | `match-setup-route` SESSION-02 |
 | App build (partial) | `./tests/app/build/` (boot, codex, collection-view — verified; `composer.test.tsx` — residual, unverified, authored but never executed against a green build) | SESSION-07 checkpoints 1–2 + retry 1 residual |
-| App match | `./tests/app/match/` (57 SESSION-08 tests plus `match-store.test.ts` and `match-launch.test.tsx` launch-consumption coverage from `match-setup-route` SESSION-03; `deployment-mode.test.tsx` deployment-contract coverage from `fix-deployment-placement` SESSION-01; `fix-match-start` SESSION-01 added `ai-deployment.test.ts` / `command-bar.test.tsx` / `match-start.test.ts` and SESSION-02 added `deployment-placement.test.ts`, also extending `deployment-mode.test.tsx`) | SESSION-08 + `match-setup-route` SESSION-03 + `fix-deployment-placement` SESSION-01 + `fix-match-start` SESSION-01/02 |
+| App match | `./tests/app/match/` (store/launch/deployment plus complete phase-AI, deferred authority/history, playback projection/transport, public-safe attack model and guarded ledger coverage) | SESSION-08 through `complete-match-loop` SESSION-01/02/03 |
+| App result | `./tests/app/result/` (`result-summary.test.tsx`, `result-actions.test.ts`) | `complete-match-loop` SESSION-05 |
 | App setup screen | `./tests/app/setup-screen/setup-screen.test.tsx` (route, generation, reveal/deploy guards) | `match-setup-route` SESSION-04 |
-| Browser e2e (partial) | `./tests/e2e/build/*.spec.ts` (authored, unrun — includes residual `composer.spec.ts`); `./tests/e2e/match/` (incl. `deployment-placement.spec.ts` — `fix-deployment-placement` SESSION-01, extended by `fix-match-start` SESSION-01 to the real five-squad deployment→movement flow, run in Chromium/Firefox/WebKit); `./tests/e2e/setup/match-setup.spec.ts` (direct route) | SESSION-07 / 08 + `match-setup-route` SESSION-04 + `fix-deployment-placement` SESSION-01 |
+| Browser e2e (partial) | `./tests/e2e/build/*.spec.ts` (authored, unrun); setup direct route; match deployment, playback controls, combat round, and bounded full-loop specs with shared real-match helpers. New flows pass under Vite development serving; production preview currently blocks before setup (M14). | SESSION-07/08 through `complete-match-loop` SESSION-02/05 |
 | Fixtures | `./tests/fixtures/catalog/`, `./tests/fixtures/maps/`, `./tests/fixtures/matches/` | SESSION-01 / 03 / 04 |
 
 ## Conventions and Invariants
@@ -43,6 +44,7 @@ Subtrees present after SESSION-08:
 - Every session owns only its precise test subtree.
 - Determinism assertions compare canonical states and ordered events.
 - Browser artifacts go to session-specific `/tmp` paths during concurrent waves.
+- `./tests/e2e/match/support/real-match.ts` is the release Tier-1 helper for deterministic setup/deployment, world-coordinate canvas input, positive movement plotting, and runtime-failure collection; it never injects store state or fabricated events.
 - Property tests use a small in-test LCG rather than an external fuzzer.
 - Programmatic ESLint tests run against `overrideConfigFile: eslint.config.js` so the rules under test are exactly the rules that ship.
 - Test fixtures under `./tests/fixtures/` (catalog, maps) are declaredly illustrative — SESSION-06 authored release balance under `./data/*.json`.
@@ -70,8 +72,4 @@ Subtrees present after SESSION-08:
 | 2026-08-28 | `fix-deployment-placement` SESSION-01 shipped `./tests/app/match/deployment-mode.test.tsx` (static deployment contract: instruction/count, staged coordinate + unplace, selected/active semantics, and the command-bar disabled/enabled gate — part of the 40-pass focused Vitest run) and `./tests/e2e/match/deployment-placement.spec.ts` (setup→deployment placement, invalid-center `OUT OF SPAWN REGION`, and commit-gating regression; 3 pass across Chromium/Firefox/WebKit; seed `8592953eb8ce193f7fcdc987660b5fab`). |
 | 2026-08-29 | `fix-match-start` SESSION-01 added `./tests/app/match/{ai-deployment.test.ts,command-bar.test.tsx,match-start.test.ts}` (per-squad coordinator, store all-`READY_DEPLOY` gate, UI readiness gate — part of a 55-pass focused run) and extended `./tests/e2e/match/deployment-placement.spec.ts` to the real five-squad deployment→`MOVEMENT_PLOT` flow across Chromium/Firefox/WebKit. |
 | 2026-08-29 | `fix-match-start` SESSION-02 added `./tests/app/match/deployment-placement.test.ts` and extended `deployment-mode.test.tsx` for engine-backed footprint-overlap rejection (10-pass focused run). |
-
-<!-- SESSION-02 -->
-### M22 — Browser support delta
-
-- `./tests/e2e/match/support/real-match.ts` owns the release Tier 1 deterministic setup, deployment, canvas world projection, positive movement plot, and runtime-failure collection helpers for SESSION-04/SESSION-05 real-match browser coverage.
+| 2026-08-29 | `complete-match-loop` SESSION-01/02/03 added focused phase-AI, deferred-authority/history, event-frame/transport, and public-safe combat tests; SESSION-04 added pool-accounting/result-derivation contracts; SESSION-05 added result actions/rendering plus real three-browser combat and bounded Chromium full-loop specs. Final unit gate: 94 files / 877 tests. Production-preview runs fail before setup on M14's existing migration-bundle limitation; development-server checkpoint runs pass. |

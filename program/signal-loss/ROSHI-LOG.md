@@ -376,3 +376,57 @@ To be folded in by a human; Roshi does not edit `./FORGE.md`, `./MU.md`, `./ENSO
 ### Roshi entry
 
 `fix-match-start` repaired the match-start path end to end across two clean sessions (SESSION-01 4/4 AI deployment + commit gate, SESSION-02 2/2 human footprint preflight). Reconciled 5 arch files (M02, M17, M19, M20, M22): dissolved M17's stapled `<!-- SESSION-01 -->` delta into coherent Public API / Internal Structure / Change History and pushed its cross-module `MatchScreen` / `CommandBar` bullets down to their owning modules (M20 / M19) rather than duplicating them; recorded the new `ai-config` / `ai-deployment` coordinator, the `applyDeployment()` all-`READY_DEPLOY` gate, the `MatchScreen` AI controller, the `CommandBar` AI-readiness gate, the engine-backed `deployment-placement.ts` preflight, the new `./data/ai.weights.json` app input, and the new tests. Resolved one live-stale claim — M20's note that the `MOVEMENT_PLOT` transition "still awaits out-of-lease AI deployment orchestration" is closed now that this cycle shipped it. Module registry and `./program/signal-loss/FORGE-CONFIG.md` unchanged — no new boundary, granularity feedback none. No convention promoted. The git-commit-pathspec observation advances to count-of-6 on a caught-and-fixed lease contamination, and feature-qualified `arch/` session references reach count-of-3; both remain Robe / doc-authorship recommendations Roshi cannot fold into `./FORGE-CONFIG.md`. One new count-of-1 observation: lower e2e browser parallelism (or raise the first-paint assertion timeout) under the shared preview server.
+
+---
+
+## 2026-08-29 — Cycle 9 · SIGNAL LOSS / complete-match-loop
+
+### What ran
+
+Jikijitsu ran five sessions across three waves and collected parseable **done** handoffs for all five. All 15/15 declared checkpoints landed: phase-safe movement/attack AI and deferred authority (SESSION-01), event-true playback (SESSION-02), truthful human combat (SESSION-03), exactly-once pool accounting plus authoritative summary derivation (SESSION-04), and the direct result/rematch/browser loop (SESSION-05). Repository gates passed (`typecheck`, lint, 94 files / 877 unit tests, build). Development-server browser checkpoints passed across Chromium/Firefox/WebKit for the real combat flow and Chromium for the bounded full loop. The prescribed production-preview runs remained red before setup because the existing Vite-ignored migration import is absent from the static bundle; this is an M13/M14 integration limitation outside every feature lease, not a value Roshi invents or resolves in code.
+
+### What I reconciled
+
+- Read the Final Report (`./.forge/final-report.md`), the complete feature `STATE.md`, all 22 files under `./program/signal-loss/arch/**`, `./program/signal-loss/FORGE-CONFIG.md`, and all eight prior entries in `./program/signal-loss/ROSHI-LOG.md`. Grounded the cycle against the 15 checkpoint commits (`5c178d8` through `7937782`), completion/arch commits, the on-disk source/test tree, and `git log --oneline -45`.
+- Reconciled the six Jikijitsu staples into their owning module descriptions and removed every `<!-- SESSION-0N -->` fragment:
+  - `./program/signal-loss/arch/M09-match-resolution.md` — folded exact normalized `MovedEvent.plottedPath` into the event API/invariants and exactly-once completed-round pool waste into the resolution contract.
+  - `./program/signal-loss/arch/M17-app-state-bridge.md` — folded exact `READY_MOVE` / `READY_ATTACK`, four-worker `startAiPhase`, immutable before/after playback authority, append-only history/opponent-model updates, authoritative result derivation, and direct transient flow payload into the existing store/core sections. Resolved the live obsolete DOM-event result-handoff claim to the shipped direct FlowStore write.
+  - `./program/signal-loss/arch/M18-board-renderer.md` — folded `projectPlaybackFrame` and `BoardCanvas.playbackProgress` into Public API and the public-safe event-prefix projection invariant.
+  - `./program/signal-loss/arch/M19-ui-components.md` — folded playback transport, the public-position engine-backed attack model, guarded combat controls, and the delivered result subtree into their owning API sections. Resolved the status/internal-structure claim that result components were still unstarted.
+  - `./program/signal-loss/arch/M20-screens.md` — folded all-phase AI control, playback/combat behavior, direct result derivation/handoff, and the self-registering `#/result` route into the coherent screen record. Removed `#/result` from Pending routes and resolved its unstarted/custom-event wording.
+  - `./program/signal-loss/arch/M22-verification-tests.md` — folded the real-match helper, focused engine/app/result coverage, 94-file/877-test repository gate, development-server browser proof, and production-preview acceptance limitation into the test registry once.
+- Reconciled one sibling record not stapled by Jikijitsu: `./program/signal-loss/arch/M14-platform-adapters.md` now records the confirmed production-preview limitation at its actual architectural owner — the existing Vite-ignored migration preload shim — rather than leaving the failure only in one feature Final Report.
+- **Module registry:** unchanged. Every delivered path remains inside M02/M09/M17/M18/M19/M20/M22's existing `Owns` contracts, and the M14 note documents an existing boundary rather than a new module. `./program/signal-loss/FORGE-CONFIG.md` remains unchanged.
+
+### What I did NOT promote to a convention
+
+The Final Report's Granularity feedback is explicitly **None**: all five sessions met every checkpoint without context exhaustion or a wave-plan correction. No program-specific Forge/Mu convention crossed the three-cycle threshold, so nothing was added to `./program/signal-loss/FORGE-CONFIG.md`.
+
+- **Scope `git commit` pathspec, not only `git add`.** Recurred: SESSION-02 reported a concurrently staged path briefly entered checkpoint 2 before amendment; the surviving commit and all normalized `filesTouched` are lease-clean. Count advances to **7**. This remains a `./JIKIJITSU.md` / `./MU.md` commit-protocol concern outside Roshi's Robe authority and outside the Conventions-only slice Roshi owns in `./program/signal-loss/FORGE-CONFIG.md`.
+- **Feature-qualify session references in `arch/`.** Applied across all seven reconciled files because session numbers restart per feature. Count advances to **4**. The practice remains an arch-authoring / mid-run-append instruction rather than a Forge decomposition or Mu implementation convention.
+- Crash-vs-blocked remains **4**; Enso/startup-triage remains **3 (mixed)**; combined visual working-set cap, shared-style ownership, and retry escalation remain **1** each. This cycle adds no evidence to those patterns.
+- The earlier shared-preview first-paint parallelism observation remains **1**. This cycle's preview failure has a different cause (bundle omission before setup), so the two are not conflated.
+
+### New observations this cycle
+
+- **Preflight the production bundle's setup boot before feature browser acceptance.** The real feature flows passed under Vite development serving, but the prescribed production-preview suite could not reach setup because of a pre-existing M14 preload/bundle defect. Cycle count: **1**. Candidate home: human-owned scheduling / verification guidance; Roshi does not edit `./program/signal-loss/FORGE-CONFIG.md` Verification Commands.
+- **Retain the requested terminal outcome and final hash in the session handoff/artifact.** SESSION-05 retained seed and completion round but omitted the concrete outcome/hash requested by the feature master, leaving Roshi to preserve the gap rather than invent values. Cycle count: **1**. Candidate home: `./JIKIJITSU.md` handoff/final-report evidence collection.
+
+### Proposed for the framework
+
+To be folded in by a human; Roshi does not edit `./FORGE.md` (absent in this checkout), `./MU.md`, `./ENSO.md`, or `./JIKIJITSU.md`.
+
+- **Scope `git commit` pathspec, not only `git add`.** Cycles observed: **7**. Candidate home: `./JIKIJITSU.md` orchestration envelope or `./MU.md` checkpoint-commit protocol.
+- **Distinguish "session crashed" from "session declared blocked," and label the result accordingly.** Cycles observed: **4**. Candidate home: `./JIKIJITSU.md` spawn/await/result-classification.
+- **Route UI-dominant sessions to Enso — or accept an early sanctioned Brush Pass.** Cycles observed: **3 (mixed)**. Candidate home: `./JIKIJITSU.md` startup-triage / Brush-Pass timing guidance.
+- **Feature-qualify session references in `arch/` for multi-feature programs.** Cycles observed: **4**. Candidate home: arch-authoring / Jikijitsu mid-run append instruction.
+- **Cap combined visual working set per session at what one context can hold.** Cycles observed: **1**. Candidate home: `./FORGE.md` decomposition heuristics.
+- **Carve a shared-style owner before concurrent UI leases.** Cycles observed: **1**. Candidate home: `./FORGE.md` decomposition.
+- **Escalate retry strategy after two consecutive non-declarative failures on the same session.** Cycles observed: **1**. Candidate home: `./JIKIJITSU.md` retry policy.
+- **Lower e2e browser parallelism or raise the first-paint assertion timeout under a shared preview server.** Cycles observed: **1**. Candidate home: program CI guidance / M01.
+- **Preflight production-preview setup boot before feature browser acceptance.** Cycles observed: **1**. Candidate home: human-owned verification scheduling.
+- **Retain requested terminal outcome/hash evidence in the session handoff.** Cycles observed: **1**. Candidate home: `./JIKIJITSU.md` evidence collection.
+
+### Roshi entry
+
+`complete-match-loop` completed 5/5 sessions and 15/15 checkpoints. Reconciled 7 arch files (M09, M14, M17, M18, M19, M20, M22): dissolved all six mid-run staples into their owning sections; recorded exact movement paths, exactly-once pool accounting, phase-safe worker AI, deferred playback authority/history/model updates, public-safe presentation/combat, authoritative result derivation, direct transient `#/result` handoff/rematches, and the expanded verification surface; resolved stale result-subtree/custom-event claims; and located the production-preview boot failure at M14's existing migration preload shim. Module registry and `./program/signal-loss/FORGE-CONFIG.md` unchanged; granularity feedback was None, so no convention promoted. Git-commit pathspec evidence advances to count-of-7 and feature-qualified arch references to count-of-4, both remaining Robe/doc-authoring recommendations. Two count-of-1 observations were added: preflight production-preview setup boot, and retain requested terminal outcome/hash evidence.

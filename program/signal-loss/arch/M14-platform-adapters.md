@@ -67,9 +67,14 @@ export function resolveBrowserClipboard(): ClipboardLike | null;
   9. Classify quota errors by DOMException code 22/1014 or names — never by name alone.
 - `preloadMigrationModule()` must be called once at app boot before creating any `CollectionRepository` — the boot path / app shell should await it.
 
+## Known Limitation
+
+The existing Vite-ignored dynamic migration import is absent from the static production bundle. As confirmed by `complete-match-loop` acceptance on 2026-08-29, `npm run preview` therefore remains at `LOADING MATCH SETUP…`, although the same setup and complete-match browser flows pass under the Vite development server. Repair requires an M13/M14-owned migration-integration cycle; match features must not add a fallback, bypass persistence validation, or edit the DB-owned migration out of lease.
+
 ## Change History
 
 | Date | Change |
 |---|---|
 | 2026-08-28 | Genesis/Forge contract recorded; implementation pending. |
 | 2026-08-28 | SESSION-02 shipped `./src/platform/**` with `CollectionRepository` over the DB-owned migration, all nine `RepositoryError` discriminants, the atomic revisioned write protocol, storage/clipboard/viewport capability probes, and name-agnostic quota classification. |
+| 2026-08-29 | `complete-match-loop` final acceptance confirmed that the existing Vite-ignored migration preload shim is absent from the production bundle and blocks `npm run preview` before setup; development-server match acceptance remains green. |
