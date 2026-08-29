@@ -14,9 +14,9 @@
 | # | Session | Modules | Owns | Status | Checkpoint | Completed | Notes |
 |---|---|---|---|---|---|---|---|
 | 01 | Wire AI Decisions and Phase-Safe Match State | M02, M17, M20, M22 | `./data/ai.weights.json`; phase AI/store files; `./src/app/screens/match/MatchScreen.tsx`; focused app tests | done | 3/3 | 2026-08-29 | Wired four real worker decisions for movement and attack, enforced exact phase readiness, and deferred authoritative engine updates until playback completion. |
-| 02 | Deliver Event-True Playback and Controls | M09, M18, M19, M20, M22 | movement event files; playback board/components/screen; focused engine/app/browser tests | pending | 0/4 | — | — |
-| 03 | Make Human Combat Honest and Operable | M19, M20, M22 | attack screen/model/components/styles; focused app tests | pending | 0/2 | — | — |
-| 04 | Make Match Summary Accounting Authoritative | M09, M17, M22 | `./src/engine/match/end-round.ts`; `./src/app/store/core/result-summary.ts`; focused tests | pending | 0/2 | — | — |
+| 02 | Deliver Event-True Playback and Controls | M09, M18, M19, M20, M22 | movement event files; playback board/components/screen; focused engine/app/browser tests | in-progress | 0/4 | — | Launched by Jikijitsu with the Zen split-phase binding on OpenAI Codex. |
+| 03 | Make Human Combat Honest and Operable | M19, M20, M22 | attack screen/model/components/styles; focused app tests | in-progress | 0/2 | — | Launched by Jikijitsu with the Zen split-phase binding on OpenAI Codex. |
+| 04 | Make Match Summary Accounting Authoritative | M09, M17, M22 | `./src/engine/match/end-round.ts`; `./src/app/store/core/result-summary.ts`; focused tests | in-progress | 0/2 | — | Launched by Jikijitsu with the Zen split-phase binding on OpenAI Codex. |
 | 05 | Close the Real Match Loop and Result Flow | M17, M19, M20, M22 | flow result contract; result mode/route/components; combat/full-loop browser tests | pending | 0/4 | — | — |
 
 ## Wave Plan
