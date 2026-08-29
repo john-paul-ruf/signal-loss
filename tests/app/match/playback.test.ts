@@ -39,6 +39,10 @@ function makeEvent(kind: Event["kind"]): Event {
         constructId: 0 as never,
         from: { x: 0 as never, y: 0 as never },
         stopPosition: { x: 1 as never, y: 0 as never },
+        plottedPath: [
+          { x: 0 as never, y: 0 as never },
+          { x: 1 as never, y: 0 as never },
+        ],
         pathDistance: 1,
         plottedLength: 1,
         halted: false,

@@ -113,6 +113,33 @@ describe("match/movement / single-construct traversal", () => {
     expect(events).toHaveLength(1);
     expect(events[0]?.halted).toBe(false);
   });
+
+  it("emits the exact normalized multi-segment polyline without changing state hashing", () => {
+    const state = makeDeployedSoloMatch();
+    const catalog = soloMatchConfig().catalog;
+    const c = constructsOfSquad(state, squadId(0))[0]!;
+    const bend = { x: (c.position.x as number) + 512, y: c.position.y } as Vec2;
+    const dest = {
+      x: (c.position.x as number) + 512,
+      y: (c.position.y as number) + 512,
+    } as Vec2;
+    const path = [c.position, bend, dest] as const;
+    const result = resolveMovementPhase(
+      state,
+      movePlots(state, (sq) => (sq === 0 ? path : [])),
+      catalog,
+    );
+    expect(result.ok).toBe(true);
+    if (!result.ok) return;
+    const event = result.value.events.find((candidate) => candidate.kind === "MOVED");
+    expect(event?.kind).toBe("MOVED");
+    if (event?.kind !== "MOVED") return;
+    expect(event.plottedPath).toEqual(path);
+    expect(Object.hasOwn(result.value.state, "plottedPath")).toBe(false);
+    expect(hashState(result.value.state)).toBe(
+      hashState({ ...result.value.state, constructs: result.value.state.constructs.slice() }),
+    );
+  });
 });
 
 describe("match/movement / halt fixed point", () => {
@@ -166,6 +193,15 @@ describe("match/movement / halt fixed point", () => {
     expect(halted).toHaveLength(1);
     expect(halted[0]?.constructId).toBe(c1.id);
     expect(halted[0]?.withConstructs.map((i) => i as number)).toContain(c0.id as number);
+    const moved = r.value.events.find(
+      (event) => event.kind === "MOVED" && event.constructId === c1.id,
+    );
+    expect(moved?.kind).toBe("MOVED");
+    if (moved?.kind === "MOVED") {
+      expect(moved.plottedPath).toEqual([c1.position, v(-1, 5)]);
+      expect(moved.stopPosition).not.toEqual(moved.plottedPath.at(-1));
+      expect(moved.pathDistance).toBeLessThan(moved.plottedLength);
+    }
   });
 });
 

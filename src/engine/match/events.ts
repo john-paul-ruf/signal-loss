@@ -62,7 +62,8 @@ export interface PoolRefillEvent {
  * arc length actually traversed at halt (or full plotted length otherwise);
  * `stopPosition` is the final resting place. `plottedLength` records the
  * originally plotted total path length so playback can render the
- * unwalked stub.
+ * unwalked stub. `plottedPath` is the engine-normalized polyline used by
+ * resolution; it is presentation-only and is never copied into MatchState.
  */
 export interface MovedEvent {
   readonly kind: "MOVED";
@@ -70,6 +71,7 @@ export interface MovedEvent {
   readonly constructId: ConstructId;
   readonly from: Vec2;
   readonly stopPosition: Vec2;
+  readonly plottedPath: readonly Vec2[];
   readonly pathDistance: number;   // fx integer (walked arc length)
   readonly plottedLength: number;  // fx integer (originally plotted)
   readonly halted: boolean;

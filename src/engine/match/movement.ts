@@ -367,6 +367,7 @@ export function resolveMovementPhase(
       constructId: m.id,
       from,
       stopPosition: m.position,
+      plottedPath: m.path,
       pathDistance: walked as number,
       plottedLength: m.totalLength as number,
       halted: m.halted && m.haltAtSubstep > 0,
@@ -434,4 +435,3 @@ function recordContact(
   }
   s.add(other);
 }
-
