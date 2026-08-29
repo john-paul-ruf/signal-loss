@@ -18,7 +18,7 @@
 | 01 | Fit the Generated Map Preview | M19, M22 | ./src/app/components/setup/MapPreview.tsx; ./tests/app/setup-screen/map-preview.test.tsx | done | 2/2 | 2026-08-28 | MapPreview viewBox derived from map.bounds via FX_ONE (2-unit margin); centered maps no longer clipped; regression added.<br>Follow-up: Display margin is a fixed 2 board units on each side; boundary/wall/spawn stroke widths (.5/.8/.6) were kept verbatim and read slightly heavier in the ~68-unit viewport but remain fitted, not clipped. |
 | 02 | Preserve Unique Setup Row Identity | M19, M22 | ./src/app/components/setup/RosterPicker.tsx; ./tests/app/setup-screen/roster-picker.test.tsx | done | 2/2 | 2026-08-28 | Excluded roster rows now key by stable source identity (saved-<id> / prebuilt-<id>); duplicate visible labels render as distinct React elements. Added focused unit regression.<br>Follow-up: Stable excluded-row key format is saved-${SavedRosterV1.id} and prebuilt-${PrebuiltId}, matching the existing legal-choice key format ${kind}-${id}. Test inspects the returned React element tree directly (no jsdom) to prove key uniqueness before render. |
 
-| 03 | Stabilize Match Store Snapshots | M17, M22 | `./src/app/store/match/context.tsx`<br>`./tests/e2e/match/match-runtime-stability.spec.ts` | pending | — | — | Cache derived selector values before `useSyncExternalStore`; verify the real setup-to-match route. |
+| 03 | Stabilize Match Store Snapshots | M17, M22 | ./src/app/store/match/context.tsx; ./tests/e2e/match/match-runtime-stability.spec.ts | done | 2/2 | 2026-08-28 | Moved useMatchStore snapshot cache inside getSnapshot (keyed by selector/equal/state) so derived selector arrays keep a stable reference for Reacts external-store contract; added a real setup-to-match browser regression.<br>Follow-up: — |
 
 ## Wave Plan
 
@@ -99,5 +99,19 @@ flowchart TD
   "surprises": "The concurrent sessions share one git index: tests/e2e/match/match-runtime-stability.spec.ts (SESSION-03's lease) was already staged in the index when I committed. I used explicit pathspec commits (git commit -m ... -- <path>) so my commits contain only my two lease files; git show confirms the SESSION-03 spec is not in either of my commits. I left that staged file untouched.",
   "followUp": "Stable excluded-row key format is `saved-${SavedRosterV1.id}` and `prebuilt-${PrebuiltId}`, matching the existing legal-choice key format `${kind}-${id}`. Test inspects the returned React element tree directly (no jsdom) to prove key uniqueness before render.",
   "filesTouched": ["src/app/components/setup/RosterPicker.tsx", "tests/app/setup-screen/roster-picker.test.tsx"],
+  "blockedReason": null
+}
+
+### SESSION-03
+{
+  "session": "03",
+  "status": "done",
+  "checkpoint": 2,
+  "notes": "Moved useMatchStore snapshot cache inside getSnapshot (keyed by selector/equal/state) so derived selector arrays keep a stable reference for React's external-store contract; added a real setup-to-match browser regression.",
+  "delivered": "Referentially-stable getSnapshot in src/app/store/match/context.tsx (fixes SquadRail getSnapshot/maximum-update-depth loop) plus tests/e2e/match/match-runtime-stability.spec.ts driving the real /#/setup -> DEPLOY -> /#/match route.",
+  "verification": "npm run typecheck pass; npm run lint pass; npx vitest run tests/app/match/shell.test.tsx tests/app/match/match-launch.test.tsx -> 9 pass; npx playwright test tests/e2e/match/match-runtime-stability.spec.ts --project=chromium --project=firefox --project=webkit -> 3 pass. Deterministic map seed 8592953eb8ce193f7fcdc987660b5fab at default budget 100 with the STRIKE FORCE prebuilt.",
+  "surprises": "The 'Own constructs' accessible name is present on two elements (the squad-rail div and the accessible-mirror section), so the test locates the section via role=region to stay unambiguous; getByLabel does not match a plain div's aria-label. Concurrent SESSION-01/02 committed their own lease files (MapPreview.tsx, RosterPicker.tsx, STATE.md) during this run — expected under orchestration, not touched by me.",
+  "followUp": "—",
+  "filesTouched": ["src/app/store/match/context.tsx", "tests/e2e/match/match-runtime-stability.spec.ts"],
   "blockedReason": null
 }
