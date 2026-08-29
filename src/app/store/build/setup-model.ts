@@ -331,3 +331,65 @@ export async function prepareSetup(
 ): Promise<SetupPreparationResult> {
   return collectSetup(draft, startGeneration(clients, draft, catalog));
 }
+
+/* ------------------------------------------------------------------------- */
+/* Stateful, cancellable service                                             */
+/* ------------------------------------------------------------------------- */
+
+/** One in-flight preparation. `generationId` lets callers ignore a stale run. */
+export interface SetupGeneration {
+  readonly generationId: number;
+  readonly result: Promise<SetupPreparationResult>;
+  /** Invalidate this generation; its late worker responses resolve as `CANCELLED`. */
+  cancel(): void;
+}
+
+/**
+ * A long-lived service that owns the two worker clients. Each `prepare` gets a
+ * monotonic `generationId`, so a screen can start a fresh generation and
+ * disregard an earlier one — a late completion carries the older id and its
+ * cancelled requests resolve as `CANCELLED`, never as a newer result.
+ */
+export interface SetupGenerationService {
+  prepare(draft: SetupDraft, catalog: Catalog): SetupGeneration;
+  /** Dispose BOTH worker clients; the service rejects further `prepare` calls. */
+  dispose(): void;
+  inFlightCount(): number;
+}
+
+export function createSetupGenerationService(
+  clients: SetupGenerationClients,
+): SetupGenerationService {
+  let counter = 0;
+  let disposed = false;
+
+  function prepare(draft: SetupDraft, catalog: Catalog): SetupGeneration {
+    if (disposed) {
+      throw new Error("SetupGenerationService has been disposed.");
+    }
+    counter = counter + 1;
+    const generationId = counter;
+    const started = startGeneration(clients, draft, catalog);
+    return {
+      generationId,
+      result: collectSetup(draft, started),
+      cancel(): void {
+        started.mapCall.cancel();
+        for (const { call } of started.aiCalls) call.cancel();
+      },
+    };
+  }
+
+  function dispose(): void {
+    if (disposed) return;
+    disposed = true;
+    clients.map.dispose();
+    clients.ai.dispose();
+  }
+
+  function inFlightCount(): number {
+    return clients.map.inFlightCount() + clients.ai.inFlightCount();
+  }
+
+  return { prepare, dispose, inFlightCount };
+}

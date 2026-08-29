@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
   AI_ROSTER_STREAM_LABELS,
+  createSetupGenerationService,
   createUserSeed,
   makeSetupDraft,
   prepareSetup,
@@ -10,17 +11,22 @@ import {
   type SetupDraft,
   type SetupGenerationClients,
 } from "../../../src/app/store/build/setup-model";
-import type {
-  AiCallResult,
-  AiClient,
-  AiClientRequest,
+import {
+  createAiClient,
+  type AiCallResult,
+  type AiClient,
+  type AiClientRequest,
+  type AiWorkerTarget,
 } from "../../../src/app/bridge/ai-client";
-import type {
-  MapGenCallResult,
-  MapGenClient,
+import {
+  createMapGenClient,
+  type MapGenCallResult,
+  type MapGenClient,
+  type MapWorkerTarget,
 } from "../../../src/app/bridge/mapgen-client";
 import type {
   MapGenRequest,
+  WorkerRequest,
   WorkerResponse,
 } from "../../../src/workers/protocol";
 import { WORKER_PROTOCOL_VERSION } from "../../../src/workers/protocol";
@@ -282,5 +288,121 @@ describe("setup-model / prepareSetup orchestration", () => {
       expect(result.failure.errorKind).toBe("AI_FAILURE");
     }
     expect(ai.requests).toHaveLength(4); // no hidden retry with a derived seed
+  });
+});
+
+/* --------------------------------------------------------------------- */
+/* Cancellation / race / disposal — real clients over fake worker targets */
+/* --------------------------------------------------------------------- */
+
+/**
+ * A controllable fake Worker satisfying both the AI and map client target
+ * contracts. It captures posted requests and delivers `message` events on
+ * demand so a test can order a late response after a cancel.
+ */
+function makeFakeWorker(): {
+  readonly target: MapWorkerTarget & AiWorkerTarget;
+  readonly posted: readonly WorkerRequest[];
+  deliver(response: WorkerResponse): void;
+  terminatedCount(): number;
+} {
+  let onMessage: ((event: { data: WorkerResponse }) => void) | null = null;
+  const posted: WorkerRequest[] = [];
+  let terminated = 0;
+  const target = {
+    postMessage(msg: WorkerRequest): void {
+      posted.push(msg);
+    },
+    addEventListener(kind: "message" | "error", handler: (event: never) => void): void {
+      if (kind === "message") {
+        onMessage = handler as unknown as (event: { data: WorkerResponse }) => void;
+      }
+    },
+    removeEventListener(): void {
+      /* not exercised */
+    },
+    terminate(): void {
+      terminated = terminated + 1;
+    },
+  };
+  return {
+    target: target as unknown as MapWorkerTarget & AiWorkerTarget,
+    posted,
+    deliver(response: WorkerResponse): void {
+      onMessage?.({ data: response });
+    },
+    terminatedCount: () => terminated,
+  };
+}
+
+function mapOk(id: number): WorkerResponse {
+  return {
+    id,
+    version: WORKER_PROTOCOL_VERSION,
+    kind: "MAP_GEN_OK",
+    result: mapResultFor("x"),
+  } as unknown as WorkerResponse;
+}
+
+function aiOk(id: number): WorkerResponse {
+  return {
+    id,
+    version: WORKER_PROTOCOL_VERSION,
+    kind: "AI_ROSTER_OK",
+    result: { roster: { constructs: [] }, rng: { state: id } },
+  } as unknown as WorkerResponse;
+}
+
+describe("setup-model / createSetupGenerationService", () => {
+  it("cancels an earlier generation; a late worker response cannot be mistaken for a newer one", async () => {
+    const mapFake = makeFakeWorker();
+    const aiFake = makeFakeWorker();
+    const clients: SetupGenerationClients = {
+      map: createMapGenClient({ factory: () => mapFake.target }),
+      ai: createAiClient({ factory: () => aiFake.target }),
+    };
+    const service = createSetupGenerationService(clients);
+
+    const gen1 = service.prepare(sampleDraft, stubCatalog);
+    expect(gen1.generationId).toBe(1);
+    gen1.cancel();
+
+    const gen2 = service.prepare(makeSetupDraft({ ...sampleDraft, seed: "second" }), stubCatalog);
+    expect(gen2.generationId).toBe(2);
+
+    // gen1 used map request id 1 and AI request ids 1..4; deliver them late.
+    mapFake.deliver(mapOk(1));
+    for (const id of [1, 2, 3, 4]) aiFake.deliver(aiOk(id));
+    const r1 = await gen1.result;
+    expect(r1.kind).toBe("error");
+    if (r1.kind === "error") expect(r1.failure.errorKind).toBe("CANCELLED");
+
+    // gen2 used map request id 2 and AI request ids 5..8.
+    mapFake.deliver(mapOk(2));
+    for (const id of [5, 6, 7, 8]) aiFake.deliver(aiOk(id));
+    const r2 = await gen2.result;
+    expect(r2.kind).toBe("ok");
+  });
+
+  it("dispose releases both worker clients and rejects further prepare calls", async () => {
+    const mapFake = makeFakeWorker();
+    const aiFake = makeFakeWorker();
+    const clients: SetupGenerationClients = {
+      map: createMapGenClient({ factory: () => mapFake.target }),
+      ai: createAiClient({ factory: () => aiFake.target }),
+    };
+    const service = createSetupGenerationService(clients);
+
+    const gen = service.prepare(sampleDraft, stubCatalog); // spawns both workers
+    service.dispose();
+
+    const r = await gen.result; // outstanding calls drained as WORKER_DOWN
+    expect(r.kind).toBe("error");
+    expect(mapFake.terminatedCount()).toBe(1);
+    expect(aiFake.terminatedCount()).toBe(1);
+
+    service.dispose(); // idempotent
+    expect(mapFake.terminatedCount()).toBe(1);
+    expect(() => service.prepare(sampleDraft, stubCatalog)).toThrow();
   });
 });

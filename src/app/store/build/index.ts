@@ -57,3 +57,32 @@ export {
   requestComposerEdit,
   type ComposerRequest,
 } from "./composer-context";
+export {
+  AI_ROSTER_STREAM_LABELS,
+  createSetupGenerationService,
+  createUserSeed,
+  makeSetupDraft,
+  prepareSetup,
+  selectorForArchetype,
+  validateSetupDraft,
+  type CryptoLike,
+  type PreparedSetup,
+  type SeedResult,
+  type SetupDraft,
+  type SetupDraftIssue,
+  type SetupFailureKind,
+  type SetupGeneration,
+  type SetupGenerationClients,
+  type SetupGenerationService,
+  type SetupPreparationFailure,
+  type SetupPreparationResult,
+} from "./setup-model";
+export {
+  browserMapGenWorker,
+  createMapGenClient,
+  type MapGenCallResult,
+  type MapGenClient,
+  type MapGenClientOptions,
+  type MapWorkerFactory,
+  type MapWorkerTarget,
+} from "../../bridge/mapgen-client";
