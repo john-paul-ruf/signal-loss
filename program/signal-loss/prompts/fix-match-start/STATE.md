@@ -12,7 +12,7 @@
 | # | Session | Modules | Owns | Status | Checkpoint | Completed | Notes |
 |---|---|---|---|---|---|---|---|
 | 01 | Wire AI Deployment Into Match Start | M02, M17, M19, M20, M22 | `./data/ai.weights.json`, `./src/app/bridge/ai-client.ts`, `./src/app/store/match/ai-config.ts`, `./src/app/store/match/ai-deployment.ts`, `./src/app/store/match/match-store.ts`, `./src/app/components/match/CommandBar.tsx`, `./src/app/screens/match/MatchScreen.tsx`, `./tests/app/match/ai-deployment.test.ts`, `./tests/app/match/command-bar.test.tsx`, `./tests/app/match/match-start.test.ts`, `./tests/app/match/deployment-mode.test.tsx`, `./tests/e2e/match/deployment-placement.spec.ts` | done | 4/4 | 2026-08-29 | Wired the existing AI worker path into match start: static AI config, per-squad AI_DEPLOY coordinator, match-entry controller, no-partial-commit store gate, and human+AI BEGIN MATCH predicate. All four AI slots reach READY_DEPLOY and the real five-squad reveal transitions to MOVEMENT_PLOT. |
-| 02 | Preflight Human Deployment Footprints | M20, M22 | `./src/app/screens/match/deployment-placement.ts`, `./src/app/screens/match/DeploymentMode.tsx`, `./tests/app/match/deployment-placement.test.ts` | in-progress | 0/2 | — | Launched in Zen Wave 1, slot 2. |
+| 02 | Preflight Human Deployment Footprints | M20, M22 | `./src/app/screens/match/deployment-placement.ts`, `./src/app/screens/match/DeploymentMode.tsx`, `./tests/app/match/deployment-placement.test.ts` | done | 2/2 | 2026-08-29 | Human deployment placement now delegates to legalDeployment(); UI rejects near-but-not-equal footprint overlaps before BEGIN MATCH instead of only exact duplicates. |
 
 ## Wave Plan
 
@@ -65,3 +65,8 @@ flowchart TD
 
 - **notes:** Wired the existing AI worker path into match start: static AI config, per-squad AI_DEPLOY coordinator, match-entry controller, no-partial-commit store gate, and human+AI BEGIN MATCH predicate. All four AI slots reach READY_DEPLOY and the real five-squad reveal transitions to MOVEMENT_PLOT.
 - **followUp:** Jikijitsu: append the M17 delta from .forge/signal/SESSION-01.arch.md (browserAiWorker public API + ai-config/ai-deployment modules). If the e2e is run fully-parallel in CI, the shared preview server under three simultaneous heavy sessions can slow WebKit's first paint; consider a slightly higher default assertion timeout or lower e2e parallelism.
+
+### SESSION-02
+
+- **notes:** Human deployment placement now delegates to legalDeployment(); UI rejects near-but-not-equal footprint overlaps before BEGIN MATCH instead of only exact duplicates.
+- **followUp:** The wall-rejection test clones the map to add a wall crossing squad 0's spawn because the simple fixture's walls sit at board center, away from the corner spawns. Invalid hovers now display their reason text (previously only valid hovers cleared it); the e2e's three legal SPAWN_POINTS stay valid because the adapter only defers to legalDeployment().
