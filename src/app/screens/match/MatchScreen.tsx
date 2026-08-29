@@ -2,6 +2,7 @@ import * as React from "react";
 import {
   createMatchStore,
   MatchStoreProvider,
+  startAiPhase,
   useMatchStore,
   useMatchStoreActions,
 } from "../../store/match";
@@ -35,51 +36,79 @@ export function MatchScreen(): React.ReactElement {
   }
   return (
     <MatchStoreProvider store={storeRef.current}>
-      <AiDeploymentController />
+      <AiController />
       <MatchModeSwitch />
     </MatchStoreProvider>
   );
 }
 
 /**
- * Match-lifetime AI deployment controller. Renders nothing; on entering the
- * DEPLOYMENT phase with a booted store it spins one four-worker client and
- * posts one deployment request per AI squad, wiring results to the store's
- * typed slot actions. It is keyed on the engine revision + mode (NOT the
- * mutable `ai` map), so incoming slot writes never cancel and restart the
- * four in-flight requests. Cleanup — on phase change or unmount, including
- * StrictMode's setup/cleanup cycle — cancels the run and disposes the client
- * so no stale worker result writes into a new phase.
+ * Match-lifetime worker controller. One effect owns every decision family so
+ * phase cleanup always cancels and disposes the old run before the next setup.
+ * AI slot writes are deliberately absent from the dependency identity.
  */
-function AiDeploymentController(): null {
+function AiController(): null {
   const mode = useMatchStore((s) => s.mode);
   const engine = useMatchStore((s) => s.engine);
+  const engineRevision = useMatchStore((s) => s.engineRevision);
   const catalog = useMatchStore((s) => s.catalog);
   const launch = useMatchStore((s) => s.launch);
+  const opponentModel = useMatchStore((s) => s.opponentModel);
   const markAiPending = useMatchStore((s) => s.markAiPending);
   const markAiReadyDeploy = useMatchStore((s) => s.markAiReadyDeploy);
+  const markAiReadyMove = useMatchStore((s) => s.markAiReadyMove);
+  const markAiReadyAttack = useMatchStore((s) => s.markAiReadyAttack);
   const markAiError = useMatchStore((s) => s.markAiError);
 
   React.useEffect(() => {
-    if (mode !== "DEPLOYMENT" || launch === null || catalog === null || engine === null) {
+    if (launch === null || catalog === null || engine === null) {
       return;
     }
+    const phase = mode === "MOVEMENT_PLOT" ? "MOVE" : mode === "ATTACK_PLOT" ? "ATTACK" : null;
+    if (mode !== "DEPLOYMENT" && phase === null) return;
     const client = createAiClient({ poolSize: 4, factory: browserAiWorker });
-    const run = startAiDeployment({
-      engine,
-      catalog,
-      launch,
-      client,
-      config: resolveMatchAiConfig(),
-      onPending: markAiPending,
-      onReady: markAiReadyDeploy,
-      onError: markAiError,
-    });
+    const config = resolveMatchAiConfig();
+    const run = phase === null
+      ? startAiDeployment({
+          engine,
+          catalog,
+          launch,
+          client,
+          config,
+          onPending: markAiPending,
+          onReady: markAiReadyDeploy,
+          onError: markAiError,
+        })
+      : startAiPhase({
+          phase,
+          engine,
+          catalog,
+          launch,
+          client,
+          config,
+          opponentModel,
+          onPending: markAiPending,
+          onReadyMove: markAiReadyMove,
+          onReadyAttack: markAiReadyAttack,
+          onError: markAiError,
+        });
     return () => {
       run.cancel();
       client.dispose();
     };
-  }, [mode, engine, catalog, launch, markAiPending, markAiReadyDeploy, markAiError]);
+  }, [
+    mode,
+    engine,
+    engineRevision,
+    catalog,
+    launch,
+    opponentModel,
+    markAiPending,
+    markAiReadyDeploy,
+    markAiReadyMove,
+    markAiReadyAttack,
+    markAiError,
+  ]);
 
   return null;
 }

@@ -33,6 +33,8 @@ export {
   projectedPoolSpend,
 } from "./plot-draft";
 
+export { startAiPhase } from "./ai-phase";
+
 export {
   MatchStoreProvider,
   useMatchStore,

@@ -186,4 +186,22 @@ describe("startAiPhase results", () => {
     expect(phase.callbacks.onReadyMove).not.toHaveBeenCalled();
     expect(phase.callbacks.onError).not.toHaveBeenCalled();
   });
+
+  it("does not recreate requests from slot callbacks and cancels the old family before a new phase starts", async () => {
+    const movement = start("MOVE");
+    expect(movement.calls).toHaveLength(4);
+    for (const [index, call] of movement.calls.entries()) {
+      call.resolve(moveOk(call.requestId, { squadId: squadId(index + 1), moves: [] }));
+    }
+    await flush();
+    expect(movement.callbacks.onPending).toHaveBeenCalledTimes(4);
+    expect(movement.callbacks.onReadyMove).toHaveBeenCalledTimes(4);
+    expect(movement.calls).toHaveLength(4);
+
+    movement.run.cancel();
+    expect(movement.calls.every((call) => call.cancelled)).toBe(true);
+    const attack = start("ATTACK");
+    expect(attack.calls).toHaveLength(4);
+    expect(attack.calls.every((call) => call.request.kind === "AI_ATTACK")).toBe(true);
+  });
 });
