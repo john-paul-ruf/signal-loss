@@ -75,29 +75,13 @@ function derivePayload(
       ? "stalemate"
       : "defeat";
   return {
-    config: {
-      rosterId: "roster:1",
-      // The full launch's saved roster stays with the core flow
-      // store; the match store retains only the digest a replay
-      // needs. Session 07's result screen reads the persisted
-      // roster by rosterId if it needs the full roster.
-      roster: {
-        id: "roster:1",
-        name: "match",
-        budget: launch.config.budget as number,
-        constructs: [],
-      } as unknown as MatchResultPayload["config"]["roster"],
-      budget: launch.config.budget as number,
-      seed: launch.seed,
-      archetypeCode: null,
-      aiTierId: `t${launch.config.aiTier}`,
-    },
+    config: launch.input,
     outcome,
     rounds: engine.round,
     humanEliminationRound: humanElim?.round ?? null,
     finalStateHash: hashState(engine),
     share: {
-      rosterCode: "",
+      rosterCode: launch.input.human.shareString,
       seed: launch.seed,
     },
   };

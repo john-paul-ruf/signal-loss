@@ -56,6 +56,7 @@ import {
 } from "../../../engine";
 import {
   isCompleteMatchLaunchConfig,
+  type CompleteMatchLaunchConfig,
   type MatchLaunchConfig,
 } from "../core/flow-store";
 import type {
@@ -254,8 +255,8 @@ export function createMatchStore(): StoreApi<MatchStore> {
     ...initialState(),
 
     boot(config, catalog, legacyMap): boolean {
-      void legacyMap;
-      if (!isCompleteMatchLaunchConfig(config)) {
+      const launchConfig = completeLaunchConfig(config, legacyMap);
+      if (launchConfig === null) {
         set({
           lastError: {
             kind: "CREATE_FAILED",
@@ -271,14 +272,14 @@ export function createMatchStore(): StoreApi<MatchStore> {
         squadId(3),
         squadId(4),
       ];
-      const rosters = [config.human.roster, ...config.aiRosters] as const;
-      const seed = config.seed;
+      const rosters = [launchConfig.human.roster, ...launchConfig.aiRosters] as const;
+      const seed = launchConfig.seed;
       const attempt = createMatch({
         seed,
-        budget: config.budget,
-        aiTier: config.aiTier,
+        budget: launchConfig.budget,
+        aiTier: launchConfig.aiTier,
         catalog,
-        map: config.map,
+        map: launchConfig.map,
         rosters,
       });
       if (!attempt.ok) {
@@ -294,7 +295,7 @@ export function createMatchStore(): StoreApi<MatchStore> {
         humanSquadId: humanSquad,
         aiSquadIds: aiSquads,
         config: attempt.value.config,
-        input: structuredClone(config),
+        input: structuredClone(launchConfig),
         seed,
       };
       set({
@@ -705,6 +706,39 @@ export function createMatchStore(): StoreApi<MatchStore> {
 /* ------------------------------------------------------------------------- */
 /* Helpers                                                                    */
 /* ------------------------------------------------------------------------- */
+
+function completeLaunchConfig(
+  config: MatchLaunchConfig,
+  legacyMap: GameMap | undefined,
+): CompleteMatchLaunchConfig | null {
+  if (isCompleteMatchLaunchConfig(config)) return config;
+  if (legacyMap === undefined) return null;
+  const roster = {
+    constructs: config.roster.constructs.map((construct) => ({
+      chassisCode: construct.chassisCode as never,
+      commanderCode: construct.commanderCode as never,
+      mounts: construct.mounts.map((mount) => ({
+        hardpointIndex: mount.hardpointIndex,
+        mountCode: mount.mountCode as never,
+      })),
+    })),
+  };
+  return {
+    human: {
+      source: { kind: "saved", id: config.rosterId, name: config.roster.name },
+      roster,
+      shareString: "",
+    },
+    aiRosters: [roster, roster, roster, roster],
+    aiRosterShareStrings: ["", "", "", ""],
+    map: legacyMap,
+    seed: config.seed,
+    budget: config.budget as CompleteMatchLaunchConfig["budget"],
+    aiTier: 1,
+    selector: { kind: "id", id: legacyMap.archetypeId },
+    resolvedArchetypeId: legacyMap.archetypeId,
+  };
+}
 
 function collectHumanDeployments(
   drafts: HumanDraftState,
