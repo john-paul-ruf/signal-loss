@@ -18,7 +18,7 @@ Every screen self-registers through `M21`'s route discovery by exporting a `rout
 
 - `screens/match/route.tsx` — id `"match"`, path `"#/match"`.
 - `MatchScreen` creates a `MatchStore` instance per mount, consumes the shared flow-store launch payload once after resolving the catalog, and switches modes. An absent or rejected payload renders a `#/setup` recovery link rather than a playable fallback.
-- `DeploymentMode` — board + spawn-region click placement, HUD progress + reason.
+- `DeploymentMode` — board + spawn-region click placement (selected-construct or next-unplaced target), reposition/unplace editing, live rejection reasons (`OUT OF SPAWN REGION` / `SPOT OCCUPIED BY ANOTHER CONSTRUCT`), HUD progress, and a render-only `DeploymentBoardState` handoff to `BoardCanvas` (`fix-deployment-placement` SESSION-01 made the existing interaction discoverable and complete without an engine, map-generation, or match-state change).
 - `MovementMode` — board + waypoint clicks / HOLD (H) / Backspace / Esc / 1-9 select; engine `legalMovePlot` is authority.
 - `AttackMode` — board + `AttackLedger` with inline `ExchangeCard`s; pointer picks nearest enemy as target.
 - `PlaybackMode` — full-motion or reduced-motion cards (arrow keys); event-only.
@@ -63,3 +63,4 @@ Every screen self-registers through `M21`'s route discovery by exporting a `rout
 | 2026-08-28 | SESSION-08 shipped `./src/app/screens/match/**` — the five match modes and the `MatchScreen` provider — with `signal-loss:match-result` DOM `CustomEvent` handoff to the core flow store. |
 | 2026-08-28 | SESSION-07 retry 1 (targeting checkpoint 3) returned no parseable handoff; Jikijitsu committed the in-lease residual `ed7b664`, which includes `./src/app/screens/build/composer/**`. Recorded here as unverified residual, not a completed checkpoint. Setup / standalone result are still fully unstarted. |
 | 2026-08-28 | `match-setup-route` SESSION-03 retry updated `MatchScreen` to consume the complete transient launch once and expose a missing-launch recovery path. SESSION-04 then shipped `./src/app/screens/setup/**`: the self-registering `#/setup` route, deterministic preparation/review flow, and deployment handoff to `#/match`; direct-route regression passed across all three Playwright browsers. |
+| 2026-08-28 | `fix-deployment-placement` SESSION-01 repaired `DeploymentMode`'s human deployment interaction at the board/screen boundary: derived human-spawn affordance, selected-or-next-unplaced placement, reposition/unplace, live rejection reasons, and a render-only `DeploymentBoardState` view-model passed to `BoardCanvas`. No engine, map-generation, or match-state change; the full `MOVEMENT_PLOT` transition still awaits out-of-lease in-match AI deployment orchestration (M15/M17). |

@@ -38,11 +38,22 @@ everyKindCovered(kind): 1;                  // compile-time exhaustiveness guard
 beatDurationMs(event, speed 1|2|4): number; // positive; scales inversely with speed
 
 // layers/ — three stacked canvases with independent redraw triggers
-paintTerrain(ctx, scene, cam);                       // redraws on map change
+paintTerrain(ctx, scene, cam, deployment?: TerrainDeploymentOptions | null);  // redraws on map change / deployment toggle
 paintField(ctx, scenes, cam, { highContrast });      // redraws on engine revision
-paintOverlay(ctx, scene, cam);                       // redraws on pointer / selection / playback cursor
+paintOverlay(ctx, scene, cam, deployment?: OverlayDeploymentOptions | null);  // redraws on pointer / selection / playback cursor / deployment draft
+
+// Deployment presentation — render-only; absent/null for every non-deployment caller (fix-deployment-placement SESSION-01)
+interface DeploymentBoardState {                      // BoardCanvas prop
+  humanSquadIndex;
+  placements: readonly { rosterIndex; constructId; position: Vec2 }[];
+  activeRosterIndex: number | null;
+  hover: { position: Vec2; valid: boolean } | null;
+}
+interface TerrainDeploymentOptions { humanSquadIndex }              // solid YOUR SPAWN·VECTOR region + dim outside
+interface OverlayDeploymentOptions { placements[{…, active}]; hover } // staged markers + shape-cued hover preview
 
 BoardCanvas: React component with three <canvas> layers + AccessibleBoardTree.
+  props.deployment?: DeploymentBoardState | null     // optional; drives terrain/overlay deployment paint, inert when absent
 AccessibleBoardTree: focusable DOM equivalent for every construct (own / enemy / ghost / destroyed).
 ```
 
@@ -67,6 +78,7 @@ AccessibleBoardTree: focusable DOM equivalent for every construct (own / enemy /
 - **Squad separability (NFR-5):** each of the five squads has a distinct `(lightness, glyph, pattern, tag)` tuple. `separabilityTriples()` proves five distinct triples exist — meeting the color-blind requirement without any color channel.
 - **Reduced-motion parity (FR-26):** `toCard(event, i)` covers every event kind — `everyKindCovered(kind): 1` is a TypeScript exhaustive switch that fails to compile if a new kind ships without a card. A runtime test iterates every kind and asserts `title` and `detail` are non-empty.
 - **Reach outline is an outer bound.** `reachOutlineOf` samples a circle from chassis footprint + current dial allowance; walls are NOT respected in the outline (deliberate). The engine's `legalMovePlot` refuses wall-crossing paths at commit time.
+- **Deployment presentation is optional and render-only (`fix-deployment-placement` SESSION-01).** `BoardCanvas.deployment` threads a `DeploymentBoardState` to the terrain layer — the observer's spawn is drawn as a solid `YOUR SPAWN · VECTOR` region and the map outside it is dimmed, while enemy spawns stay empty outlines — and to the overlay layer — staged draft markers carry an active-state ring and the hover preview cues valid-vs-invalid by shape (solid vs dashed + `✕`), not colour (NFR-5). Absent/null for every movement / attack / playback caller, and non-deployment terrain/overlay output is byte-for-byte unchanged. The board reads `pv.observer` / `humanSquadIndex` for the region and never hard-codes a screen-space location; drafts live in M17's `HumanDraftState` and never reach `MatchState` / `PublicState` / AI requests.
 - **Browser requirements.** Board canvas requires `ResizeObserver` + Canvas 2D; jsdom would need mocks — validated end-to-end via Playwright.
 
 ## Change History
@@ -75,3 +87,4 @@ AccessibleBoardTree: focusable DOM equivalent for every construct (own / enemy /
 |---|---|
 | 2026-08-28 | Genesis/Forge contract recorded; implementation pending. |
 | 2026-08-28 | SESSION-08 shipped `./src/app/board/**` — camera + three-layer canvas scene + arithmetic hit-testing + squad identity + path input + reach overlay + accessible tree + event-card playback with compile-time exhaustive kind coverage. |
+| 2026-08-28 | `fix-deployment-placement` SESSION-01 added a render-only deployment presentation path: optional `DeploymentBoardState` on `BoardCanvas` threaded to `paintTerrain` (solid `YOUR SPAWN·VECTOR` region + outside dim) and `paintOverlay` (staged markers with active ring + shape-cued valid/invalid hover preview). Non-deployment output byte-for-byte unchanged; drafts remain M17-local. |
