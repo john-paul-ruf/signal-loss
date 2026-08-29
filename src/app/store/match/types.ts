@@ -37,8 +37,13 @@ export type AiStatus =
   | { readonly kind: "IDLE" }
   | { readonly kind: "PENDING"; readonly requestId: number; readonly since: number }
   | {
-      readonly kind: "READY";
-      readonly plot: SquadMovePlots | SquadAttackPlot;
+      readonly kind: "READY_MOVE";
+      readonly plot: SquadMovePlots;
+      readonly diagnosticsSeed: string;
+    }
+  | {
+      readonly kind: "READY_ATTACK";
+      readonly plot: SquadAttackPlot;
       readonly diagnosticsSeed: string;
     }
   | { readonly kind: "READY_DEPLOY"; readonly placements: readonly Placement[] }

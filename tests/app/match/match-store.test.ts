@@ -17,6 +17,7 @@ import {
   buildHumanMovePlot,
   countImplicitHolds,
   projectedPoolSpend,
+  matchSelectors,
 } from "../../../src/app/store/match";
 import type { AiStatus } from "../../../src/app/store/match";
 import type { CompleteMatchLaunchConfig } from "../../../src/app/store/core/flow-store";
@@ -58,6 +59,31 @@ function bootStore(): ReturnType<typeof createMatchStore> {
   const ok = store.getState().boot(makeLaunch(), catalog);
   if (!ok) throw new Error("boot failed");
   return store;
+}
+
+function deployedStore(): ReturnType<typeof createMatchStore> {
+  const store = bootStore();
+  const engine = store.getState().engine!;
+  for (let sq = 0; sq < 5; sq += 1) {
+    const anchor = engine.map.spawns[sq]?.anchor;
+    if (anchor === undefined) throw new Error("spawn missing");
+    if (sq === 0) store.getState().setDeploymentDraft(0, anchor);
+    else store.getState().markAiReadyDeploy(squadId(sq), [{ rosterIndex: 0, position: anchor }]);
+  }
+  if (!store.getState().applyDeployment()) throw new Error("deployment failed");
+  return store;
+}
+
+function readyAllMoves(store: ReturnType<typeof createMatchStore>): void {
+  for (let sq = 1; sq < 5; sq += 1) {
+    store.getState().markAiReadyMove(squadId(sq), { squadId: squadId(sq), moves: [] }, "seed");
+  }
+}
+
+function readyAllAttacks(store: ReturnType<typeof createMatchStore>): void {
+  for (let sq = 1; sq < 5; sq += 1) {
+    store.getState().markAiReadyAttack(squadId(sq), { squadId: squadId(sq), attacks: [], postures: [] }, "seed");
+  }
 }
 
 describe("match-store — boot", () => {
@@ -198,7 +224,7 @@ describe("match-store — AI slot bookkeeping", () => {
     store.getState().markAiPending(squadId(1), 42);
     expect(getSlot(store, 1)?.kind).toBe("PENDING");
     store.getState().markAiReadyMove(squadId(1), { squadId: squadId(1), moves: [] }, "s");
-    expect(getSlot(store, 1)?.kind).toBe("READY");
+    expect(getSlot(store, 1)?.kind).toBe("READY_MOVE");
     // A commit clears the AI slate.
     // Deploy first so we have a committed match to resolve movement on.
     const engine = store.getState().engine!;
@@ -215,6 +241,90 @@ describe("match-store — AI slot bookkeeping", () => {
     }
     store.getState().resolveMovement();
     expect(store.getState().ai.size).toBe(0);
+  });
+});
+
+describe("match-store — phase-safe resolution", () => {
+  it.each(["missing", "pending", "error", "wrong-phase"] as const)("rejects %s movement AI without changing committed or draft state", (condition) => {
+    const store = deployedStore();
+    const engine = store.getState().engine;
+    const revision = store.getState().engineRevision;
+    const human = engine!.constructs.find((construct) => (construct.squadId as number) === 0)!;
+    store.getState().setHold(human.id, true);
+    readyAllMoves(store);
+    if (condition === "missing") store.getState().clearAiSlot(squadId(1));
+    if (condition === "pending") store.getState().markAiPending(squadId(1), 91);
+    if (condition === "error") store.getState().markAiError(squadId(1), 91, "AI_FAILURE", "visible failure");
+    if (condition === "wrong-phase") store.getState().markAiReadyAttack(squadId(1), { squadId: squadId(1), attacks: [], postures: [] }, "seed");
+    const drafts = store.getState().drafts;
+    const ai = store.getState().ai;
+    expect(store.getState().resolveMovement()).toBe(false);
+    expect(store.getState().engine).toBe(engine);
+    expect(store.getState().engineRevision).toBe(revision);
+    expect(store.getState().drafts).toBe(drafts);
+    expect(store.getState().ai).toBe(ai);
+    expect(store.getState().mode).toBe("MOVEMENT_PLOT");
+    if (condition === "error") expect(store.getState().lastError).toMatchObject({ kind: "AI_FAILED", message: expect.stringContaining("visible failure") });
+  });
+
+  it("requires exact attack readiness and preserves attack drafts on rejection", () => {
+    const store = deployedStore();
+    readyAllMoves(store);
+    expect(store.getState().resolveMovement()).toBe(true);
+    store.getState().playbackFinish();
+    readyAllAttacks(store);
+    store.getState().markAiReadyMove(squadId(2), { squadId: squadId(2), moves: [] }, "wrong");
+    const engine = store.getState().engine;
+    const drafts = store.getState().drafts;
+    expect(store.getState().resolveAttack()).toBe(false);
+    expect(store.getState().engine).toBe(engine);
+    expect(store.getState().drafts).toBe(drafts);
+    expect(store.getState().mode).toBe("ATTACK_PLOT");
+  });
+
+  it("defers movement authority and revision until zero-event playback finishes", () => {
+    const store = deployedStore();
+    const before = store.getState().engine;
+    const revision = store.getState().engineRevision;
+    readyAllMoves(store);
+    expect(store.getState().resolveMovement()).toBe(true);
+    const playback = store.getState().playback;
+    expect(playback.beforeSnapshot).toBe(before);
+    expect(playback.afterSnapshot).not.toBe(before);
+    expect(store.getState().engine).toBe(before);
+    expect(store.getState().engineRevision).toBe(revision);
+    expect(playback.events).toHaveLength(0);
+    expect(matchSelectors.selectPlaybackDone(store.getState())).toBe(true);
+    store.getState().playbackFinish();
+    expect(store.getState().engine).toBe(playback.afterSnapshot);
+    expect(store.getState().engineRevision).toBe(revision + 1);
+    expect(store.getState().mode).toBe("ATTACK_PLOT");
+  });
+
+  it("appends history once and updates opponent observations only after attack finish", () => {
+    const store = deployedStore();
+    const deploymentHistory = store.getState().eventHistory;
+    expect(deploymentHistory.length).toBeGreaterThan(0);
+    readyAllMoves(store);
+    store.getState().resolveMovement();
+    store.getState().playbackSkip();
+    store.getState().playbackFinish();
+    const afterMoveHistory = store.getState().eventHistory;
+    expect(afterMoveHistory.slice(0, deploymentHistory.length)).toEqual(deploymentHistory);
+
+    readyAllAttacks(store);
+    const modelBefore = store.getState().opponentModel;
+    expect(store.getState().resolveAttack()).toBe(true);
+    const attackEvents = store.getState().playback.events;
+    expect(store.getState().opponentModel).toBe(modelBefore);
+    expect(store.getState().eventHistory).toBe(afterMoveHistory);
+    store.getState().playbackSkip();
+    store.getState().playbackFinish();
+    expect(store.getState().eventHistory).toEqual([...afterMoveHistory, ...attackEvents]);
+    expect(store.getState().opponentModel).not.toBe(modelBefore);
+    const historyLength = store.getState().eventHistory.length;
+    store.getState().playbackFinish();
+    expect(store.getState().eventHistory).toHaveLength(historyLength);
   });
 });
 

@@ -32,6 +32,7 @@ import type {
   Event,
   GameMap,
   MatchState,
+  OpponentModel,
   Placement,
   Posture,
   SquadAttackPlot,
@@ -47,12 +48,14 @@ import {
   applyTrace,
   checkElimination,
   createMatch,
+  emptyOpponentModel,
   resolveAttackStage,
   resolveMovementPhase,
   snapshotStartOfRound,
   sortEventsCanonical,
   squadId,
   updateKnownPositions,
+  updateOpponentModel,
 } from "../../../engine";
 import {
   isCompleteMatchLaunchConfig,
@@ -94,6 +97,8 @@ export interface MatchStoreState {
   readonly ai: ReadonlyMap<number, AiStatus>;
   readonly selection: SelectionState;
   readonly playback: PlaybackState;
+  readonly eventHistory: readonly Event[];
+  readonly opponentModel: OpponentModel;
   readonly present: MatchPresentation;
   readonly lastError: MatchStoreError | null;
   /** Monotonic — bumped every time engine slice is replaced. Used for playback continuity. */
@@ -236,6 +241,8 @@ function initialState(): MatchStoreState {
     ai: new Map(),
     selection: emptySelection(),
     playback: emptyPlayback(),
+    eventHistory: [],
+    opponentModel: emptyOpponentModel(),
     present: {
       highContrastSquads: false,
       showRangeMeasure: true,
@@ -307,6 +314,8 @@ export function createMatchStore(): StoreApi<MatchStore> {
         ai: new Map(),
         selection: emptySelection(),
         playback: emptyPlayback(),
+        eventHistory: [],
+        opponentModel: emptyOpponentModel(),
         lastError: null,
         engineRevision: 1,
       });
@@ -405,12 +414,12 @@ export function createMatchStore(): StoreApi<MatchStore> {
     },
     markAiReadyMove(sq, plot, diagnosticsSeed): void {
       const ai = new Map(get().ai);
-      ai.set(sq as number, { kind: "READY", plot, diagnosticsSeed });
+      ai.set(sq as number, { kind: "READY_MOVE", plot, diagnosticsSeed });
       set({ ai });
     },
     markAiReadyAttack(sq, plot, diagnosticsSeed): void {
       const ai = new Map(get().ai);
-      ai.set(sq as number, { kind: "READY", plot, diagnosticsSeed });
+      ai.set(sq as number, { kind: "READY_ATTACK", plot, diagnosticsSeed });
       set({ ai });
     },
     markAiError(sq, requestId, errorKind, message): void {
@@ -503,6 +512,7 @@ export function createMatchStore(): StoreApi<MatchStore> {
           afterSnapshot: nextEngine,
           stageKind: null, // deployment is not a playback stage — events are for the log only
         },
+        eventHistory: canonicalEvents,
         lastError: null,
       }));
       return true;
@@ -514,6 +524,7 @@ export function createMatchStore(): StoreApi<MatchStore> {
         set({ lastError: { kind: "LAUNCH_MISSING" } });
         return false;
       }
+      if (!requireAiReady(ai, launch.aiSquadIds, "READY_MOVE", "MOVE", set)) return false;
       const humanPlot = buildHumanMovePlot(engine, launch.humanSquadId, drafts, catalog);
       const plots = collectSquadMovePlots(humanPlot, ai, launch.aiSquadIds);
       const result = resolveMovementPhase(engine, plots, catalog);
@@ -528,9 +539,7 @@ export function createMatchStore(): StoreApi<MatchStore> {
         return false;
       }
       const afterMove = updateKnownPositions(result.value.state, catalog);
-      set((prior) => ({
-        engine: afterMove,
-        engineRevision: prior.engineRevision + 1,
+      set({
         mode: "MOVEMENT_PLAYBACK",
         drafts: emptyMovementDrafts(drafts),
         ai: new Map(),
@@ -544,7 +553,7 @@ export function createMatchStore(): StoreApi<MatchStore> {
           stageKind: "MOVEMENT",
         },
         lastError: null,
-      }));
+      });
       return true;
     },
 
@@ -554,6 +563,7 @@ export function createMatchStore(): StoreApi<MatchStore> {
         set({ lastError: { kind: "LAUNCH_MISSING" } });
         return false;
       }
+      if (!requireAiReady(ai, launch.aiSquadIds, "READY_ATTACK", "ATTACK", set)) return false;
       const humanPlot = buildHumanAttackPlot(engine, launch.humanSquadId, drafts);
       const plots = collectSquadAttackPlots(humanPlot, ai, launch.aiSquadIds);
       const attackResult = resolveAttackStage(engine, plots, catalog);
@@ -591,9 +601,7 @@ export function createMatchStore(): StoreApi<MatchStore> {
       } else {
         finalState = updateKnownPositions(finalState, catalog);
       }
-      set((prior) => ({
-        engine: finalState,
-        engineRevision: prior.engineRevision + 1,
+      set({
         mode: "ATTACK_PLAYBACK",
         drafts: emptyAttackDrafts(drafts),
         ai: new Map(),
@@ -607,7 +615,7 @@ export function createMatchStore(): StoreApi<MatchStore> {
           stageKind: "ATTACK",
         },
         lastError: null,
-      }));
+      });
       return true;
     },
 
@@ -640,7 +648,7 @@ export function createMatchStore(): StoreApi<MatchStore> {
       set({ playback: { ...p, speed } });
     },
     playbackFinish(): void {
-      const { playback, engine } = get();
+      const { playback } = get();
       if (playback.afterSnapshot === null) return;
       const next = playback.afterSnapshot;
       // After movement resolution the engine state has phase=ATTACK_PLOT;
@@ -657,11 +665,14 @@ export function createMatchStore(): StoreApi<MatchStore> {
       } else {
         mode = "DEPLOYMENT";
       }
-      void engine;
       set((prior) => ({
         engine: next,
         engineRevision: prior.engineRevision + 1,
         mode,
+        eventHistory: [...prior.eventHistory, ...playback.events],
+        opponentModel: playback.stageKind === "ATTACK"
+          ? updateOpponentModel(prior.opponentModel, playback.events)
+          : prior.opponentModel,
         playback: emptyPlayback(),
       }));
     },
@@ -800,14 +811,8 @@ function collectSquadMovePlots(
   out[human.squadId as number] = human;
   for (const sq of aiIds) {
     const slot = ai.get(sq as number);
-    if (slot !== undefined && slot.kind === "READY") {
-      const plot = slot.plot;
-      if ("moves" in plot) {
-        out[sq as number] = plot;
-        continue;
-      }
-    }
-    out[sq as number] = { squadId: sq, moves: [] };
+    if (slot === undefined || slot.kind !== "READY_MOVE") throw new Error("AI movement readiness gate violated.");
+    out[sq as number] = slot.plot;
   }
   return out as [SquadMovePlots, SquadMovePlots, SquadMovePlots, SquadMovePlots, SquadMovePlots];
 }
@@ -821,14 +826,8 @@ function collectSquadAttackPlots(
   out[human.squadId as number] = human;
   for (const sq of aiIds) {
     const slot = ai.get(sq as number);
-    if (slot !== undefined && slot.kind === "READY") {
-      const plot = slot.plot;
-      if ("attacks" in plot && "postures" in plot) {
-        out[sq as number] = plot;
-        continue;
-      }
-    }
-    out[sq as number] = { squadId: sq, attacks: [], postures: [] };
+    if (slot === undefined || slot.kind !== "READY_ATTACK") throw new Error("AI attack readiness gate violated.");
+    out[sq as number] = slot.plot;
   }
   return out as [SquadAttackPlot, SquadAttackPlot, SquadAttackPlot, SquadAttackPlot, SquadAttackPlot];
 }
@@ -845,6 +844,32 @@ function clamp(n: number, lo: number, hi: number): number {
   if (n < lo) return lo;
   if (n > hi) return hi;
   return n;
+}
+
+function requireAiReady(
+  ai: ReadonlyMap<number, AiStatus>,
+  squads: readonly SquadId[],
+  required: "READY_MOVE" | "READY_ATTACK",
+  stage: "MOVE" | "ATTACK",
+  set: (partial: Partial<MatchStore>) => void,
+): boolean {
+  for (const squad of squads) {
+    const slot = ai.get(squad as number);
+    if (slot?.kind === required) continue;
+    if (slot?.kind === "ERROR") {
+      set({ lastError: { kind: "AI_FAILED", squadId: squad, message: `[${slot.errorKind}] ${slot.message}` } });
+    } else {
+      set({
+        lastError: {
+          kind: "ENGINE_REJECTED",
+          stage,
+          message: `FR-${stage === "MOVE" ? "14" : "16"}:AI_${stage}_NOT_READY AI squad ${squad as number} has not completed ${stage === "MOVE" ? "movement" : "attack"} plotting.`,
+        },
+      });
+    }
+    return false;
+  }
+  return true;
 }
 
 /* ------------------------------------------------------------------------- */

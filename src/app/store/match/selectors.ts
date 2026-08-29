@@ -139,7 +139,7 @@ export function selectAiPendingCount(s: MatchStore | MatchStoreState): number {
 export function selectAllAiReady(
   s: MatchStore | MatchStoreState,
   aiIds: readonly SquadId[],
-  requiredKind: "READY" | "READY_DEPLOY",
+  requiredKind: "READY_MOVE" | "READY_ATTACK" | "READY_DEPLOY",
 ): boolean {
   for (const sq of aiIds) {
     const slot = s.ai.get(sq as number);
@@ -190,7 +190,7 @@ export function selectPlayback(s: MatchStore | MatchStoreState): MatchStore["pla
 
 export function selectPlaybackDone(s: MatchStore | MatchStoreState): boolean {
   const p = s.playback;
-  return p.events.length > 0 && p.cursor >= p.events.length;
+  return p.afterSnapshot !== null && p.cursor >= p.events.length;
 }
 
 /* ------------------------------------------------------------------------- */
