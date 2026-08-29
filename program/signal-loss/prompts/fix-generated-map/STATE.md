@@ -16,7 +16,8 @@
 | # | Session | Modules | Owns | Status | Checkpoint | Completed | Notes |
 |---|---|---|---|---|---|---|---|
 | 01 | Fit the Generated Map Preview | M19, M22 | ./src/app/components/setup/MapPreview.tsx; ./tests/app/setup-screen/map-preview.test.tsx | done | 2/2 | 2026-08-28 | MapPreview viewBox derived from map.bounds via FX_ONE (2-unit margin); centered maps no longer clipped; regression added.<br>Follow-up: Display margin is a fixed 2 board units on each side; boundary/wall/spawn stroke widths (.5/.8/.6) were kept verbatim and read slightly heavier in the ~68-unit viewport but remain fitted, not clipped. |
-| 02 | Preserve Unique Setup Row Identity | M19, M22 | `./src/app/components/setup/RosterPicker.tsx`<br>`./tests/app/setup-screen/roster-picker.test.tsx` | pending | — | — | Replace display-text keys for excluded saved/prebuilt rows with namespaced source IDs. |
+| 02 | Preserve Unique Setup Row Identity | M19, M22 | ./src/app/components/setup/RosterPicker.tsx; ./tests/app/setup-screen/roster-picker.test.tsx | done | 2/2 | 2026-08-28 | Excluded roster rows now key by stable source identity (saved-<id> / prebuilt-<id>); duplicate visible labels render as distinct React elements. Added focused unit regression.<br>Follow-up: Stable excluded-row key format is saved-${SavedRosterV1.id} and prebuilt-${PrebuiltId}, matching the existing legal-choice key format ${kind}-${id}. Test inspects the returned React element tree directly (no jsdom) to prove key uniqueness before render. |
+
 | 03 | Stabilize Match Store Snapshots | M17, M22 | `./src/app/store/match/context.tsx`<br>`./tests/e2e/match/match-runtime-stability.spec.ts` | pending | — | — | Cache derived selector values before `useSyncExternalStore`; verify the real setup-to-match route. |
 
 ## Wave Plan
@@ -84,5 +85,19 @@ flowchart TD
   "surprises": "Working tree showed concurrent edits to src/app/store/match/context.tsx (SESSION-03's lease) and an interleaved SESSION-02 commit during my run; neither touched by me — expected under orchestration.",
   "followUp": "Display margin is a fixed 2 board units on each side; boundary/wall/spawn stroke widths (.5/.8/.6) were kept verbatim and read slightly heavier in the ~68-unit viewport but remain fitted, not clipped.",
   "filesTouched": ["src/app/components/setup/MapPreview.tsx", "tests/app/setup-screen/map-preview.test.tsx"],
+  "blockedReason": null
+}
+
+### SESSION-02
+{
+  "session": "02",
+  "status": "done",
+  "checkpoint": 2,
+  "notes": "Excluded roster rows now key by stable source identity (saved-<id> / prebuilt-<id>); duplicate visible labels render as distinct React elements. Added focused unit regression.",
+  "delivered": "RosterPicker excluded accumulator changed from string[] to an internal ExcludedRosterRow {key,label} record; rows render with key={row.key} using saved-${saved.id}/prebuilt-${prebuilt.id} namespaces. Iteration order, labels, legality-message selection, and the EXCLUDED — SHOWN, NEVER HIDDEN surface are unchanged. New test asserts two identical 'SCOUT PATROL · NOT BUILT AT 100' labels produce two visible rows with distinct source-derived keys, and a legal prebuilt choice is still keyed by its source identity.",
+  "verification": "npx vitest run ./tests/app/setup-screen/roster-picker.test.tsx → 3 pass; npm run typecheck → pass; npm run lint → pass. Duplicate console-warning label 'SCOUT PATROL · NOT BUILT AT 100' now yields keys saved-roster:1 and prebuilt-prebuilt:scout (unique).",
+  "surprises": "The concurrent sessions share one git index: tests/e2e/match/match-runtime-stability.spec.ts (SESSION-03's lease) was already staged in the index when I committed. I used explicit pathspec commits (git commit -m ... -- <path>) so my commits contain only my two lease files; git show confirms the SESSION-03 spec is not in either of my commits. I left that staged file untouched.",
+  "followUp": "Stable excluded-row key format is `saved-${SavedRosterV1.id}` and `prebuilt-${PrebuiltId}`, matching the existing legal-choice key format `${kind}-${id}`. Test inspects the returned React element tree directly (no jsdom) to prove key uniqueness before render.",
+  "filesTouched": ["src/app/components/setup/RosterPicker.tsx", "tests/app/setup-screen/roster-picker.test.tsx"],
   "blockedReason": null
 }
