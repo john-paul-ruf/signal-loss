@@ -205,12 +205,53 @@ test.describe("deployment placement — real setup → match", () => {
     await expect(page.getByTestId("mv-length")).toHaveText(/^[1-9]\d* \/ \d+$/);
     await expect(selectedRow.locator(".squad-rail__state")).toHaveText(/^PLOTTED /);
 
-    // 8 — COMMIT through the real confirmation dialog → movement playback.
-    await page.getByTestId("commit-movement").click();
-    await page
-      .locator(".sl-modal")
-      .getByRole("button", { name: "COMMIT MOVEMENT" })
-      .click();
+    // 8 — the first click only arms the irreversible commit. The named
+    // dialog stays in the viewport, EDIT returns to plotting and restores
+    // focus, and only the reopened dialog's affirmative action resolves.
+    const commitMovement = page.getByTestId("commit-movement");
+    await commitMovement.click();
+
+    const dialog = page.getByRole("dialog", { name: "COMMIT MOVEMENT" });
+    const edit = dialog.getByRole("button", { name: "EDIT", exact: true });
+    const confirmMovement = dialog.getByRole("button", {
+      name: "COMMIT MOVEMENT",
+      exact: true,
+    });
+    const scrim = page.locator(".sl-modal-scrim");
+
+    await expect(dialog).toBeVisible();
+    await expect(page.getByTestId("mode-movement")).toBeVisible();
+    await expect(page.getByTestId("mode-playback")).toHaveCount(0);
+    await expect(dialog.locator(".sl-modal__body")).toHaveText(
+      "2 constructs will HOLD.",
+    );
+    await expect(scrim).toHaveCSS("position", "fixed");
+    await expect(scrim).toHaveCSS("top", "0px");
+    await expect(scrim).toHaveCSS("right", "0px");
+    await expect(scrim).toHaveCSS("bottom", "0px");
+    await expect(scrim).toHaveCSS("left", "0px");
+    await expect(dialog).toBeInViewport();
+    await expect(edit).toBeInViewport();
+    await expect(confirmMovement).toBeInViewport();
+
+    await edit.click();
+    await expect(dialog).toHaveCount(0);
+    await expect(page.getByTestId("mode-movement")).toBeVisible();
+    await expect(page.getByTestId("mode-playback")).toHaveCount(0);
+
+    // WebKit follows Safari's pointer convention and does not focus a button
+    // on click. Reopen from an explicit keyboard focus target so the shared
+    // trap has an opener to restore in every configured browser.
+    await commitMovement.focus();
+    await commitMovement.press("Space");
+    await expect(dialog).toBeVisible();
+    await edit.click();
+    await expect(dialog).toHaveCount(0);
+    await expect(commitMovement).toBeFocused();
+
+    await commitMovement.click();
+    await expect(dialog).toBeVisible();
+    await confirmMovement.click();
     await expect(page.getByTestId("mode-playback")).toBeVisible({ timeout: 30_000 });
     await expect(page.getByTestId("mode-movement")).toHaveCount(0);
     // The engine accepted the move — no MOVE rejection surfaced.
