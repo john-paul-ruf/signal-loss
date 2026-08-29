@@ -4,14 +4,31 @@
  * every pointer event / frame — must be cheap.
  */
 
+import type { Vec2 } from "../../../engine";
 import type { Camera } from "../camera";
 import { worldToScreenX, worldToScreenY, worldDistanceOnScreen } from "../camera";
 import type { OverlayScene } from "../scene";
+
+/**
+ * Deployment-only overlay paint options: the staged draft markers and the
+ * hovered valid/invalid placement preview. Render-only — draft positions
+ * live in the match store's `HumanDraftState`, never on engine state.
+ */
+export interface OverlayDeploymentOptions {
+  readonly placements: readonly {
+    readonly rosterIndex: number;
+    readonly label: string;
+    readonly position: Vec2;
+    readonly active: boolean;
+  }[];
+  readonly hover: { readonly position: Vec2; readonly valid: boolean } | null;
+}
 
 export function paintOverlay(
   ctx: CanvasRenderingContext2D,
   scene: OverlayScene,
   cam: Camera,
+  deployment: OverlayDeploymentOptions | null = null,
 ): void {
   ctx.save();
   ctx.clearRect(0, 0, cam.viewport.width, cam.viewport.height);
@@ -118,5 +135,80 @@ export function paintOverlay(
     void worldDistanceOnScreen;
   }
 
+  // Deployment markers + hover preview (drawn last so they read above the
+  // selection ring without disturbing it).
+  if (deployment !== null) {
+    paintDeployment(ctx, deployment, cam);
+  }
+
   ctx.restore();
+}
+
+/**
+ * Draw each staged placement at its true world position — a vector-hued
+ * marker with a roster label, the active one ringed brighter — plus the
+ * hovered placement preview. Legality is carried by shape, not colour
+ * alone: a valid preview is a solid ring, an invalid one is a dashed ring
+ * with an `✕` cross (the live reason text lives in the deployment HUD).
+ */
+function paintDeployment(
+  ctx: CanvasRenderingContext2D,
+  deployment: OverlayDeploymentOptions,
+  cam: Camera,
+): void {
+  const markerR = 11;
+  for (const placed of deployment.placements) {
+    const cx = worldToScreenX(cam, placed.position.x);
+    const cy = worldToScreenY(cam, placed.position.y);
+
+    ctx.fillStyle = "rgba(168,251,255,0.14)";
+    ctx.beginPath();
+    ctx.arc(cx, cy, markerR, 0, Math.PI * 2);
+    ctx.fill();
+
+    ctx.strokeStyle = placed.active ? "#4DE1FF" : "#A8FBFF";
+    ctx.lineWidth = placed.active ? 2.5 : 1.5;
+    ctx.beginPath();
+    ctx.arc(cx, cy, markerR, 0, Math.PI * 2);
+    ctx.stroke();
+
+    // Vector glyph (▲) centred in the marker.
+    ctx.fillStyle = "#A8FBFF";
+    ctx.font = "10px 'IBM Plex Mono', monospace";
+    ctx.textAlign = "center";
+    ctx.textBaseline = "middle";
+    ctx.fillText("▲", cx, cy + 1);
+
+    // Roster label above the marker.
+    ctx.font = "600 10px 'IBM Plex Mono', monospace";
+    ctx.textBaseline = "bottom";
+    ctx.fillText(placed.label, cx, cy - markerR - 2);
+  }
+
+  const hover = deployment.hover;
+  if (hover !== null) {
+    const hx = worldToScreenX(cam, hover.position.x);
+    const hy = worldToScreenY(cam, hover.position.y);
+    if (hover.valid) {
+      ctx.strokeStyle = "#4DE1FF";
+      ctx.lineWidth = 1.5;
+      ctx.setLineDash([]);
+      ctx.beginPath();
+      ctx.arc(hx, hy, markerR, 0, Math.PI * 2);
+      ctx.stroke();
+    } else {
+      ctx.strokeStyle = "#FF4D6D";
+      ctx.lineWidth = 1.5;
+      ctx.setLineDash([4, 3]);
+      ctx.beginPath();
+      ctx.arc(hx, hy, markerR, 0, Math.PI * 2);
+      ctx.stroke();
+      ctx.setLineDash([]);
+      ctx.fillStyle = "#FF4D6D";
+      ctx.font = "12px 'IBM Plex Mono', monospace";
+      ctx.textAlign = "center";
+      ctx.textBaseline = "middle";
+      ctx.fillText("✕", hx, hy + 1);
+    }
+  }
 }

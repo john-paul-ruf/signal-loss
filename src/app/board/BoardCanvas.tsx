@@ -10,7 +10,7 @@ import {
 } from "./scene";
 import { paintTerrain } from "./layers/terrain-layer";
 import { paintField } from "./layers/field-layer";
-import { paintOverlay } from "./layers/overlay-layer";
+import { paintOverlay, type OverlayDeploymentOptions } from "./layers/overlay-layer";
 import { pickConstruct } from "./hit-test";
 import { AccessibleBoardTree } from "./accessible-tree";
 import "./board.css";
@@ -25,6 +25,27 @@ import "./board.css";
  * The accessible tree renders alongside — no keyboard-only user has to
  * find a hit target on canvas.
  */
+/**
+ * Render-only deployment presentation. The board reads this to mark the
+ * observer's spawn, draw staged draft markers, and preview the hovered
+ * placement. It NEVER carries a value into `MatchState`, `PublicState`,
+ * engine events, or AI worker requests — draft positions stay in the
+ * match store's `HumanDraftState`. Absent for movement / attack / playback.
+ */
+export interface DeploymentBoardState {
+  readonly humanSquadIndex: number;
+  readonly placements: readonly {
+    readonly rosterIndex: number;
+    readonly constructId: ConstructId;
+    readonly position: Vec2;
+  }[];
+  readonly activeRosterIndex: number | null;
+  readonly hover: {
+    readonly position: Vec2;
+    readonly valid: boolean;
+  } | null;
+}
+
 export interface BoardCanvasProps {
   /**
    * The interaction receiver — called when the pointer moves or a
@@ -35,6 +56,12 @@ export interface BoardCanvasProps {
    * If omitted the board renders read-only.
    */
   readonly onPointerAction?: (kind: PointerActionKind, world: Vec2, event: React.PointerEvent<HTMLCanvasElement>) => void;
+  /**
+   * Optional deployment presentation. When present the terrain layer marks
+   * the observer's spawn and the overlay draws staged markers + a hover
+   * preview. Absent / null for every non-deployment caller (inert).
+   */
+  readonly deployment?: DeploymentBoardState | null;
 }
 
 export type PointerActionKind = "move" | "click" | "double-click" | "leave";
@@ -84,8 +111,13 @@ export function BoardCanvas(props: BoardCanvasProps): React.ReactElement {
     });
   }, [pv, viewportSize.w, viewportSize.h]);
 
+  const deployment = props.deployment ?? null;
+  const deploymentActive = deployment !== null;
+  const deploymentHumanSquadIndex = deployment?.humanSquadIndex ?? null;
+
   // Terrain redraws only on map/trace-step change → depends on
-  // engineRevision AND round.
+  // engineRevision AND round. Deployment toggling repaints the spawn
+  // affordance, but a pointer-only hover change does not (that is overlay).
   React.useEffect(() => {
     if (pv === null || catalog === null) return;
     const canvas = terrainRef.current;
@@ -94,8 +126,15 @@ export function BoardCanvas(props: BoardCanvasProps): React.ReactElement {
     if (ctx === null) return;
     resizeCanvas(canvas, camera);
     const scene = buildBoardScene(pv, catalog, camera).terrain;
-    paintTerrain(ctx, scene, camera);
-  }, [pv, catalog, camera, engine?.round, engineRevision]);
+    paintTerrain(
+      ctx,
+      scene,
+      camera,
+      deploymentHumanSquadIndex === null
+        ? null
+        : { humanSquadIndex: deploymentHumanSquadIndex },
+    );
+  }, [pv, catalog, camera, engine?.round, engineRevision, deploymentActive, deploymentHumanSquadIndex]);
 
   // Field redraws when engine state changes.
   React.useEffect(() => {
@@ -125,6 +164,18 @@ export function BoardCanvas(props: BoardCanvasProps): React.ReactElement {
         : scenes.find((s) => s.id === selection) ?? null;
     // Draft path is set by the mode via the store; we read it here.
     const draftPath = readDraftPath(selection, pv);
+    const deploymentOptions: OverlayDeploymentOptions | null =
+      deployment === null
+        ? null
+        : {
+            placements: deployment.placements.map((p) => ({
+              rosterIndex: p.rosterIndex,
+              label: String(p.rosterIndex + 1).padStart(2, "0"),
+              position: p.position,
+              active: p.rosterIndex === deployment.activeRosterIndex,
+            })),
+            hover: deployment.hover,
+          };
     paintOverlay(
       ctx,
       {
@@ -145,6 +196,7 @@ export function BoardCanvas(props: BoardCanvasProps): React.ReactElement {
         shots: extractShotLines(playback.events.slice(0, playback.cursor), scenes),
       },
       camera,
+      deploymentOptions,
     );
   }, [
     pv,
@@ -154,6 +206,7 @@ export function BoardCanvas(props: BoardCanvasProps): React.ReactElement {
     selectionSlice.hoveredWaypoint,
     playback.events,
     playback.cursor,
+    deployment,
   ]);
 
   const onPointer = React.useCallback(
