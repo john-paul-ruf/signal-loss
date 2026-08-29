@@ -236,3 +236,46 @@ To be folded in by a human; Roshi does not edit `./FORGE.md`, `./MU.md`, `./ENSO
 ### Roshi entry
 
 Retry completion reconciled four arch files (M17, M19, M20, M22) and removed M17's SESSION-03 staple. The former temporary launch-payload gap, blocked `#/setup` ownership, and absent test-record wording are resolved to the shipped, verified state. Module registry and `./program/signal-loss/FORGE-CONFIG.md` remain unchanged. No convention was promoted; the Enso-at-spawn observation advances to count-of-2, while the two count-of-4 Robe recommendations remain recommendations only.
+
+---
+
+## 2026-08-28 — Cycle 6 · SIGNAL LOSS / fix-generated-map
+
+New feature (`fix-generated-map`) on the same program — three defect repairs on already-shipped setup/match code. Session numbers restart again: this cycle's SESSION-01..03 are distinct from `full-v1`'s and `match-setup-route`'s.
+
+### What ran
+
+Jikijitsu ran all three sessions concurrently in one wave (disjoint write sets). SESSION-01 (fit the setup map preview) 2/2, SESSION-02 (unique excluded-roster-row keys) 2/2, SESSION-03 (stabilize the match-store external-store snapshot) 2/2. Feature 3/3 complete; six Mu checkpoint commits (`df18f65` → `0790cc6` less the completion records), no lease violations, no checkpoint shortfalls, working tree clean. The three fixes: `MapPreview` viewBox derived from centered `map.bounds` via `FX_ONE`; `RosterPicker` excluded rows keyed by namespaced source identity (`saved-<id>` / `prebuilt-<id>`); `useMatchStore.getSnapshot` caches inside the getter so derived selector arrays keep a stable reference for React's external-store contract.
+
+### What I reconciled
+
+- Read: the Final Report (`./.forge/final-report.md`), `STATE.md` in full, every file under `./program/signal-loss/arch/**`, `./program/signal-loss/FORGE-CONFIG.md`, `./program/signal-loss/prompts/fix-generated-map/MASTER.md`, and all five prior `ROSHI-LOG.md` entries. Grounded every claim against `git log --oneline -30`, `git diff --stat 1b5c898..0790cc6`, and per-file `git show` of the pre/post `context.tsx`.
+- **`arch/` — no change this cycle, and this is a reconciliation result, not an omission.** All three repairs sit below the arch's descriptive altitude and none contradicts a documented claim:
+  - Jikijitsu stapled no mid-run delta into any arch file this cycle — the 7-file cycle diff touches no `./program/signal-loss/arch/**` path (verified by `git diff --stat`); the arch mtimes are cycle-5 Roshi's.
+  - `M19-ui-components.md`'s one-line `MapPreview` ("accepted-map review") and `RosterPicker` ("legal saved and prebuilt human-roster selection") descriptions are higher-altitude than a viewBox derivation or a React key namespace; both remain true.
+  - `M17-app-state-bridge.md`'s only reference to the fixed hook — line 19, "`useFlowStore` … mirroring `useMatchStore`; re-renders only when the selected slice changes by reference (or `equal`)" — states the external-store *contract* SESSION-03 made real. Pre-fix, `getSnapshot` returned a fresh filtered array, so that contract was violated in practice for the match store (the reported `getSnapshot`/maximum-update-depth loop). The fix moves the cache inside `getSnapshot`; the post-fix code comment matches the arch wording verbatim. The doc was already describing the intended contract, so the fix brings reality to the doc, not the doc to reality — nothing to rewrite. Rewriting would append implementation detail below altitude, against Vow 2.
+- **Module registry** (in `./program/signal-loss/FORGE-CONFIG.md`): no update. All six touched files fall inside existing `Owns` contracts — `MapPreview.tsx` / `RosterPicker.tsx` under M19, `store/match/context.tsx` under M17, the three tests under M22. No new module boundary shipped.
+
+### What I did NOT promote to a convention
+
+The Final Report's granularity feedback is empty — both declared checkpoint counts met on every session, no context exhaustion, no ownership overlap needing a wave-plan correction. No Forge-authoring pattern to fold into `./program/signal-loss/FORGE-CONFIG.md`. One standing Robe-targeted pattern recurred:
+
+- **Scope `git commit` pathspec, not only `git add`.** Recurred this cycle: SESSION-02 found `tests/e2e/match/match-runtime-stability.spec.ts` (SESSION-03's lease) already staged in the shared index at commit time and used explicit `git commit -m … -- <path>` so its two commits carried only its own lease files (confirmed by its own `git show`). Same shared-index-contamination shape as `full-v1` cycle 1's `cab5120`; another preventive success. Cycle count now **5** (full-v1 c1 failure, c2 + c3 preventive, `match-setup-route` c4 failure-and-fix, `fix-generated-map` c6 preventive). Still a `./JIKIJITSU.md` / `./MU.md` concern Roshi cannot edit — no `./FORGE-CONFIG.md` change.
+
+The crash-vs-blocked pattern gained no new data point (all three sessions completed cleanly). SESSION-03's aside — the "Own constructs" accessible name resolving to two elements, disambiguated in-test via `role=region` — is a one-off test-authoring detail at count-of-1, not queued.
+
+### Proposed for the framework
+
+To be folded in by a human; Roshi does not edit `./FORGE.md`, `./MU.md`, `./ENSO.md`, or `./JIKIJITSU.md`.
+
+- **Scope `git commit` pathspec, not only `git add`.** Cycles observed: **5**. Candidate home: `./JIKIJITSU.md` orchestration envelope or `./MU.md` checkpoint-commit protocol.
+- **Distinguish "session crashed" from "session declared blocked," and label the result accordingly.** Cycles observed: **4**. Candidate home: `./JIKIJITSU.md` spawn/await/result-classification.
+- **Route UI-dominant sessions to Enso at spawn time, not by mid-flight delegation.** Cycles observed: **2**. Candidate home: `./JIKIJITSU.md` spawn-time routing heuristic or Forge's per-session worker-mix hint.
+- **Cap combined visual working set per session at what one context can hold.** Cycles observed: **1**. Candidate home: `./FORGE.md` decomposition heuristics.
+- **Carve a shared-style owner before concurrent UI leases.** Cycles observed: **1**. Candidate home: `./FORGE.md` decomposition.
+- **Escalate retry strategy after two consecutive non-declarative failures on the same session.** Cycles observed: **1**. Candidate home: `./JIKIJITSU.md` retry policy.
+- **Feature-qualify session references in `arch/` for multi-feature programs.** Cycles observed: **1**. Candidate home: `arch/`-authoring convention / mid-run arch-append instruction.
+
+### Roshi entry
+
+`fix-generated-map` was a three-defect repair cycle on already-shipped setup/match code. No arch file changed — a reconciliation result, not an omission: Jikijitsu stapled no delta, all three repairs sit below the arch's descriptive altitude, and the only doc reference to the fixed hook (M17's `useMatchStore` external-store contract) is one the SESSION-03 `getSnapshot` fix now upholds rather than contradicts. Module registry and `./program/signal-loss/FORGE-CONFIG.md` unchanged — every touched file falls inside existing M17/M19/M22 `Owns`. No convention promoted. The git-commit-pathspec observation advances to count-of-5 on a fresh preventive success (SESSION-02) but remains a Robe recommendation Roshi cannot fold in.
