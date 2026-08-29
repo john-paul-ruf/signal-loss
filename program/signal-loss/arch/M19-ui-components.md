@@ -89,3 +89,10 @@
 
 - `PlaybackTransport` is the command-bar transport surface for truthful playing, paused, complete, cursor, speed, step, and skip states; reduced-motion playback exposes previous/next/skip controls and focusable information-complete event cards.
 
+
+<!-- SESSION-03 -->
+### M19 attack model delta
+
+- `./src/app/components/match/attack-model.ts` is the pure attack-presentation boundary. It builds an app-only hypothetical `MatchState` whose construct positions are replaced by the human observer's `PublicState` positions, then obtains the normal and called rows through two engine `exchangePreview()` calls. The hypothetical state is never persisted or sent across a worker/replay boundary.
+- Ghost exchange data is computed only at the last-confirmed public position and remains labeled `POSITION UNCONFIRMED`; authoritative enemy coordinates are never consulted for preview range or LOS.
+- The module also owns pure exact-hit routing, pool balance/guarded called and posture toggles, and committed-human playback-spend derivation used by M19/M20 attack surfaces.
