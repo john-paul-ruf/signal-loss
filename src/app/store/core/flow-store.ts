@@ -1,5 +1,14 @@
 import { createStore, type StoreApi } from "zustand/vanilla";
 import type { PersistedEntityIdV1, SavedRosterV1 } from "../../../platform/index";
+import type {
+  AiTier,
+  ArchetypeId,
+  ArchetypeSelector,
+  Budget,
+  GameMap,
+  PrebuiltId,
+  Roster,
+} from "../../../engine";
 
 /**
  * Non-persisted flow store — carries `MatchLaunchConfig` from the setup
@@ -17,14 +26,46 @@ import type { PersistedEntityIdV1, SavedRosterV1 } from "../../../platform/index
  * The parameters a setup screen commits when the player launches a match.
  * Consumers of the match store read this once at mount and NEVER write it.
  */
-export interface MatchLaunchConfig {
+export type LaunchRosterSource =
+  | { readonly kind: "saved"; readonly id: SavedRosterV1["id"]; readonly name: string }
+  | { readonly kind: "prebuilt"; readonly id: PrebuiltId; readonly name: string };
+
+export interface CompleteMatchLaunchConfig {
+  readonly human: {
+    readonly source: LaunchRosterSource;
+    readonly roster: Roster;
+    readonly shareString: string;
+  };
+  readonly aiRosters: readonly [Roster, Roster, Roster, Roster];
+  readonly aiRosterShareStrings: readonly [string, string, string, string];
+  readonly map: GameMap;
+  readonly seed: string;
+  readonly budget: Budget;
+  readonly aiTier: AiTier;
+  readonly selector: ArchetypeSelector;
+  readonly resolvedArchetypeId: ArchetypeId;
+}
+
+/**
+ * Deprecated shape retained only so pre-launch consumers fail at runtime with
+ * a structured create error rather than becoming an invalid playable match.
+ * New setup code must always write {@link CompleteMatchLaunchConfig}.
+ */
+interface LegacyMatchLaunchConfig {
   readonly rosterId: SavedRosterV1["id"];
-  /** Copy of the roster taken at launch time so a delete mid-match can't leak state. */
   readonly roster: SavedRosterV1;
   readonly budget: number;
   readonly seed: string;
   readonly archetypeCode: number | null;
   readonly aiTierId: string;
+}
+
+export type MatchLaunchConfig = CompleteMatchLaunchConfig | LegacyMatchLaunchConfig;
+
+export function isCompleteMatchLaunchConfig(
+  config: MatchLaunchConfig,
+): config is CompleteMatchLaunchConfig {
+  return "human" in config && "aiRosters" in config && "map" in config;
 }
 
 /**

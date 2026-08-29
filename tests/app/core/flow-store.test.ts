@@ -4,21 +4,27 @@ import {
   type MatchLaunchConfig,
   type MatchResultPayload,
 } from "../../../src/app/store/core/index";
+import { buildSimpleMap } from "../../fixtures/maps/simple";
 
 const launch: MatchLaunchConfig = {
-  rosterId: "roster:1",
-  roster: {
-    id: "roster:1",
-    name: "R1",
-    budget: 50,
-    constructs: [
-      { chassisCode: 10, commanderCode: 1, mounts: [] },
-    ],
+  human: {
+    source: { kind: "saved", id: "roster:1", name: "R1" },
+    roster: { constructs: [{ chassisCode: 10 as never, commanderCode: 1 as never, mounts: [] }] },
+    shareString: "SL1-human",
   },
+  aiRosters: [
+    { constructs: [{ chassisCode: 10 as never, commanderCode: 1 as never, mounts: [] }] },
+    { constructs: [{ chassisCode: 10 as never, commanderCode: 1 as never, mounts: [] }] },
+    { constructs: [{ chassisCode: 10 as never, commanderCode: 1 as never, mounts: [] }] },
+    { constructs: [{ chassisCode: 10 as never, commanderCode: 1 as never, mounts: [] }] },
+  ],
+  aiRosterShareStrings: ["SL1-ai1", "SL1-ai2", "SL1-ai3", "SL1-ai4"],
+  map: buildSimpleMap("seed-abc"),
   budget: 50,
   seed: "seed-abc",
-  archetypeCode: null,
-  aiTierId: "steady",
+  aiTier: 2,
+  selector: { kind: "any" },
+  resolvedArchetypeId: "arena" as never,
 };
 
 const result: MatchResultPayload = {
