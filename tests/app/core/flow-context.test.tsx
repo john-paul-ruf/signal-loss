@@ -11,11 +11,9 @@ import { renderToStaticMarkup } from "react-dom/server";
 import { describe, expect, it } from "vitest";
 import {
   FlowStoreProvider,
+  createFlowStore,
   useFlowStore,
   useFlowStoreApi,
-} from "../../../src/app/store/core/flow-context";
-import {
-  createFlowStore,
   type MatchLaunchConfig,
 } from "../../../src/app/store/core/index";
 

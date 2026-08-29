@@ -2,6 +2,7 @@ import * as React from "react";
 import { createRoot } from "react-dom/client";
 import "./styles.css";
 import { useCurrentRoute } from "./route-registry";
+import { FlowStoreProvider } from "./store/core/index";
 
 /**
  * Root component. Delegates to whichever route the registry resolves for the
@@ -59,7 +60,9 @@ function mount(): void {
   root.render(
     <React.StrictMode>
       <ErrorBoundary>
-        <App />
+        <FlowStoreProvider>
+          <App />
+        </FlowStoreProvider>
       </ErrorBoundary>
     </React.StrictMode>,
   );
