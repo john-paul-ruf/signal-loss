@@ -30,7 +30,7 @@ import type {
   Catalog,
   ConstructId,
   Event,
-  MatchConfig,
+  GameMap,
   MatchState,
   Placement,
   Posture,
@@ -54,7 +54,10 @@ import {
   squadId,
   updateKnownPositions,
 } from "../../../engine";
-import type { MatchLaunchConfig } from "../core";
+import {
+  isCompleteMatchLaunchConfig,
+  type MatchLaunchConfig,
+} from "../core/flow-store";
 import type {
   AiStatus,
   HumanDraftState,
@@ -106,7 +109,7 @@ export interface MatchStoreActions {
    * pre-generated game map (both come from setup). Creates the match and
    * transitions to DEPLOYMENT mode. Returns false if createMatch fails.
    */
-  boot(config: MatchLaunchConfig, catalog: Catalog, map: MatchConfig["map"]): boolean;
+  boot(config: MatchLaunchConfig, catalog: Catalog, legacyMap?: GameMap): boolean;
 
   /* Human deployment drafts */
   setDeploymentDraft(rosterIndex: number, position: Vec2): void;
@@ -250,7 +253,17 @@ export function createMatchStore(): StoreApi<MatchStore> {
   return createStore<MatchStore>((set, get) => ({
     ...initialState(),
 
-    boot(config, catalog, map): boolean {
+    boot(config, catalog, legacyMap): boolean {
+      void legacyMap;
+      if (!isCompleteMatchLaunchConfig(config)) {
+        set({
+          lastError: {
+            kind: "CREATE_FAILED",
+            message: "FR-8: launch payload is missing prepared AI rosters or map.",
+          },
+        });
+        return false;
+      }
       const humanSquad = squadId(0);
       const aiSquads: [SquadId, SquadId, SquadId, SquadId] = [
         squadId(1),
@@ -258,41 +271,14 @@ export function createMatchStore(): StoreApi<MatchStore> {
         squadId(3),
         squadId(4),
       ];
-      // Session-08 contract: the human's saved roster is passed in;
-      // AI rosters are generated separately by Session 07's setup screen
-      // before the match launches and land here via the same launch
-      // payload extension. Until Session 07 wires that extension in, we
-      // seed all five squads with the human roster so the engine's
-      // create/deployment paths remain exercisable. AI rosters swap in
-      // via the extended MatchLaunchConfig.
-      // The persistence layer stores plain integer chassis/mount codes;
-      // engine `Construct` uses branded types over the same numbers, so
-      // the cast is safe at runtime and preserves the persistence layer
-      // as the sole schema-owner.
-      const humanRoster = {
-        constructs: config.roster.constructs.map((c) => ({
-          chassisCode: c.chassisCode,
-          commanderCode: c.commanderCode,
-          mounts: c.mounts.map((m) => ({
-            hardpointIndex: m.hardpointIndex,
-            mountCode: m.mountCode,
-          })),
-        })),
-      } as unknown as MatchConfig["rosters"][number];
-      const rosters: MatchConfig["rosters"] = [
-        humanRoster,
-        humanRoster,
-        humanRoster,
-        humanRoster,
-        humanRoster,
-      ];
+      const rosters = [config.human.roster, ...config.aiRosters] as const;
       const seed = config.seed;
       const attempt = createMatch({
         seed,
-        budget: config.budget as MatchConfig["budget"],
-        aiTier: parseAiTier(config.aiTierId),
+        budget: config.budget,
+        aiTier: config.aiTier,
         catalog,
-        map,
+        map: config.map,
         rosters,
       });
       if (!attempt.ok) {
@@ -308,6 +294,7 @@ export function createMatchStore(): StoreApi<MatchStore> {
         humanSquadId: humanSquad,
         aiSquadIds: aiSquads,
         config: attempt.value.config,
+        input: structuredClone(config),
         seed,
       };
       set({
@@ -718,16 +705,6 @@ export function createMatchStore(): StoreApi<MatchStore> {
 /* ------------------------------------------------------------------------- */
 /* Helpers                                                                    */
 /* ------------------------------------------------------------------------- */
-
-function parseAiTier(id: string): number {
-  if (id.startsWith("t") || id.startsWith("T")) {
-    const n = parseInt(id.slice(1), 10);
-    if (Number.isFinite(n) && n >= 1 && n <= 3) return n;
-  }
-  const n = parseInt(id, 10);
-  if (Number.isFinite(n) && n >= 1 && n <= 3) return n;
-  return 1;
-}
 
 function collectHumanDeployments(
   drafts: HumanDraftState,

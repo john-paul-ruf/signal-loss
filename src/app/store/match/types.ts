@@ -21,6 +21,7 @@ import type {
   SquadMovePlots,
   Vec2,
 } from "../../../engine";
+import type { CompleteMatchLaunchConfig } from "../core/flow-store";
 
 /** The kind of mode the match shell is currently rendering. */
 export type MatchModeId =
@@ -97,6 +98,7 @@ export interface LaunchSnapshot {
   readonly humanSquadId: SquadId; // always 0 in v1
   readonly aiSquadIds: readonly [SquadId, SquadId, SquadId, SquadId];
   readonly config: MatchConfigDigest;
+  readonly input: CompleteMatchLaunchConfig;
   readonly seed: string;
 }
 

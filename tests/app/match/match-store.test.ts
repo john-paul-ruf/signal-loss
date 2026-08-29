@@ -19,7 +19,7 @@ import {
   projectedPoolSpend,
 } from "../../../src/app/store/match";
 import type { AiStatus } from "../../../src/app/store/match";
-import type { SavedRosterV1 } from "../../../src/platform/index";
+import type { CompleteMatchLaunchConfig } from "../../../src/app/store/core/flow-store";
 import {
   soloRoster,
   testCatalog,
@@ -28,32 +28,34 @@ import { buildSimpleMap } from "../../fixtures/maps/simple";
 import type { ConstructId, Fx } from "../../../src/engine";
 import { constructId, squadId } from "../../../src/engine";
 
-function makeLaunch(): SavedRosterV1 {
-  const engineRoster = soloRoster();
+function makeLaunch(): CompleteMatchLaunchConfig {
+  const humanRoster = soloRoster();
   return {
-    id: "roster:1",
-    name: "test-roster",
+    human: {
+      source: { kind: "saved", id: "roster:1", name: "test-roster" },
+      roster: humanRoster,
+      shareString: "SL1-human",
+    },
+    aiRosters: [
+      { constructs: [{ chassisCode: 11 as never, commanderCode: 1 as never, mounts: [] }] },
+      { constructs: [{ chassisCode: 12 as never, commanderCode: 2 as never, mounts: [] }] },
+      { constructs: [{ chassisCode: 10 as never, commanderCode: 3 as never, mounts: [] }] },
+      { constructs: [{ chassisCode: 11 as never, commanderCode: 2 as never, mounts: [] }] },
+    ],
+    aiRosterShareStrings: ["SL1-ai1", "SL1-ai2", "SL1-ai3", "SL1-ai4"],
+    map: buildSimpleMap("match-solo"),
+    seed: "seed-08",
     budget: 25,
-    constructs: engineRoster.constructs.map((c) => ({ ...c, mounts: c.mounts.slice() })),
-  } as SavedRosterV1;
+    aiTier: 1,
+    selector: { kind: "any" },
+    resolvedArchetypeId: "arena" as never,
+  };
 }
 
 function bootStore(): ReturnType<typeof createMatchStore> {
   const store = createMatchStore();
   const catalog = testCatalog();
-  const map = buildSimpleMap("match-solo");
-  const ok = store.getState().boot(
-    {
-      rosterId: "roster:1",
-      roster: makeLaunch(),
-      budget: 25,
-      seed: "seed-08",
-      archetypeCode: null,
-      aiTierId: "t1",
-    },
-    catalog,
-    map,
-  );
+  const ok = store.getState().boot(makeLaunch(), catalog);
   if (!ok) throw new Error("boot failed");
   return store;
 }
@@ -69,29 +71,24 @@ describe("match-store — boot", () => {
     expect(s.drafts.deploymentDrafts.size).toBe(0);
     expect(s.ai.size).toBe(0);
     expect(s.lastError).toBeNull();
+    expect(s.engine?.constructs.map((construct) => construct.chassisCode as number)).toEqual([10, 11, 12, 10, 11]);
+    expect(s.launch?.input).toEqual(makeLaunch());
   });
 
   it("reports a create failure with a CREATE_FAILED error", () => {
     const store = createMatchStore();
     // Pass a null-y catalog so createMatch surfaces validation errors —
     // easiest to construct via a stub roster whose chassis is unknown.
-    const badRoster = {
-      id: "roster:1",
-      name: "bad",
-      budget: 25,
-      constructs: [{ chassisCode: 9999, commanderCode: null, mounts: [] }],
-    } as SavedRosterV1;
+    const badLaunch = makeLaunch();
     const ok = store.getState().boot(
       {
-        rosterId: "roster:1",
-        roster: badRoster,
-        budget: 25,
-        seed: "s",
-        archetypeCode: null,
-        aiTierId: "t1",
+        ...badLaunch,
+        human: {
+          ...badLaunch.human,
+          roster: { constructs: [{ chassisCode: 9999 as never, commanderCode: null, mounts: [] }] },
+        },
       },
       testCatalog(),
-      buildSimpleMap("bad"),
     );
     expect(ok).toBe(false);
     expect(store.getState().lastError?.kind).toBe("CREATE_FAILED");
@@ -338,4 +335,3 @@ function getSlot(
 ): AiStatus | undefined {
   return store.getState().ai.get(sq) as AiStatus | undefined;
 }
-
