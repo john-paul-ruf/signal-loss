@@ -2,8 +2,11 @@ import * as React from "react";
 import { BoardCanvas } from "../../board";
 import type { DeploymentBoardState } from "../../board/BoardCanvas";
 import { useMatchStore } from "../../store/match";
-import { pointInPoly } from "../../../engine";
 import type { MatchConstruct, Vec2 } from "../../../engine";
+import {
+  classifyDeploymentPlacement,
+  type DeploymentPlacementCheck,
+} from "./deployment-placement";
 
 const SELECT_HINT = "SELECT A UNIT, THEN CLICK YOUR SPAWN";
 
@@ -19,6 +22,7 @@ const SELECT_HINT = "SELECT A UNIT, THEN CLICK YOUR SPAWN";
 export function DeploymentMode(): React.ReactElement {
   const engine = useMatchStore((s) => s.engine);
   const launch = useMatchStore((s) => s.launch);
+  const catalog = useMatchStore((s) => s.catalog);
   const drafts = useMatchStore((s) => s.drafts);
   const selectedConstructId = useMatchStore((s) => s.selection.selectedConstructId);
   const selectConstruct = useMatchStore((s) => s.selectConstruct);
@@ -32,7 +36,6 @@ export function DeploymentMode(): React.ReactElement {
   }
 
   const humanSquad = launch.humanSquadId as number;
-  const spawn = engine.map.spawns[humanSquad];
   const own = engine.constructs.filter((c) => (c.squadId as number) === humanSquad);
   const placedCount = drafts.deploymentDrafts.size;
 
@@ -47,17 +50,18 @@ export function DeploymentMode(): React.ReactElement {
       ? nextUnplaced
       : null;
 
-  function classify(world: Vec2, index: number): { valid: boolean; reason: string | null } {
-    if (spawn === undefined || !pointInPoly(world, spawn.polygon)) {
-      return { valid: false, reason: "OUT OF SPAWN REGION" };
+  function classify(world: Vec2, index: number): DeploymentPlacementCheck {
+    if (engine === null || launch === null || catalog === null) {
+      return { valid: false, reason: "CATALOG UNAVAILABLE", violationKind: null };
     }
-    for (const [idx, pos] of drafts.deploymentDrafts) {
-      if (idx === index) continue;
-      if ((pos.x as number) === (world.x as number) && (pos.y as number) === (world.y as number)) {
-        return { valid: false, reason: "SPOT OCCUPIED BY ANOTHER CONSTRUCT" };
-      }
-    }
-    return { valid: true, reason: null };
+    return classifyDeploymentPlacement(
+      engine,
+      launch.humanSquadId,
+      index,
+      world,
+      drafts.deploymentDrafts,
+      catalog,
+    );
   }
 
   const activeConstruct = targetRosterIndex === null ? undefined : own[targetRosterIndex];
@@ -92,9 +96,9 @@ export function DeploymentMode(): React.ReactElement {
               setHover(null);
               return;
             }
-            const { valid } = classify(world, targetRosterIndex);
-            setHover({ position: world, valid });
-            if (valid) setReason(null);
+            const check = classify(world, targetRosterIndex);
+            setHover({ position: world, valid: check.valid });
+            setReason(check.valid ? null : check.reason);
             return;
           }
           if (kind !== "click") return;
