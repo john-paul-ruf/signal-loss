@@ -17,7 +17,7 @@
 | 02 | Deliver Event-True Playback and Controls | M09, M18, M19, M20, M22 | movement event files; playback board/components/screen; focused engine/app/browser tests | done | 4/4 | 2026-08-29 | Delivered event-true playback projection, truthful command-bar transport, progressive logging, reduced-motion parity, exact AI readiness gates, and reusable real-match browser coverage. |
 | 03 | Make Human Combat Honest and Operable | M19, M20, M22 | attack screen/model/components/styles; focused app tests | done | 2/2 | 2026-08-29 | Delivered public-safe engine-backed attack previews, exact hit routing, guarded pool edits, keyboard controls, playback spend reporting, and production attack styling. |
 | 04 | Make Match Summary Accounting Authoritative | M09, M17, M22 | `./src/engine/match/end-round.ts`; `./src/app/store/core/result-summary.ts`; focused tests | done | 2/2 | 2026-08-29 | Corrected exactly-once pool waste accounting and added the authoritative, event-derived match result summary contract. |
-| 05 | Close the Real Match Loop and Result Flow | M17, M19, M20, M22 | flow result contract; result mode/route/components; combat/full-loop browser tests | in-progress | 0/4 | — | Launched by Jikijitsu with the Zen split-phase binding on OpenAI Codex. |
+| 05 | Close the Real Match Loop and Result Flow | M17, M19, M20, M22 | flow result contract; result mode/route/components; combat/full-loop browser tests | done | 4/4 | 2026-08-29 | Completed authoritative result handoff, standalone summary route, rematch/copy actions, and real browser match-loop coverage. |
 
 ## Wave Plan
 
@@ -120,4 +120,5 @@ flowchart TD
 
 ### SESSION-05
 
-—
+- **notes:** Completed authoritative result handoff, standalone summary route, rematch/copy actions, and real browser match-loop coverage.
+- **followUp:** Fix the static-bundle migration preload path outside this lease so the standard preview-based Playwright configuration can execute. Architecture delta is in .forge/signal/SESSION-05.arch.md.
