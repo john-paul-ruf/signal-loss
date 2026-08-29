@@ -365,9 +365,6 @@ export function advanceRoundAndRefill(
   for (let sq = 0; sq < SQUAD_COUNT; sq = sq + 1) {
     const s = state.squads[sq];
     if (s === undefined) continue;
-    // Roll cumulative pool granted/wasted counters BEFORE recomputing.
-    const carriedWaste = Math.max(0, s.poolTotal - s.poolSpent);
-    const wasted = s.totalPoolWasted + carriedWaste;
     // Refill pool via poolFor over the pre-transition state.
     const breakdown = poolFor(state, s.id, catalog);
     newSquads.push({
@@ -375,7 +372,6 @@ export function advanceRoundAndRefill(
       poolTotal: breakdown.total,
       poolSpent: 0,
       totalPoolGranted: s.totalPoolGranted + breakdown.total,
-      totalPoolWasted: wasted,
     });
     events.push({
       kind: "POOL_REFILL",

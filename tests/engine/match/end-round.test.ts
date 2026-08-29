@@ -4,12 +4,15 @@ import type { Vec2 } from "../../../src/engine/fx/index";
 import {
   applyTrace,
   applyDestruction,
+  advanceRoundAndRefill,
   checkElimination,
   currentTraceStep,
+  resolveAttackPhase,
+  resolveAttackStage,
   snapshotStartOfRound,
   squadId,
 } from "../../../src/engine/match/index";
-import type { MatchState } from "../../../src/engine/match/index";
+import type { MatchState, SquadAttackPlot } from "../../../src/engine/match/index";
 import { soloMatchConfig, makeCloseSoloMatch, makeDeployedSoloMatch } from "../../fixtures/matches/simple-match";
 
 function v(x: number, y: number): Vec2 {
@@ -18,6 +21,20 @@ function v(x: number, y: number): Vec2 {
 
 function withRound(state: MatchState, round: number): MatchState {
   return { ...state, round };
+}
+
+function emptyAttackPlots(): [
+  SquadAttackPlot,
+  SquadAttackPlot,
+  SquadAttackPlot,
+  SquadAttackPlot,
+  SquadAttackPlot,
+] {
+  return [0, 1, 2, 3, 4].map((id) => ({
+    squadId: squadId(id),
+    attacks: [],
+    postures: [],
+  })) as unknown as ReturnType<typeof emptyAttackPlots>;
 }
 
 describe("match/end-round / currentTraceStep", () => {
@@ -187,5 +204,65 @@ describe("match/end-round / trace advancing dial to destruction cascades", () =>
     if (dEvents[0]?.kind === "DESTROYED") {
       expect(dEvents[0].cause).toBe("TRACE");
     }
+  });
+});
+
+describe("match/end-round / cumulative pool accounting", () => {
+  it("counts each completed round's waste once while preserving spend counters", () => {
+    const catalog = soloMatchConfig().catalog;
+    let state = { ...makeCloseSoloMatch(), phase: "ATTACK_PLOT" as const };
+    const human = state.constructs.find((construct) => (construct.squadId as number) === 0)!;
+
+    const roundOnePlots = emptyAttackPlots();
+    roundOnePlots[0] = {
+      squadId: squadId(0),
+      attacks: [],
+      postures: [{ constructId: human.id, posture: "POSTURE" }],
+    };
+    const roundOne = resolveAttackStage(state, roundOnePlots, catalog);
+    expect(roundOne.ok).toBe(true);
+    if (!roundOne.ok) return;
+
+    const afterRoundOne = roundOne.value.state.squads[0];
+    expect(afterRoundOne.totalPoolGranted).toBe(state.squads[0].poolTotal);
+    expect(afterRoundOne.totalPoolSpent).toBe(1);
+    expect(afterRoundOne.totalPoolWasted).toBe(state.squads[0].poolTotal - 1);
+    expect(afterRoundOne.totalCalledShots).toBe(0);
+    expect(afterRoundOne.totalPostures).toBe(1);
+
+    const advanced = advanceRoundAndRefill(roundOne.value.state, catalog);
+    state = { ...advanced.state, phase: "ATTACK_PLOT" };
+    expect(state.round).toBe(2);
+    expect(state.squads[0].totalPoolWasted).toBe(afterRoundOne.totalPoolWasted);
+
+    const roundTwo = resolveAttackStage(state, emptyAttackPlots(), catalog);
+    expect(roundTwo.ok).toBe(true);
+    if (!roundTwo.ok) return;
+    const totals = roundTwo.value.state.squads[0];
+    expect(totals.totalPoolGranted).toBe(totals.totalPoolSpent + totals.totalPoolWasted);
+    expect(totals.totalCalledShots).toBe(0);
+    expect(totals.totalPostures).toBe(1);
+  });
+
+  it("includes unused pool once when the attack phase completes the match", () => {
+    const catalog = soloMatchConfig().catalog;
+    const base = makeCloseSoloMatch();
+    const terminal: MatchState = {
+      ...base,
+      phase: "ATTACK_PLOT",
+      constructs: base.constructs.map((construct) =>
+        (construct.squadId as number) === 0
+          ? construct
+          : { ...construct, destroyed: true, destroyedRound: base.round },
+      ),
+    };
+    const result = resolveAttackPhase(terminal, emptyAttackPlots(), catalog);
+    expect(result.ok).toBe(true);
+    if (!result.ok) return;
+    expect(result.value.state.phase).toBe("COMPLETE");
+    const human = result.value.state.squads[0];
+    expect(human.totalPoolGranted).toBe(terminal.squads[0].poolTotal);
+    expect(human.totalPoolSpent).toBe(0);
+    expect(human.totalPoolWasted).toBe(terminal.squads[0].poolTotal);
   });
 });
