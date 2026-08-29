@@ -37,30 +37,65 @@ function useMatchStoreApi(): StoreApi<MatchStore> {
 }
 
 /**
+ * One memoized snapshot. Keyed by selector, equality function, and store
+ * state identity so a selector that derives a fresh array/object (e.g.
+ * `selectHumanConstructs`) still yields a stable reference across renders
+ * of one unchanged store state — the identity contract
+ * `useSyncExternalStore` requires.
+ */
+interface SnapshotCache<T> {
+  readonly selector: (state: MatchStore) => T;
+  readonly equal: (left: T, right: T) => boolean;
+  readonly state: MatchStore;
+  readonly value: T;
+}
+
+/**
  * Minimal `useSyncExternalStore` wrapper. React re-renders only if the
  * selected slice value changes by reference (or by `equal` if given).
+ *
+ * The `getSnapshot` passed to React must be referentially stable for an
+ * unchanged store state, so the cache lives inside the getter (not after
+ * it). A derived selector returning a new array each call would otherwise
+ * make React see a changed snapshot every render and loop.
  */
 export function useMatchStore<T>(
   selector: (state: MatchStore) => T,
   equal: (a: T, b: T) => boolean = Object.is,
 ): T {
   const store = useMatchStoreApi();
-  const getSnapshot = React.useCallback((): T => selector(store.getState()), [selector, store]);
+  const cache = React.useRef<SnapshotCache<T> | null>(null);
+  const getSnapshot = React.useCallback((): T => {
+    const state = store.getState();
+    const prior = cache.current;
+    if (
+      prior !== null &&
+      prior.selector === selector &&
+      prior.equal === equal &&
+      prior.state === state
+    ) {
+      return prior.value;
+    }
+    const next = selector(state);
+    if (
+      prior !== null &&
+      prior.selector === selector &&
+      prior.equal === equal &&
+      equal(prior.value, next)
+    ) {
+      // Value is unchanged by the caller's equality — keep the prior
+      // reference but advance the cached state so identity stays stable.
+      cache.current = { selector, equal, state, value: prior.value };
+      return prior.value;
+    }
+    cache.current = { selector, equal, state, value: next };
+    return next;
+  }, [store, selector, equal]);
   const subscribe = React.useCallback(
     (onChange: () => void): (() => void) => store.subscribe(onChange),
     [store],
   );
-  const value = React.useSyncExternalStore(subscribe, getSnapshot, getSnapshot);
-  const cache = React.useRef<{ has: boolean; value: T }>({ has: false, value } as { has: boolean; value: T });
-  if (!cache.current.has) {
-    cache.current = { has: true, value };
-    return value;
-  }
-  if (equal(cache.current.value, value)) {
-    return cache.current.value;
-  }
-  cache.current = { has: true, value };
-  return value;
+  return React.useSyncExternalStore(subscribe, getSnapshot, getSnapshot);
 }
 
 /**
