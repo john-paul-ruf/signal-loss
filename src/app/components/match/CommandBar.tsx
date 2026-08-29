@@ -18,6 +18,7 @@ export function CommandBar(): React.ReactElement {
   const engine = useMatchStore((s) => s.engine);
   const launch = useMatchStore((s) => s.launch);
   const drafts = useMatchStore((s) => s.drafts);
+  const ai = useMatchStore((s) => s.ai);
   const applyDeployment = useMatchStore((s) => s.applyDeployment);
   const resolveMovement = useMatchStore((s) => s.resolveMovement);
   const resolveAttack = useMatchStore((s) => s.resolveAttack);
@@ -39,6 +40,24 @@ export function CommandBar(): React.ReactElement {
   const deploymentComplete =
     engine !== null && launch !== null && humanConstructCount > 0 && deploymentUnplaced === 0;
 
+  // AI readiness: every launch AI squad must carry a READY_DEPLOY slot before
+  // BEGIN MATCH is offered. Mouse and keyboard share this single predicate,
+  // derived from the launch tuple + the READY_DEPLOY discriminant (never a
+  // map-size heuristic). A failure never enables the action.
+  const aiSlots =
+    launch !== null ? launch.aiSquadIds.map((squad) => ai.get(squad as number)) : [];
+  const aiDeploymentReady =
+    launch !== null && aiSlots.every((slot) => slot?.kind === "READY_DEPLOY");
+  const deploymentReady = deploymentComplete && aiDeploymentReady;
+  const anyAiFailed = aiSlots.some((slot) => slot?.kind === "ERROR");
+  const aiStatus: string | null = !deploymentComplete
+    ? null
+    : anyAiFailed
+      ? "AI DEPLOYMENT FAILED"
+      : aiDeploymentReady
+        ? null
+        : "WAITING FOR AI DEPLOYMENT";
+
   // Ctrl+Enter fires the mode's commit action.
   React.useEffect(() => {
     function onKey(e: KeyboardEvent): void {
@@ -55,7 +74,7 @@ export function CommandBar(): React.ReactElement {
       } else if (mode === "DEPLOYMENT") {
         e.preventDefault();
         // Same gate as the button — the keyboard path cannot bypass it.
-        if (deploymentComplete) applyDeployment();
+        if (deploymentReady) applyDeployment();
       } else if (
         (mode === "MOVEMENT_PLAYBACK" || mode === "ATTACK_PLAYBACK") &&
         playbackDone
@@ -66,7 +85,7 @@ export function CommandBar(): React.ReactElement {
     }
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
-  }, [mode, applyDeployment, playbackFinish, playbackDone, deploymentComplete]);
+  }, [mode, applyDeployment, playbackFinish, playbackDone, deploymentReady]);
 
   function openMoveConfirm(): void {
     setConfirmOpen("MOVE");
@@ -86,7 +105,7 @@ export function CommandBar(): React.ReactElement {
           type="button"
           className="command-bar__commit"
           onClick={applyDeployment}
-          disabled={!deploymentComplete}
+          disabled={!deploymentReady}
           data-testid="commit-deployment"
         >
           BEGIN MATCH ⌃⏎
@@ -162,6 +181,15 @@ export function CommandBar(): React.ReactElement {
             data-testid="deploy-remaining"
           >
             {deploymentUnplaced} CONSTRUCT{deploymentUnplaced === 1 ? "" : "S"} UNPLACED
+          </span>
+        ) : null}
+        {mode === "DEPLOYMENT" && aiStatus !== null ? (
+          <span
+            className="command-bar__status"
+            role="status"
+            data-testid="deploy-ai-status"
+          >
+            {aiStatus}
           </span>
         ) : null}
         {button}

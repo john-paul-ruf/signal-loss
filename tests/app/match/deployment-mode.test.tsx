@@ -23,6 +23,7 @@ import { DeploymentMode } from "../../../src/app/screens/match/DeploymentMode";
 import { CommandBar } from "../../../src/app/components/match/CommandBar";
 import { soloRoster, testCatalog } from "../../fixtures/matches/simple-match";
 import { buildSimpleMap } from "../../fixtures/maps/simple";
+import { squadId } from "../../../src/engine";
 import type { SavedRosterV1 } from "../../../src/platform/index";
 
 function bootStore(): ReturnType<typeof createMatchStore> {
@@ -119,13 +120,34 @@ describe("CommandBar — deployment commit gate", () => {
     expect(html).toContain("NO TIMER — COMMIT WHEN READY");
   });
 
-  it("enables BEGIN MATCH once every construct is placed", () => {
+  it("enables BEGIN MATCH once every human construct AND every AI squad is ready", () => {
+    const store = bootStore();
+    const engine = store.getState().engine;
+    const anchor = engine?.map.spawns[0]?.anchor;
+    if (anchor === undefined) throw new Error("no spawn anchor");
+    store.getState().setDeploymentDraft(0, anchor);
+    // AI readiness is now part of the gate — seed a legal READY_DEPLOY slot
+    // for each of the four AI squads.
+    for (let sq = 1; sq <= 4; sq = sq + 1) {
+      const aiAnchor = engine?.map.spawns[sq]?.anchor;
+      if (aiAnchor === undefined) throw new Error(`no spawn anchor ${sq}`);
+      store.getState().markAiReadyDeploy(squadId(sq), [{ rosterIndex: 0, position: aiAnchor }]);
+    }
+    const html = renderCommandBar(store);
+    expect(commitButton(html)).not.toContain("disabled");
+    expect(html).not.toContain("UNPLACED");
+  });
+
+  it("keeps BEGIN MATCH disabled while humans are placed but AI is not ready", () => {
     const store = bootStore();
     const anchor = store.getState().engine?.map.spawns[0]?.anchor;
     if (anchor === undefined) throw new Error("no spawn anchor");
     store.getState().setDeploymentDraft(0, anchor);
     const html = renderCommandBar(store);
-    expect(commitButton(html)).not.toContain("disabled");
+    expect(commitButton(html)).toContain("disabled");
+    // Human completion alone is not enough — the AI-waiting status shows.
+    expect(html).toContain('data-testid="deploy-ai-status"');
+    expect(html).toContain("WAITING FOR AI DEPLOYMENT");
     expect(html).not.toContain("UNPLACED");
   });
 });
