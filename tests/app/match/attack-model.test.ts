@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import {
   effectiveDialLength,
   exchangePreview,
+  legalAttackPlot,
   publicView,
   squadId,
   type ConstructId,
@@ -9,7 +10,15 @@ import {
   type PublicState,
   type Vec2,
 } from "../../../src/engine";
-import { buildAttackExchangeModel, outcomeReason } from "../../../src/app/components/match/attack-model";
+import {
+  buildAttackExchangeModel,
+  guardCalledToggle,
+  guardPostureToggle,
+  outcomeReason,
+  poolBalance,
+  routeAttackHit,
+} from "../../../src/app/components/match/attack-model";
+import { buildHumanAttackPlot, type HumanDraftState } from "../../../src/app/store/match";
 import { makeCloseSoloMatch, testCatalog } from "../../fixtures/matches/simple-match";
 
 function publicCopyState(state: MatchState, view: PublicState): MatchState {
@@ -130,5 +139,71 @@ describe("attack model", () => {
     expect(model.positionLabel).toBe("POSITION CONFIRMED");
     expect(state).toEqual(beforeState);
     expect(view).toEqual(beforeView);
+  });
+
+  it("routes only exact living hits and never substitutes a nearest target", () => {
+    const state = makeCloseSoloMatch();
+    const own = state.constructs[0]!;
+    const enemy = state.constructs[1]!;
+
+    expect(routeAttackHit(state.constructs, squadId(0), own.id, null)).toEqual({ kind: "NONE" });
+    expect(routeAttackHit(state.constructs, squadId(0), null, own.id)).toEqual({
+      kind: "SELECT",
+      constructId: own.id,
+    });
+    expect(routeAttackHit(state.constructs, squadId(0), own.id, enemy.id)).toEqual({
+      kind: "TARGET",
+      attackerId: own.id,
+      targetId: enemy.id,
+    });
+    expect(routeAttackHit(state.constructs, squadId(0), null, enemy.id)).toEqual({ kind: "NONE" });
+    const destroyed = state.constructs.map((construct) =>
+      construct.id === enemy.id ? { ...construct, destroyed: true } : construct,
+    );
+    expect(routeAttackHit(destroyed, squadId(0), own.id, enemy.id)).toEqual({ kind: "NONE" });
+  });
+
+  it("guards called and posture independently, refuses first overspend, and permits refunds", () => {
+    const state = makeCloseSoloMatch();
+    const own = state.constructs[0]!;
+    const enemy = state.constructs[1]!;
+    const empty: HumanDraftState = {
+      deploymentDrafts: new Map(),
+      moveDrafts: new Map(),
+      holdSet: new Set(),
+      attackDrafts: new Map(),
+      postureDrafts: new Map(),
+    };
+    expect(guardCalledToggle(state, squadId(0), empty, 2, own.id)).toMatchObject({
+      accepted: false,
+      reason: "NO_TARGET",
+    });
+    const shot: HumanDraftState = {
+      ...empty,
+      attackDrafts: new Map([[own.id as number, { targetId: enemy.id, called: false }]]),
+    };
+    expect(guardCalledToggle(state, squadId(0), shot, 2, own.id)).toMatchObject({ accepted: true, active: true });
+    const both: HumanDraftState = {
+      ...shot,
+      attackDrafts: new Map([[own.id as number, { targetId: enemy.id, called: true }]]),
+      postureDrafts: new Map([[own.id as number, "POSTURE"]]),
+    };
+    expect(poolBalance(state, squadId(0), both, 2)).toEqual({ total: 2, spent: 2, remaining: 0, overspentBy: 0 });
+    expect(guardCalledToggle(state, squadId(0), both, 2, own.id)).toMatchObject({ accepted: true, active: false });
+    expect(guardPostureToggle(state, squadId(0), both, 2, own.id)).toMatchObject({ accepted: true, active: false });
+    const postureOnly: HumanDraftState = {
+      ...shot,
+      postureDrafts: new Map([[own.id as number, "POSTURE"]]),
+    };
+    expect(guardCalledToggle(state, squadId(0), postureOnly, 1, own.id)).toMatchObject({
+      accepted: false,
+      reason: "POOL_EXHAUSTED",
+    });
+    const clearedTarget: HumanDraftState = { ...postureOnly, attackDrafts: new Map() };
+    expect(poolBalance(state, squadId(0), clearedTarget, 1)).toMatchObject({ spent: 1, remaining: 0 });
+    expect(clearedTarget.postureDrafts.get(own.id as number)).toBe("POSTURE");
+
+    const attackState = { ...state, phase: "ATTACK_PLOT" as const };
+    expect(legalAttackPlot(attackState, squadId(0), buildHumanAttackPlot(attackState, squadId(0), both))).toEqual([]);
   });
 });

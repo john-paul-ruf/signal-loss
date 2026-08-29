@@ -1,12 +1,17 @@
 import type {
   Catalog,
   ConstructId,
+  Event,
   ExchangeCard,
+  MatchConstruct,
   MatchState,
   PublicState,
   ShotOutcome,
+  SquadId,
 } from "../../../engine";
 import { effectiveDialLength, exchangePreview } from "../../../engine";
+import type { HumanDraftState } from "../../store/match";
+import { projectedPoolSpend } from "../../store/match";
 
 export interface DialTransition {
   readonly from: number;
@@ -32,6 +37,22 @@ export interface AttackExchangeModel {
     readonly posture: AttackOutcomeCell;
   };
 }
+
+export interface PoolBalance {
+  readonly total: number;
+  readonly spent: number;
+  readonly remaining: number;
+  readonly overspentBy: number;
+}
+
+export type GuardedToggle =
+  | { readonly accepted: true; readonly active: boolean; readonly balance: PoolBalance }
+  | { readonly accepted: false; readonly reason: "NO_TARGET" | "POOL_EXHAUSTED"; readonly balance: PoolBalance };
+
+export type AttackHitCommand =
+  | { readonly kind: "NONE" }
+  | { readonly kind: "SELECT"; readonly constructId: ConstructId }
+  | { readonly kind: "TARGET"; readonly attackerId: ConstructId; readonly targetId: ConstructId };
 
 /**
  * Preview an exchange against the human observer's public positions. The
@@ -88,6 +109,89 @@ export function outcomeReason(outcome: ShotOutcome): string {
     case "SELF_TARGET":
       return "SELF TARGET";
   }
+}
+
+export function poolBalance(
+  state: MatchState,
+  squadId: SquadId,
+  drafts: HumanDraftState,
+  poolTotal: number,
+): PoolBalance {
+  const spent = projectedPoolSpend(state, squadId, drafts).total;
+  return {
+    total: poolTotal,
+    spent,
+    remaining: Math.max(0, poolTotal - spent),
+    overspentBy: Math.max(0, spent - poolTotal),
+  };
+}
+
+export function guardCalledToggle(
+  state: MatchState,
+  squadId: SquadId,
+  drafts: HumanDraftState,
+  poolTotal: number,
+  constructId: ConstructId,
+): GuardedToggle {
+  const balance = poolBalance(state, squadId, drafts, poolTotal);
+  const attack = drafts.attackDrafts.get(constructId as number);
+  if (attack === undefined) return { accepted: false, reason: "NO_TARGET", balance };
+  if (attack.called) return { accepted: true, active: false, balance };
+  if (balance.remaining === 0) return { accepted: false, reason: "POOL_EXHAUSTED", balance };
+  return { accepted: true, active: true, balance };
+}
+
+export function guardPostureToggle(
+  state: MatchState,
+  squadId: SquadId,
+  drafts: HumanDraftState,
+  poolTotal: number,
+  constructId: ConstructId,
+): GuardedToggle {
+  const balance = poolBalance(state, squadId, drafts, poolTotal);
+  if (drafts.postureDrafts.get(constructId as number) === "POSTURE") {
+    return { accepted: true, active: false, balance };
+  }
+  if (balance.remaining === 0) return { accepted: false, reason: "POOL_EXHAUSTED", balance };
+  return { accepted: true, active: true, balance };
+}
+
+export function routeAttackHit(
+  constructs: readonly MatchConstruct[],
+  humanSquadId: SquadId,
+  selectedId: ConstructId | null,
+  hitId: ConstructId | null,
+): AttackHitCommand {
+  if (hitId === null) return { kind: "NONE" };
+  const hit = constructs.find((construct) => construct.id === hitId);
+  if (hit === undefined || hit.destroyed) return { kind: "NONE" };
+  if (hit.squadId === humanSquadId) return { kind: "SELECT", constructId: hit.id };
+  const selected = constructs.find((construct) => construct.id === selectedId);
+  if (selected === undefined || selected.destroyed || selected.squadId !== humanSquadId) {
+    return { kind: "NONE" };
+  }
+  return { kind: "TARGET", attackerId: selected.id, targetId: hit.id };
+}
+
+export function committedHumanSpend(
+  events: readonly Event[],
+  beforeState: MatchState,
+  humanSquadId: SquadId,
+): { readonly called: number; readonly postures: number; readonly total: number } {
+  const humanIds = new Set(
+    beforeState.constructs
+      .filter((construct) => construct.squadId === humanSquadId)
+      .map((construct) => construct.id as number),
+  );
+  let called = 0;
+  let postures = 0;
+  for (const event of events) {
+    if (event.kind === "SHOT" && event.called && humanIds.has(event.attackerId as number)) called += 1;
+    if (event.kind === "POSTURE_REVEAL" && event.posture === "POSTURE" && event.squadId === humanSquadId) {
+      postures += 1;
+    }
+  }
+  return { called, postures, total: called + postures };
 }
 
 function cellsFor(

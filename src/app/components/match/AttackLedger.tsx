@@ -1,119 +1,129 @@
 import * as React from "react";
 import { useMatchStore, matchSelectors } from "../../store/match";
-import type { ConstructId, MatchConstruct } from "../../../engine";
+import type { ConstructId } from "../../../engine";
 import { ExchangeCard } from "./ExchangeCard";
+import { guardCalledToggle, guardPostureToggle, poolBalance } from "./attack-model";
+import "./attack-ledger.css";
 
-/**
- * Attack ledger (design.md §5.7). One row per living own construct
- * with independent target and posture controls. Selection wires to
- * the store's attack-draft slice; posture is a separate draft slice
- * so a construct can posture without shooting.
- */
-export function AttackLedger(): React.ReactElement {
+export interface AttackLedgerProps {
+  readonly onFeedback?: (message: string) => void;
+}
+
+export function AttackLedger({ onFeedback = () => undefined }: AttackLedgerProps): React.ReactElement {
   const own = useMatchStore(matchSelectors.selectHumanConstructs);
   const enemies = useMatchStore(matchSelectors.selectKnownEnemyList);
-  const drafts = useMatchStore((s) => s.drafts);
-  const setAttack = useMatchStore((s) => s.setAttackDraft);
-  const clearAttack = useMatchStore((s) => s.clearAttackDraft);
-  const setPosture = useMatchStore((s) => s.setPostureDraft);
-  const clearPosture = useMatchStore((s) => s.clearPostureDraft);
-  const selectConstruct = useMatchStore((s) => s.selectConstruct);
-  const selectedId = useMatchStore((s) => s.selection.selectedConstructId);
-
-  const living: MatchConstruct[] = own.filter((c) => !c.destroyed);
+  const engine = useMatchStore((state) => state.engine);
+  const launch = useMatchStore((state) => state.launch);
+  const pool = useMatchStore(matchSelectors.selectHumanPool);
+  const drafts = useMatchStore((state) => state.drafts);
+  const setAttack = useMatchStore((state) => state.setAttackDraft);
+  const clearAttack = useMatchStore((state) => state.clearAttackDraft);
+  const setPosture = useMatchStore((state) => state.setPostureDraft);
+  const clearPosture = useMatchStore((state) => state.clearPostureDraft);
+  const selectConstruct = useMatchStore((state) => state.selectConstruct);
+  const selectedId = useMatchStore((state) => state.selection.selectedConstructId);
+  const living = own.filter((construct) => !construct.destroyed);
+  const balance = engine !== null && launch !== null && pool !== null
+    ? poolBalance(engine, launch.humanSquadId, drafts, pool.total)
+    : null;
 
   return (
     <section className="attack-ledger" aria-label="Attack ledger">
+      <header className="attack-ledger__heading">
+        <span>ATTACK LEDGER</span>
+        <strong data-testid="attack-pool-remaining">{balance?.remaining ?? 0} REMAINING</strong>
+      </header>
       <ul className="attack-ledger__list" role="list">
-        {living.map((c) => {
-          const attack = drafts.attackDrafts.get(c.id as number);
-          const posture = drafts.postureDrafts.get(c.id as number);
+        {living.map((construct, index) => {
+          const attack = drafts.attackDrafts.get(construct.id as number);
+          const posture = drafts.postureDrafts.get(construct.id as number);
+          const selected = construct.id === selectedId;
           return (
             <li
-              key={c.id as number}
-              className={
-                "attack-ledger__row" +
-                ((c.id as number) === (selectedId as number | null) ? " attack-ledger__row--selected" : "")
-              }
-              data-testid={`attack-row-${c.id as number}`}
-              onClick={() => selectConstruct(c.id)}
+              key={construct.id as number}
+              className={`attack-ledger__row${selected ? " attack-ledger__row--selected" : ""}`}
+              data-testid={`attack-row-${construct.id as number}`}
             >
-              <header className="attack-ledger__row-header">
+              <button
+                type="button"
+                className="attack-ledger__row-header"
+                aria-pressed={selected}
+                aria-label={`Select construct ${construct.id as number}`}
+                onClick={() => selectConstruct(construct.id)}
+              >
+                <kbd>{index === 9 ? "0" : index + 1}</kbd>
+                <span className="attack-ledger__glyph" aria-hidden="true">▲</span>
                 <span className="attack-ledger__code">
-                  {c.chassisCode}-{String(c.id as number).padStart(2, "0")}
+                  {construct.chassisCode}-{String(construct.id as number).padStart(2, "0")}
                 </span>
-                {c.commanderCode !== null ? (
-                  <span className="attack-ledger__cmd">◆CMD</span>
-                ) : null}
-                <span className="attack-ledger__dial">
-                  {"●".repeat(c.dialIndex) + "○".repeat(Math.max(0, 5 - c.dialIndex))}
+                {construct.commanderCode !== null ? <span className="attack-ledger__cmd">◆ CMD</span> : null}
+                <span className="attack-ledger__dial" aria-label={`Dial state ${construct.dialIndex}`}>
+                  {"●".repeat(construct.dialIndex) + "○".repeat(Math.max(0, 5 - construct.dialIndex))}
                 </span>
-              </header>
+              </button>
               <div className="attack-ledger__controls">
                 <label>
                   <span>TARGET</span>
                   <select
-                    value={attack?.targetId as number | undefined ?? ""}
-                    onChange={(e) => {
-                      const v = e.target.value;
-                      if (v === "") clearAttack(c.id);
-                      else
-                        setAttack(
-                          c.id,
-                          parseInt(v, 10) as unknown as ConstructId,
-                          attack?.called ?? false,
-                        );
+                    value={(attack?.targetId as number | undefined) ?? ""}
+                    onChange={(event) => {
+                      const value = event.target.value;
+                      if (value === "") clearAttack(construct.id);
+                      else setAttack(construct.id, Number(value) as unknown as ConstructId, attack?.called ?? false);
                     }}
-                    aria-label={`Target for construct ${c.id as number}`}
+                    aria-label={`Target for construct ${construct.id as number}`}
                   >
-                    <option value="">— no target —</option>
-                    {enemies
-                      .filter((k) => !k.base.destroyed)
-                      .map((k) => (
-                        <option key={k.base.id as number} value={k.base.id as number}>
-                          #{k.base.id as number} {k.base.chassisCode}{k.confirmed ? "" : " (ghost)"}
-                        </option>
-                      ))}
+                    <option value="">— DECLARE TARGET —</option>
+                    {enemies.filter((known) => !known.base.destroyed).map((known) => (
+                      <option key={known.base.id as number} value={known.base.id as number}>
+                        #{known.base.id as number} {known.base.chassisCode}{known.confirmed ? "" : " · POSITION UNCONFIRMED"}
+                      </option>
+                    ))}
                   </select>
                 </label>
-                <button
-                  type="button"
-                  className={
-                    "attack-ledger__called" +
-                    (attack?.called ? " attack-ledger__called--on" : "")
-                  }
-                  disabled={attack === undefined}
-                  onClick={() => {
-                    if (attack === undefined) return;
-                    setAttack(c.id, attack.targetId, !attack.called);
-                  }}
-                  aria-pressed={attack?.called ?? false}
-                  data-testid={`called-toggle-${c.id as number}`}
-                >
-                  CALLED · 1pt
-                </button>
-                <button
-                  type="button"
-                  className={
-                    "attack-ledger__posture" +
-                    (posture === "POSTURE" ? " attack-ledger__posture--on" : "")
-                  }
-                  onClick={() => {
-                    if (posture === "POSTURE") clearPosture(c.id);
-                    else setPosture(c.id, "POSTURE");
-                  }}
-                  aria-pressed={posture === "POSTURE"}
-                  data-testid={`posture-toggle-${c.id as number}`}
-                >
-                  {posture === "POSTURE" ? "POSTURE · 1pt" : "FLAT · free"}
-                </button>
+                <div className="attack-ledger__toggle-group" role="group" aria-label={`Shot type for construct ${construct.id as number}`}>
+                  <button type="button" aria-pressed={!attack?.called} disabled={attack === undefined} onClick={() => {
+                    if (attack !== undefined && attack.called) setAttack(construct.id, attack.targetId, false);
+                  }}>NORMAL <span>0PT</span></button>
+                  <button
+                    type="button"
+                    aria-pressed={attack?.called ?? false}
+                    disabled={attack === undefined}
+                    data-testid={`called-toggle-${construct.id as number}`}
+                    onClick={() => {
+                      if (engine === null || launch === null || pool === null || attack === undefined) return;
+                      const result = guardCalledToggle(engine, launch.humanSquadId, drafts, pool.total, construct.id);
+                      if (!result.accepted) {
+                        onFeedback("POOL EXHAUSTED — 0 REMAINING");
+                        return;
+                      }
+                      setAttack(construct.id, attack.targetId, result.active);
+                    }}
+                  >» CALLED <span>1PT</span></button>
+                </div>
+                <div className="attack-ledger__toggle-group" role="group" aria-label={`Posture for construct ${construct.id as number}`}>
+                  <button type="button" aria-pressed={posture !== "POSTURE"} onClick={() => clearPosture(construct.id)}>
+                    FLAT <span>0PT</span>
+                  </button>
+                  <button
+                    type="button"
+                    aria-pressed={posture === "POSTURE"}
+                    data-testid={`posture-toggle-${construct.id as number}`}
+                    onClick={() => {
+                      if (engine === null || launch === null || pool === null) return;
+                      const result = guardPostureToggle(engine, launch.humanSquadId, drafts, pool.total, construct.id);
+                      if (!result.accepted) {
+                        onFeedback("POOL EXHAUSTED — 0 REMAINING");
+                        return;
+                      }
+                      if (result.active) setPosture(construct.id, "POSTURE");
+                      else clearPosture(construct.id);
+                    }}
+                  >⌐ POSTURE <span>1PT</span></button>
+                </div>
               </div>
               {attack !== undefined ? (
-                <ExchangeCard
-                  attackerId={c.id}
-                  targetId={attack.targetId}
-                  called={attack.called}
-                />
+                <ExchangeCard attackerId={construct.id} targetId={attack.targetId} called={attack.called} />
               ) : null}
             </li>
           );

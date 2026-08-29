@@ -1,0 +1,246 @@
+.attack-ledger {
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  background: color-mix(in srgb, var(--color-panel) 96%, transparent);
+  color: var(--color-ink);
+}
+
+.attack-ledger__heading {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  min-height: 36px;
+  padding: 8px 12px;
+  border-bottom: 1px solid var(--color-line);
+  font-size: 10px;
+  letter-spacing: var(--tracking-hlabel);
+}
+
+.attack-ledger__heading strong {
+  color: var(--color-sys);
+  font-family: var(--font-mono);
+  font-size: 10px;
+}
+
+.attack-ledger__list {
+  flex: 1;
+  overflow-y: auto;
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+
+.attack-ledger__row {
+  padding: 10px 12px;
+  border-bottom: 1px solid var(--color-line);
+  border-left: 2px solid transparent;
+  background: var(--color-panel);
+}
+
+.attack-ledger__row--selected {
+  border-left-color: var(--color-sys);
+  background: var(--color-panel-3);
+}
+
+.attack-ledger__row-header {
+  display: flex;
+  width: 100%;
+  align-items: center;
+  gap: 8px;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+.attack-ledger__row-header kbd {
+  padding: 1px 4px;
+  border: 1px solid var(--color-line-2);
+  color: var(--color-ink-3);
+  font-family: var(--font-mono);
+  font-size: 10px;
+}
+
+.attack-ledger__glyph {
+  color: var(--color-vector);
+}
+
+.attack-ledger__code,
+.attack-ledger__dial {
+  font-family: var(--font-mono);
+  font-variant-numeric: tabular-nums;
+}
+
+.attack-ledger__code {
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.attack-ledger__cmd {
+  color: var(--color-warn);
+  font-size: 9px;
+}
+
+.attack-ledger__dial {
+  margin-left: auto;
+  color: var(--color-bad);
+  font-size: 9px;
+  letter-spacing: 0.12em;
+}
+
+.attack-ledger__controls {
+  display: grid;
+  gap: 6px;
+  margin-top: 8px;
+}
+
+.attack-ledger__controls label {
+  display: grid;
+  grid-template-columns: 52px 1fr;
+  align-items: center;
+  gap: 8px;
+  color: var(--color-ink-4);
+  font-size: 9px;
+  letter-spacing: var(--tracking-hlabel);
+}
+
+.attack-ledger__controls select {
+  min-height: 28px;
+  border: 1px solid var(--color-line-2);
+  border-radius: 0;
+  background: var(--color-panel-2);
+  color: var(--color-ink);
+  font-family: var(--font-mono);
+  font-size: 10px;
+}
+
+.attack-ledger__toggle-group {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  border: 1px solid var(--color-line-2);
+}
+
+.attack-ledger__toggle-group button {
+  min-height: 28px;
+  border: 0;
+  border-right: 1px solid var(--color-line-2);
+  background: transparent;
+  color: var(--color-ink-3);
+  font-family: var(--font-display);
+  font-size: 10px;
+  letter-spacing: 0.1em;
+  cursor: pointer;
+}
+
+.attack-ledger__toggle-group button:last-child {
+  border-right: 0;
+}
+
+.attack-ledger__toggle-group button[aria-pressed="true"] {
+  background: var(--color-sys);
+  color: var(--color-void);
+  font-weight: 600;
+}
+
+.attack-ledger__toggle-group button:disabled {
+  color: var(--color-ink-4);
+  cursor: not-allowed;
+}
+
+.attack-ledger__toggle-group span {
+  font-family: var(--font-mono);
+  opacity: 0.72;
+}
+
+.exchange-card {
+  margin-top: 8px;
+  border: 1px solid var(--color-line-2);
+  background: var(--color-panel-2);
+}
+
+.exchange-card__header {
+  display: flex;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 6px 8px;
+  border-bottom: 1px solid var(--color-line);
+  color: var(--color-ink-2);
+  font-family: var(--font-mono);
+  font-size: 9px;
+}
+
+.exchange-card__position,
+.exchange-card__reason {
+  margin: 0;
+  padding: 5px 8px;
+  color: var(--color-ok);
+  font-family: var(--font-mono);
+  font-size: 9px;
+}
+
+.exchange-card__position--ghost {
+  color: var(--color-warn);
+}
+
+.exchange-card__matrix {
+  width: 100%;
+  border-collapse: collapse;
+  table-layout: fixed;
+  font-family: var(--font-mono);
+  font-size: 9px;
+  font-variant-numeric: tabular-nums;
+}
+
+.exchange-card__matrix th,
+.exchange-card__matrix td {
+  padding: 5px;
+  border: 1px solid var(--color-line);
+  text-align: center;
+}
+
+.exchange-card__matrix th {
+  color: var(--color-ink-3);
+  font-weight: 500;
+}
+
+.exchange-card__matrix td strong,
+.exchange-card__matrix td span {
+  display: block;
+}
+
+.exchange-card__matrix td strong {
+  color: var(--color-ink);
+  font-size: 14px;
+}
+
+.exchange-card__matrix td span {
+  margin-top: 2px;
+  color: var(--color-ink-4);
+  font-size: 8px;
+}
+
+.exchange-card__row--declared {
+  background: color-mix(in srgb, var(--color-sys) 9%, transparent);
+  box-shadow: inset 2px 0 var(--color-sys);
+}
+
+.exchange-card__reason[role="alert"] {
+  color: var(--color-bad);
+}
+
+.pool-ledger__remaining,
+.pool-ledger__invalid {
+  font-family: var(--font-mono);
+  font-size: 10px;
+}
+
+.pool-ledger__remaining {
+  color: var(--color-sys);
+}
+
+.pool-ledger__invalid {
+  color: var(--color-bad);
+}

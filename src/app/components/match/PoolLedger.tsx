@@ -1,5 +1,6 @@
 import * as React from "react";
 import { useMatchStore, matchSelectors, projectedPoolSpend } from "../../store/match";
+import { committedHumanSpend } from "./attack-model";
 
 /**
  * Pool ledger (FR-17, design.md §5.7). Always visible during attack
@@ -13,6 +14,7 @@ export function PoolLedger(): React.ReactElement {
   const launch = useMatchStore((s) => s.launch);
   const drafts = useMatchStore((s) => s.drafts);
   const mode = useMatchStore((s) => s.mode);
+  const playback = useMatchStore((s) => s.playback);
 
   const pool = matchSelectors.selectHumanPool({ engine, catalog, launch } as unknown as Parameters<typeof matchSelectors.selectHumanPool>[0]);
   if (pool === null || engine === null || launch === null) {
@@ -23,9 +25,14 @@ export function PoolLedger(): React.ReactElement {
       </div>
     );
   }
-  const spend = projectedPoolSpend(engine, launch.humanSquadId, drafts);
-  const remaining = pool.total - (mode === "ATTACK_PLOT" ? spend.total : engine.squads[launch.humanSquadId as number]?.poolSpent ?? 0);
-  const wasted = Math.max(0, remaining);
+  const draftSpend = projectedPoolSpend(engine, launch.humanSquadId, drafts);
+  const spend = mode === "ATTACK_PLAYBACK" && playback.beforeSnapshot !== null
+    ? committedHumanSpend(playback.events, playback.beforeSnapshot, launch.humanSquadId)
+    : draftSpend;
+  const rawRemaining = pool.total - spend.total;
+  const remaining = Math.max(0, rawRemaining);
+  const wasted = remaining;
+  const invalidDraft = rawRemaining < 0;
   const projected = mode === "MOVEMENT_PLOT" || mode === "MOVEMENT_PLAYBACK" || mode === "DEPLOYMENT";
   const term = pool.terms;
   const commanderTerm = term[1];
@@ -41,12 +48,12 @@ export function PoolLedger(): React.ReactElement {
     <div
       className={"pool-ledger" + (projected ? " pool-ledger--projected" : "")}
       role="group"
-      aria-label={`Reaction pool: ${pool.total} total, ${spend.total} projected spend, ${wasted} would waste`}
+      aria-label={`Reaction pool: ${pool.total} total, ${spend.total} spent, ${remaining} remaining${invalidDraft ? `, invalid draft overspent by ${-rawRemaining}` : ""}`}
     >
       <div className="pool-ledger__top">
         <span className="pool-ledger__label">POOL</span>
         <span className="pool-ledger__pips" aria-hidden="true">
-          {"◆".repeat(Math.min(6, pool.total)) + "◇".repeat(Math.max(0, spend.total))}
+          {"◆".repeat(Math.min(pool.total, spend.total)) + "◇".repeat(remaining)}
         </span>
         <span className="pool-ledger__count" data-testid="pool-total">
           {spend.total} / {pool.total} SPENT
@@ -59,6 +66,14 @@ export function PoolLedger(): React.ReactElement {
         <span>⌐ posture ×{spend.postures}</span>
         <span>» called ×{spend.called}</span>
       </div>
+      <div className="pool-ledger__remaining" data-testid="pool-remaining">
+        {remaining} REMAINING
+      </div>
+      {invalidDraft ? (
+        <div className="pool-ledger__invalid" role="alert">
+          INVALID DRAFT · {-rawRemaining} POINT{-rawRemaining === 1 ? "" : "S"} OVER POOL
+        </div>
+      ) : null}
       {wasted > 0 && !projected ? (
         <div className="pool-ledger__waste" role="alert">
           ⚠ {wasted} POINT{wasted === 1 ? "" : "S"} WILL BE LOST AT COMMIT
