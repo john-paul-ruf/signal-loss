@@ -11,7 +11,7 @@
 
 | # | Session | Modules | Owns | Status | Checkpoint | Completed | Notes |
 |---|---|---|---|---|---|---|---|
-| 01 | Restore Movement Plot Interaction | M18, M20, M22 | `./src/app/board/BoardCanvas.tsx`, `./src/app/screens/match/MovementMode.tsx`, `./tests/e2e/match/deployment-placement.spec.ts` | in-progress | 0/3 | — | Canvas hit ids are currently discarded and movement overlay drafts are hard-coded empty. |
+| 01 | Restore Movement Plot Interaction | M18, M20, M22 | `./src/app/board/BoardCanvas.tsx`, `./src/app/screens/match/MovementMode.tsx`, `./tests/e2e/match/deployment-placement.spec.ts` | blocked | 2/3 | 2026-08-29 | no handoff JSON; see `./.forge/results/SESSION-01.result.md`. |
 
 ## Wave Plan
 
@@ -54,3 +54,11 @@ flowchart TD
 6. **No engine, schema, AI, or attack changes:** those paths are read-only for this defect and are absent from the lease.
 
 ## Handoff Notes
+
+### SESSION-01 — blocked
+
+- **Reason:** no handoff JSON; see `./.forge/results/SESSION-01.result.md`.
+- **Zen result:** You've hit your weekly limit · resets Aug 31 at 8am (America/Chicago)
+- **Checkpoint evidence:** Mu committed checkpoints 1 and 2. Checkpoint 3 was not committed by Mu.
+- **Residual:** Jikijitsu committed the uncommitted lease work in `./tests/e2e/match/deployment-placement.spec.ts` as a session-end residual.
+- **Follow-up:** unavailable because the result contained no exit-contract JSON.
