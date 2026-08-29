@@ -1,4 +1,5 @@
 import * as React from "react";
+import "./confirm-modal.css";
 import { Button } from "./Button";
 import { FocusTrap } from "./FocusTrap";
 

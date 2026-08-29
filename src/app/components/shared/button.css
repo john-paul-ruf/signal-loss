@@ -1,0 +1,82 @@
+.sl-btn {
+  appearance: none;
+  min-height: 36px;
+  padding: 8px 16px;
+  border: 1px solid var(--color-line-2);
+  border-radius: 0;
+  background: transparent;
+  color: var(--color-ink);
+  font-family: var(--font-display);
+  font-size: 11px;
+  font-weight: 600;
+  line-height: 1.25;
+  letter-spacing: var(--tracking-hlabel);
+  text-transform: uppercase;
+  cursor: pointer;
+  user-select: none;
+}
+
+.sl-btn--primary {
+  border-color: var(--color-sys);
+  background: var(--color-sys);
+  color: var(--color-void);
+}
+
+.sl-btn--ghost {
+  border-color: var(--color-line-2);
+  background: transparent;
+  color: var(--color-ink-2);
+}
+
+.sl-btn--danger {
+  border-color: var(--color-bad);
+  border-style: dashed;
+  background: transparent;
+  color: var(--color-bad);
+  font-weight: 700;
+}
+
+.sl-btn--primary:hover:not(:disabled) {
+  border-color: var(--color-vector);
+  background: var(--color-vector);
+}
+
+.sl-btn--ghost:hover:not(:disabled) {
+  border-color: var(--color-sys);
+  background: var(--color-panel-2);
+  color: var(--color-ink);
+}
+
+.sl-btn--danger:hover:not(:disabled) {
+  border-style: solid;
+  background: var(--color-bad);
+  color: var(--color-void);
+}
+
+.sl-btn:active:not(:disabled) {
+  transform: translateY(1px);
+}
+
+.sl-btn:disabled {
+  border-color: var(--color-line);
+  border-style: dotted;
+  background: var(--color-panel-2);
+  color: var(--color-ink-3);
+  cursor: not-allowed;
+  filter: grayscale(1);
+  opacity: 0.45;
+}
+
+.sl-btn--loading {
+  position: relative;
+  padding-inline-end: 36px;
+}
+
+.sl-btn--loading::after {
+  content: "";
+  position: absolute;
+  top: calc(50% - 1px);
+  right: 14px;
+  width: 12px;
+  border-bottom: 2px dotted currentColor;
+}
