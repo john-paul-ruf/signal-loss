@@ -15,6 +15,9 @@ import { PlaybackMode } from "./PlaybackMode";
 import { ResultMode } from "./ResultMode";
 import { resolveCatalog } from "../../store/build/catalog";
 import { useFlowStore } from "../../store/core";
+import { createAiClient, browserAiWorker } from "../../bridge/ai-client";
+import { startAiDeployment } from "../../store/match/ai-deployment";
+import { resolveMatchAiConfig } from "../../store/match/ai-config";
 
 /**
  * Match screen entry. Owns the match store lifecycle — one store per
@@ -32,9 +35,53 @@ export function MatchScreen(): React.ReactElement {
   }
   return (
     <MatchStoreProvider store={storeRef.current}>
+      <AiDeploymentController />
       <MatchModeSwitch />
     </MatchStoreProvider>
   );
+}
+
+/**
+ * Match-lifetime AI deployment controller. Renders nothing; on entering the
+ * DEPLOYMENT phase with a booted store it spins one four-worker client and
+ * posts one deployment request per AI squad, wiring results to the store's
+ * typed slot actions. It is keyed on the engine revision + mode (NOT the
+ * mutable `ai` map), so incoming slot writes never cancel and restart the
+ * four in-flight requests. Cleanup — on phase change or unmount, including
+ * StrictMode's setup/cleanup cycle — cancels the run and disposes the client
+ * so no stale worker result writes into a new phase.
+ */
+function AiDeploymentController(): null {
+  const mode = useMatchStore((s) => s.mode);
+  const engine = useMatchStore((s) => s.engine);
+  const catalog = useMatchStore((s) => s.catalog);
+  const launch = useMatchStore((s) => s.launch);
+  const markAiPending = useMatchStore((s) => s.markAiPending);
+  const markAiReadyDeploy = useMatchStore((s) => s.markAiReadyDeploy);
+  const markAiError = useMatchStore((s) => s.markAiError);
+
+  React.useEffect(() => {
+    if (mode !== "DEPLOYMENT" || launch === null || catalog === null || engine === null) {
+      return;
+    }
+    const client = createAiClient({ poolSize: 4, factory: browserAiWorker });
+    const run = startAiDeployment({
+      engine,
+      catalog,
+      launch,
+      client,
+      config: resolveMatchAiConfig(),
+      onPending: markAiPending,
+      onReady: markAiReadyDeploy,
+      onError: markAiError,
+    });
+    return () => {
+      run.cancel();
+      client.dispose();
+    };
+  }, [mode, engine, catalog, launch, markAiPending, markAiReadyDeploy, markAiError]);
+
+  return null;
 }
 
 function MatchModeSwitch(): React.ReactElement {

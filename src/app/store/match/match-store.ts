@@ -435,6 +435,32 @@ export function createMatchStore(): StoreApi<MatchStore> {
         set({ lastError: { kind: "LAUNCH_MISSING" } });
         return false;
       }
+      // Defensive gate: never hand the engine a partial AI deployment. Every
+      // launch AI squad must have reached READY_DEPLOY. A missing / IDLE /
+      // PENDING slot is not-ready; an ERROR slot preserves its failure detail.
+      // This also protects a direct imperative caller that bypasses the button.
+      for (const sq of launch.aiSquadIds) {
+        const slot = ai.get(sq as number);
+        if (slot !== undefined && slot.kind === "READY_DEPLOY") continue;
+        if (slot !== undefined && slot.kind === "ERROR") {
+          set({
+            lastError: {
+              kind: "AI_FAILED",
+              squadId: sq,
+              message: `[${slot.errorKind}] ${slot.message}`,
+            },
+          });
+        } else {
+          set({
+            lastError: {
+              kind: "ENGINE_REJECTED",
+              stage: "DEPLOY",
+              message: `FR-12:AI_DEPLOYMENT_NOT_READY AI squad ${sq as number} has not completed deployment.`,
+            },
+          });
+        }
+        return false;
+      }
       const perSquad: [
         readonly Placement[],
         readonly Placement[],
