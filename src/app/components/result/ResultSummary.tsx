@@ -1,11 +1,12 @@
 import * as React from "react";
 import type { MatchResultSummary, PoolRoundResult } from "../../store/core";
 import { SQUAD_LADDER } from "../../store/build";
+import { copyText, resolveBrowserClipboard } from "../../../platform/clipboard";
 import "./result-summary.css";
 
-export interface ResultSummaryProps { readonly result: MatchResultSummary }
+export interface ResultSummaryProps { readonly result: MatchResultSummary; readonly busy?: boolean; readonly actionError?: string | null; readonly onSameSeed?: () => void; readonly onNewSeed?: () => void }
 
-export function ResultSummary({ result }: ResultSummaryProps): React.ReactElement {
+export function ResultSummary({ result, busy, actionError, onSameSeed, onNewSeed }: ResultSummaryProps): React.ReactElement {
   const humanConstructs = result.constructs.filter((entry) => (entry.squadId as number) === 0);
   const dealt = humanConstructs.reduce((total, entry) => total + entry.damageDealt, 0);
   const taken = humanConstructs.reduce((total, entry) => total + entry.damageTaken, 0);
@@ -30,7 +31,7 @@ export function ResultSummary({ result }: ResultSummaryProps): React.ReactElemen
 
         <section className="result-repro" aria-labelledby="repro-title"><div className="result-section-heading"><h2 id="repro-title">Reproducibility</h2><span>HUMAN + ALL FOUR AI ROSTERS</span></div><dl className="result-repro__facts"><Fact label="Seed" value={result.reproducibility.seed} /><Fact label="Budget" value={`${result.reproducibility.budget} PTS`} /><Fact label="Archetype" value={result.reproducibility.resolvedArchetypeId as string} /><Fact label="AI tier" value={`TIER ${result.reproducibility.aiTier}`} /><Fact label="Final hash" value={result.finalStateHash} /></dl><RosterStrings result={result} /></section>
       </div>
-      <footer className="result-footer"><p><strong>NO PROGRESSION — ROSTERS ARE UNCHANGED BY PLAY</strong><span>NO XP · NO UNLOCKS · NO PERSISTENT DAMAGE</span></p><nav aria-label="Result actions"><a href="#/build">BUILD ZONE</a></nav></footer>
+      <footer className="result-footer"><p><strong>NO PROGRESSION — ROSTERS ARE UNCHANGED BY PLAY</strong><span>NO XP · NO UNLOCKS · NO PERSISTENT DAMAGE</span>{actionError && <span role="alert">{actionError}</span>}</p><nav aria-label="Result actions"><a href="#/build">BUILD ZONE</a>{onNewSeed && <button type="button" disabled={busy} onClick={onNewSeed}>{busy ? "GENERATING…" : "REMATCH · NEW SEED"}</button>}{onSameSeed && <button type="button" disabled={busy} onClick={onSameSeed}>REMATCH · SAME SEED</button>}</nav></footer>
     </main>
   );
 }
@@ -45,7 +46,12 @@ function PoolChart({rounds}:{readonly rounds:readonly PoolRoundResult[]}):React.
 
 function RosterStrings({ result }: ResultSummaryProps): React.ReactElement {
   const strings = [result.reproducibility.humanRosterShareString, ...result.reproducibility.aiRosterShareStrings];
-  return <ul className="result-rosters">{strings.map((value, index) => <li key={index}><strong>{index === 0 ? "▲ VC · HUMAN ROSTER" : `${SQUAD_LADDER[index]?.glyph ?? "◇"} ${SQUAD_LADDER[index]?.tag ?? "AI"} · AI ROSTER ${index}`}</strong><code tabIndex={0}>{value}</code><span>SELECTABLE FOR MANUAL COPY</span></li>)}</ul>;
+  const [status, setStatus] = React.useState("Ready to copy roster strings.");
+  const copy = async (value: string, index: number): Promise<void> => {
+    const outcome = await copyText(value, resolveBrowserClipboard());
+    setStatus(outcome.ok ? `${index === 0 ? "Human" : `AI ${index}`} roster copied.` : outcome.error.kind === "UNSUPPORTED" ? "Clipboard unsupported — select the visible string and copy manually." : outcome.error.kind === "DENIED" ? "Clipboard permission denied — select the visible string and copy manually." : "Clipboard write failed — select the visible string and copy manually.");
+  };
+  return <><ul className="result-rosters">{strings.map((value, index) => <li key={index}><strong>{index === 0 ? "▲ VC · HUMAN ROSTER" : `${SQUAD_LADDER[index]?.glyph ?? "◇"} ${SQUAD_LADDER[index]?.tag ?? "AI"} · AI ROSTER ${index}`}</strong><code tabIndex={0}>{value}</code><button type="button" onClick={() => void copy(value, index)}>COPY</button></li>)}</ul><p className="result-copy-status" role="status" aria-live="polite">{status}</p></>;
 }
 
 function placement(value: number | null): string { if(value===null)return "UNRESOLVED";return `${value}${value===1?"ST":value===2?"ND":value===3?"RD":"TH"}`; }

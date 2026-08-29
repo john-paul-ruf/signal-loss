@@ -29,9 +29,11 @@ export {
 
 export {
   createFlowStore,
+  isCompleteMatchLaunchConfig,
   type FlowActions,
   type FlowState,
   type FlowStore,
+  type CompleteMatchLaunchConfig,
   type MatchLaunchConfig,
   type MatchResultPayload,
 } from "./flow-store";
