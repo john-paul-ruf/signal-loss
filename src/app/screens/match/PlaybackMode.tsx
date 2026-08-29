@@ -16,10 +16,19 @@ export function PlaybackMode(): React.ReactElement {
   const stepBy = useMatchStore((s) => s.playbackStepBy);
   const skip = useMatchStore((s) => s.playbackSkip);
   const setRunning = useMatchStore((s) => s.playbackSetRunning);
+  const setReducedMotion = useMatchStore((s) => s.setReducedMotion);
   const reducedMotion = useMatchStore((s) => s.present.reducedMotion);
   const [activeProgress, setActiveProgress] = React.useState(0);
   const hasRemainingEvents = React.useRef(false);
   hasRemainingEvents.current = playback.cursor < playback.events.length;
+
+  React.useEffect(() => {
+    const query = window.matchMedia("(prefers-reduced-motion: reduce)");
+    const sync = (): void => setReducedMotion(query.matches);
+    sync();
+    query.addEventListener("change", sync);
+    return () => query.removeEventListener("change", sync);
+  }, [setReducedMotion]);
 
   React.useEffect(() => {
     setRunning(!reducedMotion && hasRemainingEvents.current);
