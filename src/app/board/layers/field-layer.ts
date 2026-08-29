@@ -106,6 +106,12 @@ export function paintField(
       ctx.fillText("◆CMD", cx, cy + rPx + 10);
     }
 
+    if (s.posture !== null) {
+      ctx.font = "600 9px 'IBM Plex Mono', monospace";
+      ctx.fillStyle = s.posture === "POSTURE" ? "#FFB43C" : "#E8F2FB";
+      ctx.fillText(s.posture, cx, cy - rPx - 16);
+    }
+
     ctx.globalAlpha = 1;
   }
 

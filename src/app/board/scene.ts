@@ -55,14 +55,15 @@ export interface TerrainScene {
 export interface ConstructScene {
   readonly id: ConstructId;
   readonly squadId: SquadId;
-  readonly position: Vec2;
+  position: Vec2;
   readonly footprintFx: number;
-  readonly dialIndex: number;
+  dialIndex: number;
   readonly dialLength: number;
   readonly damage: number;
   readonly rangeFx: number;
   readonly isCommander: boolean;
-  readonly destroyed: boolean;
+  destroyed: boolean;
+  posture: "FLAT" | "POSTURE" | null;
   /** True iff this construct is a ghost (unconfirmed position). */
   readonly ghost: boolean;
   readonly driftFx: number;
@@ -87,6 +88,11 @@ export interface OverlayScene {
     readonly called: boolean;
     readonly landed: boolean;
     readonly damage: number;
+  }[];
+  readonly playbackPaths: readonly {
+    readonly walked: readonly Vec2[];
+    readonly unwalked: readonly Vec2[];
+    readonly label: string | null;
   }[];
 }
 
@@ -171,6 +177,7 @@ export function buildConstructScene(
       rangeFx: effectiveAttackRangeOf(known, catalog) as number,
       isCommander: known.base.commanderCode !== null,
       destroyed: known.base.destroyed,
+      posture: null,
       ghost,
       driftFx: known.driftRadius as number,
       lastSeenRound: known.confirmedRound,

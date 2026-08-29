@@ -2,6 +2,7 @@ import * as React from "react";
 import { useMatchStore, matchSelectors } from "../store/match";
 import type { KnownConstruct } from "../../engine";
 import { visualFor } from "./squad-visual";
+import type { PlaybackFrame } from "./playback";
 
 /**
  * Focusable DOM equivalent of the canvas scene (design.md §5.4,
@@ -11,7 +12,7 @@ import { visualFor } from "./squad-visual";
  * The list is visually presented off-screen but remains in the accessible
  * tree — reduced motion / screen readers use this exclusively.
  */
-export function AccessibleBoardTree(): React.ReactElement {
+export function AccessibleBoardTree(props: { readonly playbackFrame?: PlaybackFrame | null }): React.ReactElement {
   const pv = useMatchStore(matchSelectors.selectHumanPublicView);
   const catalog = useMatchStore((s) => s.catalog);
   const selectConstruct = useMatchStore((s) => s.selectConstruct);
@@ -24,6 +25,36 @@ export function AccessibleBoardTree(): React.ReactElement {
         aria-label="Board — semantic mirror"
         role="list"
       />
+    );
+  }
+
+  if (props.playbackFrame !== null && props.playbackFrame !== undefined) {
+    return (
+      <div className="accessible-tree" aria-label="Board — semantic playback mirror">
+        <ul role="list">
+          {props.playbackFrame.constructs.map((scene) => {
+            const visual = visualFor(scene.squadId);
+            const position = scene.ghost
+              ? `last seen round ${scene.lastSeenRound} · position unconfirmed · drift ±${scene.driftFx}`
+              : `at ${scene.position.x as number}, ${scene.position.y as number} · position confirmed`;
+            return (
+              <li key={scene.id as number}>
+                <button
+                  type="button"
+                  className="accessible-tree__item"
+                  aria-label={`${visual.name} · construct ${scene.id as number} · ${position} · dial ${scene.dialIndex}${scene.destroyed ? " · destroyed" : ""}${scene.posture === null ? "" : ` · ${scene.posture}`}`}
+                  onClick={() => { selectConstruct(scene.id); inspectConstruct(scene.id); }}
+                >
+                  {visual.glyph} {visual.tag}-{String(scene.id as number).padStart(2, "0")}
+                </button>
+              </li>
+            );
+          })}
+        </ul>
+        <div role="status" aria-live="polite">
+          {props.playbackFrame.announcements.join(" · ")}
+        </div>
+      </div>
     );
   }
 

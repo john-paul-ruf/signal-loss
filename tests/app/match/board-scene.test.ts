@@ -9,8 +9,10 @@ import {
   buildConstructScene,
   buildTerrainScene,
   extractShotLines,
+  projectPlaybackFrame,
 } from "../../../src/app/board";
-import { applyDeployments, publicView, squadId } from "../../../src/engine";
+import { applyDeployments, fxFromInt, publicView, squadId } from "../../../src/engine";
+import type { MatchState, Vec2 } from "../../../src/engine";
 import {
   soloCenterPlacements,
   soloMatchConfig,
@@ -22,6 +24,7 @@ import type { Event } from "../../../src/engine";
 function deployedPublicView(): {
   pv: ReturnType<typeof publicView>;
   catalog: ReturnType<typeof testCatalog>;
+  state: MatchState;
 } {
   const cfg = soloMatchConfig();
   const state = createMatch(cfg);
@@ -32,7 +35,7 @@ function deployedPublicView(): {
     cfg.catalog,
   );
   if (!deployed.ok) throw new Error("applyDeployments failed");
-  return { pv: publicView(deployed.value, squadId(0), cfg.catalog), catalog: cfg.catalog };
+  return { pv: publicView(deployed.value, squadId(0), cfg.catalog), catalog: cfg.catalog, state: deployed.value };
 }
 
 describe("scene/terrain — trace step lookup", () => {
@@ -47,6 +50,93 @@ describe("scene/terrain — trace step lookup", () => {
     if (scene.traceStep !== null && scene.nextTraceStep !== null) {
       expect(scene.nextTraceStep.index).toBeGreaterThan(scene.traceStep.index);
     }
+  });
+});
+
+describe("scene/playback — event prefix projection", () => {
+  it("interpolates an exact multi-segment movement and preserves the unwalked stub", () => {
+    const { state, catalog } = deployedPublicView();
+    const construct = state.constructs[0]!;
+    const bend = {
+      x: (construct.position.x as number) + (fxFromInt(1) as number),
+      y: construct.position.y,
+    } as Vec2;
+    const end = {
+      x: bend.x,
+      y: (bend.y as number) + (fxFromInt(1) as number),
+    } as Vec2;
+    const moved: Event = {
+      kind: "MOVED",
+      round: state.round,
+      constructId: construct.id,
+      from: construct.position,
+      stopPosition: end,
+      plottedPath: [construct.position, bend, end],
+      pathDistance: 2048,
+      plottedLength: 2048,
+      halted: false,
+    };
+    const atStart = projectPlaybackFrame(state, catalog, squadId(0), [moved], 0, 0);
+    const halfway = projectPlaybackFrame(state, catalog, squadId(0), [moved], 0, 0.5);
+    const atEnd = projectPlaybackFrame(state, catalog, squadId(0), [moved], 1, 0);
+    expect(atStart.constructs[0]?.position).toEqual(construct.position);
+    expect(halfway.constructs[0]?.position).toEqual(bend);
+    expect(atEnd.constructs[0]?.position).toEqual(end);
+    expect(halfway.paths[0]?.unwalked.at(-1)).toEqual(end);
+    expect(state.constructs[0]?.position).toEqual(construct.position);
+    expect(moved).toMatchObject({ plottedPath: [construct.position, bend, end] });
+  });
+
+  it("stages halt, posture, shot, dial, trace, destruction, and completion facts", () => {
+    const { state, catalog } = deployedPublicView();
+    const own = state.constructs[0]!;
+    const target = state.constructs[1]!;
+    const events: Event[] = [
+      { kind: "POSTURE_REVEAL", round: 1, constructId: own.id, posture: "POSTURE", squadId: own.squadId },
+      { kind: "SHOT", round: 1, attackerId: own.id, targetId: target.id, called: true, landed: true, damage: 1, targetPosture: "FLAT", baseDamage: 1 },
+      { kind: "DIAL_ADVANCED", round: 1, constructId: target.id, from: 0, to: 1 },
+      { kind: "TRACE_DAMAGE", round: 1, constructId: target.id, damage: 1, stepIndex: 0, safeRegionRound: 1 },
+      { kind: "DESTROYED", round: 1, constructId: target.id, squadId: target.squadId, cause: "TRACE", wasCommander: false },
+      { kind: "MATCH_COMPLETE", round: 1, winner: own.squadId, reason: "LAST_STANDING" },
+    ];
+    const frame = projectPlaybackFrame(state, catalog, squadId(0), events, events.length, 0);
+    expect(frame.constructs[0]?.posture).toBe("POSTURE");
+    expect(frame.shots).toHaveLength(1);
+    expect(frame.constructs[1]?.dialIndex).toBe(2);
+    expect(frame.constructs[1]?.destroyed).toBe(true);
+    expect(frame.matchComplete).toBe(true);
+  });
+
+  it("keeps an unconfirmed enemy at its public ghost position", () => {
+    const { state, catalog } = deployedPublicView();
+    const enemy = state.constructs[1]!;
+    const stale = {
+      ...state,
+      round: state.round + 1,
+      knownPositions: state.knownPositions.map((entry) =>
+        entry.subject === enemy.id && entry.observer === squadId(0)
+          ? { ...entry, confirmedRound: state.round }
+          : entry,
+      ),
+    };
+    const ghostBefore = publicView(stale, squadId(0), catalog).constructs.find((known) => known.base.id === enemy.id)!;
+    const hiddenEnd = { x: fxFromInt(9), y: fxFromInt(9) };
+    const moved: Event = {
+      kind: "MOVED",
+      round: stale.round,
+      constructId: enemy.id,
+      from: enemy.position,
+      stopPosition: hiddenEnd,
+      plottedPath: [enemy.position, hiddenEnd],
+      pathDistance: 1024,
+      plottedLength: 1024,
+      halted: false,
+    };
+    const frame = projectPlaybackFrame(stale, catalog, squadId(0), [moved], 1, 0);
+    const projected = frame.constructs.find((scene) => scene.id === enemy.id)!;
+    expect(projected.ghost).toBe(true);
+    expect(projected.position).toEqual(ghostBefore.position);
+    expect(projected.position).not.toEqual(hiddenEnd);
   });
 });
 

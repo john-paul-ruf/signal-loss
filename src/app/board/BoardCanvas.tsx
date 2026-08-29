@@ -9,6 +9,7 @@ import {
   buildConstructScene,
   extractShotLines,
 } from "./scene";
+import { projectPlaybackFrame } from "./playback";
 import { pathLengthFx } from "./input";
 import { paintTerrain } from "./layers/terrain-layer";
 import { paintField } from "./layers/field-layer";
@@ -73,6 +74,8 @@ export interface BoardCanvasProps {
    * preview. Absent / null for every non-deployment caller (inert).
    */
   readonly deployment?: DeploymentBoardState | null;
+  /** Presentation-only progress of the active playback beat, from 0 through 1. */
+  readonly playbackProgress?: number;
 }
 
 export type PointerActionKind = "move" | "click" | "double-click" | "leave";
@@ -108,6 +111,21 @@ export function BoardCanvas(props: BoardCanvasProps): React.ReactElement {
   }, []);
 
   const pv = useMatchStore(matchSelectors.selectHumanPublicView);
+  const playbackFrame = React.useMemo(() => {
+    if (
+      catalog === null ||
+      playback.beforeSnapshot === null ||
+      playback.stageKind === null
+    ) return null;
+    return projectPlaybackFrame(
+      playback.beforeSnapshot,
+      catalog,
+      playback.beforeSnapshot.squads[0].id,
+      playback.events,
+      playback.cursor,
+      props.playbackProgress ?? 0,
+    );
+  }, [catalog, playback, props.playbackProgress]);
 
   const camera = React.useMemo<Camera>(() => {
     if (pv === null) {
@@ -157,9 +175,9 @@ export function BoardCanvas(props: BoardCanvasProps): React.ReactElement {
     const ctx = canvas.getContext("2d");
     if (ctx === null) return;
     resizeCanvas(canvas, camera);
-    const scenes = buildConstructScene(pv, catalog);
+    const scenes = playbackFrame?.constructs ?? buildConstructScene(pv, catalog);
     paintField(ctx, scenes, camera, { highContrast: present.highContrastSquads });
-  }, [pv, catalog, camera, engineRevision, present.highContrastSquads]);
+  }, [pv, catalog, camera, engineRevision, present.highContrastSquads, playbackFrame]);
 
   // Overlay redraws on pointer + selection + playback cursor.
   React.useEffect(() => {
@@ -169,7 +187,7 @@ export function BoardCanvas(props: BoardCanvasProps): React.ReactElement {
     const ctx = canvas.getContext("2d");
     if (ctx === null) return;
     resizeCanvas(canvas, camera);
-    const scenes = buildConstructScene(pv, catalog);
+    const scenes = playbackFrame?.constructs ?? buildConstructScene(pv, catalog);
     const selection = selectionSlice.selectedConstructId;
     const selectionSc =
       selection === null
@@ -215,7 +233,8 @@ export function BoardCanvas(props: BoardCanvasProps): React.ReactElement {
         pathLengthFx: draftPath.length,
         allowanceFx: draftPath.allowance,
         overAllowance: draftPath.length > draftPath.allowance,
-        shots: extractShotLines(playback.events.slice(0, playback.cursor), scenes),
+        shots: playbackFrame?.shots ?? extractShotLines(playback.events.slice(0, playback.cursor), scenes),
+        playbackPaths: playbackFrame?.paths ?? [],
       },
       camera,
       deploymentOptions,
@@ -231,6 +250,7 @@ export function BoardCanvas(props: BoardCanvasProps): React.ReactElement {
     selectionSlice.hoveredWaypoint,
     playback.events,
     playback.cursor,
+    playbackFrame,
     deployment,
   ]);
 
@@ -277,7 +297,7 @@ export function BoardCanvas(props: BoardCanvasProps): React.ReactElement {
         onClick={(e) => onPointer("click")(e as unknown as React.PointerEvent<HTMLCanvasElement>)}
         onDoubleClick={(e) => onPointer("double-click")(e as unknown as React.PointerEvent<HTMLCanvasElement>)}
       />
-      <AccessibleBoardTree />
+      <AccessibleBoardTree playbackFrame={playbackFrame} />
     </div>
   );
 }

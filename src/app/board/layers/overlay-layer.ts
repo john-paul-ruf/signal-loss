@@ -135,6 +135,23 @@ export function paintOverlay(
     void worldDistanceOnScreen;
   }
 
+  for (const playbackPath of scene.playbackPaths) {
+    paintPolyline(ctx, playbackPath.walked, cam, false);
+    paintPolyline(ctx, playbackPath.unwalked, cam, true);
+    const stop = playbackPath.walked.at(-1);
+    if (playbackPath.label !== null && stop !== undefined) {
+      ctx.fillStyle = "#FFB43C";
+      ctx.font = "600 10px 'IBM Plex Mono', monospace";
+      ctx.textAlign = "left";
+      ctx.textBaseline = "bottom";
+      ctx.fillText(
+        playbackPath.label,
+        worldToScreenX(cam, stop.x) + 6,
+        worldToScreenY(cam, stop.y) - 6,
+      );
+    }
+  }
+
   // Deployment markers + hover preview (drawn last so they read above the
   // selection ring without disturbing it).
   if (deployment !== null) {
@@ -142,6 +159,27 @@ export function paintOverlay(
   }
 
   ctx.restore();
+}
+
+function paintPolyline(
+  ctx: CanvasRenderingContext2D,
+  path: readonly Vec2[],
+  cam: Camera,
+  dashed: boolean,
+): void {
+  if (path.length < 2) return;
+  ctx.strokeStyle = dashed ? "rgba(255,180,60,0.65)" : "#4DE1FF";
+  ctx.lineWidth = 2;
+  ctx.setLineDash(dashed ? [5, 4] : []);
+  ctx.beginPath();
+  path.forEach((point, index) => {
+    const x = worldToScreenX(cam, point.x);
+    const y = worldToScreenY(cam, point.y);
+    if (index === 0) ctx.moveTo(x, y);
+    else ctx.lineTo(x, y);
+  });
+  ctx.stroke();
+  ctx.setLineDash([]);
 }
 
 /**

@@ -46,3 +46,8 @@ export {
 } from "./squad-visual";
 
 export { AccessibleBoardTree } from "./accessible-tree";
+export {
+  projectPlaybackFrame,
+  type PlaybackFrame,
+  type PlaybackPath,
+} from "./playback";
