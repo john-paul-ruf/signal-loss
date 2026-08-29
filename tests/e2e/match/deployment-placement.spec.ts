@@ -16,16 +16,15 @@ import type { Fx, Vec2 } from "../../../src/engine";
  *   - the human spawn is labelled and BEGIN MATCH starts disabled at 0 / 3
  *   - a center click (outside squad 0's corner spawn) reports the reason
  *   - three interior clicks stage drafts, advance the count, and only then
- *     enable the irreversible commit
- *   - BEGIN MATCH hands off to the engine as the final authority, with no
- *     partial commit and no runtime crash
+ *     (once the four AI squads report READY_DEPLOY) enable the irreversible
+ *     commit
+ *   - BEGIN MATCH hands off to the engine as the final authority and the match
+ *     advances to MOVEMENT_PLOT with no partial commit and no runtime crash
  *
- * NOTE: in-match AI deployment orchestration is not yet wired in this build
- * (M15 workers / M17 store — outside this session's lease), so the engine
- * rejects the still-unplaced AI squads and the match does not yet advance to
- * MOVEMENT_PLOT. Step 5 accepts either the transition or that surfaced
- * rejection, so it proves the in-lease contract today and stays valid once
- * AI deployment lands.
+ * In-match AI deployment is now wired (M15 workers / M17 store): the match
+ * screen posts one deployment request per AI squad on entry, so BEGIN MATCH
+ * enables only after every AI squad is placed and the real five-squad
+ * simultaneous reveal succeeds. This spec requires that full transition.
  *
  * Canvas clicks are derived from the board's own bounding box and the known
  * generated geometry — never a window-absolute coordinate. `MAP_BOUNDS` and
@@ -61,6 +60,10 @@ const MAP_CENTER: Vec2 = { x: 0 as Fx, y: 0 as Fx };
 const FORBIDDEN = [
   "getSnapshot should be cached",
   "Maximum update depth",
+  "FR-12:PARTIAL_DEPLOYMENT",
+  "FR-12:AI_DEPLOYMENT_NOT_READY",
+  "Engine rejected DEPLOY",
+  "WORKER_DOWN",
 ];
 
 async function generateAndDeploy(page: Page): Promise<void> {
@@ -148,37 +151,27 @@ test.describe("deployment placement — real setup → match", () => {
     // A staged coordinate is visible in the HUD (board feedback, not a no-op).
     await expect(page.getByText(/✓ -?\d+, -?\d+/).first()).toBeVisible();
 
-    // 4 — commit is enabled only once every construct is down.
-    await expect(beginMatch).toBeEnabled();
+    // 4 — all three human constructs are down, but the commit stays gated
+    // until the four AI squads finish deploying in their workers. Wait for
+    // the shared human-plus-AI predicate to enable BEGIN MATCH.
     await expect(page.getByTestId("deploy-remaining")).toHaveCount(0);
+    await expect(beginMatch).toBeEnabled({ timeout: 30_000 });
 
     // 5 — the gate having passed, BEGIN MATCH hands off to applyDeployment,
-    // the final engine authority. On success the mode advances to movement
-    // plotting. In-match AI deployment orchestration is a separate, not-yet-
-    // wired concern (M15 workers / M17 store, outside this lease); until it
-    // lands the engine legitimately rejects the still-unplaced AI squads and
-    // surfaces ENGINE_REJECTED without partially committing. Accept either
-    // outcome, but never a silent no-op, a partial commit, or a runtime crash.
+    // the final engine authority. All five squads are placed, so the real
+    // simultaneous reveal succeeds and the mode advances to movement plotting.
     await beginMatch.click();
-    await expect
-      .poll(
-        async () =>
-          (await page.getByTestId("mode-movement").count()) > 0 ||
-          (await page.getByTestId("command-error").count()) > 0,
-        { timeout: 30_000 },
-      )
-      .toBe(true);
+    await expect(page.getByTestId("mode-movement")).toBeVisible({ timeout: 30_000 });
 
-    const advancedToMovement = (await page.getByTestId("mode-movement").count()) > 0;
-    if (!advancedToMovement) {
-      // Engine stayed the authority: still on the match route, deployment
-      // intact at 3 / 3, nothing partially committed.
-      await expect(page).toHaveURL(/#\/match$/);
-      await expect(page.getByTestId("mode-deployment")).toBeVisible();
-      await expect(page.getByTestId("deploy-count")).toHaveText("3 / 3 PLACED");
-    }
+    // The match advanced for real — still on the match route, the movement
+    // surface is up, the deployment HUD is gone (not a silent no-op), and no
+    // command error surfaced.
+    await expect(page).toHaveURL(/#\/match$/);
+    await expect(page.getByTestId("command-error")).toHaveCount(0);
+    await expect(page.getByTestId("mode-deployment")).toHaveCount(0);
 
-    // No React external-store / update-depth failure at any point.
+    // No partial-deployment, worker, or React external-store failure at any
+    // point in the flow.
     const offending = failures.filter((text) =>
       FORBIDDEN.some((needle) => text.includes(needle)),
     );
