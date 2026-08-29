@@ -2,7 +2,7 @@
 
 > **Path:** `./src/app/components/`
 > **Imports from:** M12, M17
-> **Status:** shared primitives shipped and verified in SESSION-02; build-zone display primitives shipped and verified in SESSION-07 checkpoints 1–2; match components shipped and verified in SESSION-08. A SESSION-07 retry landed one unverified composer component (`CommanderDeltaGrid.tsx`) — see Build display primitives below. Setup / result component subtrees remain fully unstarted, pending a further SESSION-07 retry.
+> **Status:** shared primitives shipped and verified in SESSION-02; build-zone display primitives shipped and verified in SESSION-07 checkpoints 1–2; match components shipped and verified in SESSION-08. A SESSION-07 retry landed one unverified composer component (`CommanderDeltaGrid.tsx`) — see Build display primitives below. The setup component subtree is now owned by the `match-setup-route` cycle (SESSION-04, not launched this cycle); the result component subtree remains unstarted, pending a further SESSION-07 retry.
 
 ## Public API
 
@@ -49,7 +49,7 @@
 |---|---|
 | Shared | `./src/app/components/shared/` |
 | Build (partial) | `./src/app/components/build/` |
-| Setup / result | `./src/app/components/setup/`, `./src/app/components/result/` — pending SESSION-07 retry |
+| Setup / result | `./src/app/components/setup/` — `match-setup-route` SESSION-04, not launched; `./src/app/components/result/` — pending SESSION-07 retry |
 | Match | `./src/app/components/match/` |
 
 ## Conventions and Invariants
@@ -73,3 +73,4 @@
 | 2026-08-28 | SESSION-07 checkpoints 1–2 shipped build display primitives (`CurveChart`, `DialPips`, `DialStatGrid`, `HardpointBadges`, `format.ts`). Setup / result / composer components remain pending checkpoints 3–5. |
 | 2026-08-28 | SESSION-08 shipped `./src/app/components/match/**` — the persistent match shell plus phase header, trace timeline, pool ledger, squad rail, inspector, round log, command bar, rules drawer, attack ledger, and exchange card. |
 | 2026-08-28 | SESSION-07 retry 1 (targeting checkpoint 3) returned no parseable handoff; residual `ed7b664` added `CommanderDeltaGrid.tsx` unverified. Setup / result component subtrees remain fully unstarted. |
+| 2026-08-28 | `match-setup-route` cycle: no component shipped under M19. The `./src/app/components/setup/**` subtree is now owned by `match-setup-route` SESSION-04, which was not launched (blocked behind SESSION-03); the result component subtree stays pending a SESSION-07 retry. |

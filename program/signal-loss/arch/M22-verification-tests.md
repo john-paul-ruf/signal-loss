@@ -2,7 +2,7 @@
 
 > **Path:** `./tests/`
 > **Imports from:** modules under test
-> **Status:** partial. Every session shipped and verified its owned test subtree through SESSION-08. Battery `.test.ts` script directories under `./tests/{determinism,playability,behavior,costing}/` remain intentionally empty (real coverage lives under `./tests/harness/**`); build-zone e2e specs were authored in SESSION-07 but remain unrun. A SESSION-07 retry additionally landed unverified composer unit/e2e specs — see Internal Structure.
+> **Status:** partial. Every session shipped and verified its owned test subtree through SESSION-08. Battery `.test.ts` script directories under `./tests/{determinism,playability,behavior,costing}/` remain intentionally empty (real coverage lives under `./tests/harness/**`); build-zone e2e specs were authored in SESSION-07 but remain unrun. A SESSION-07 retry additionally landed unverified composer unit/e2e specs — see Internal Structure. The `match-setup-route` cycle added and verified `./tests/app/core/flow-context.test.tsx` (SESSION-01) and `./tests/app/setup-generation/**` (SESSION-02); its SESSION-03 was blocked and SESSION-04 not launched, so no `match-store` / `match-launch` / setup-screen / setup-e2e specs were added this cycle.
 
 ## Public API
 
@@ -30,7 +30,8 @@ Subtrees present after SESSION-08:
 | Harness batteries | `./tests/harness/` (55 self-tests; content / seeds / report / runner / determinism / playability / behavior / costing / all / cli) | SESSION-06 |
 | Verification reports | `./docs/verification/` | SESSION-06 |
 | Platform | `./tests/platform/` (capability, clipboard, collection-repository) | SESSION-02 |
-| App core | `./tests/app/core/` (collection-store, flow-store, navigation-store, preferences-store, shared-components) | SESSION-02 |
+| App core | `./tests/app/core/` (collection-store, flow-store, navigation-store, preferences-store, shared-components — SESSION-02; `flow-context.test.tsx` — provider/SSR + no-storage structural asserts, `match-setup-route` SESSION-01) | SESSION-02 + `match-setup-route` SESSION-01 |
+| App setup-generation | `./tests/app/setup-generation/` (`mapgen-client.test.ts` — 7 tests; `setup-model.test.ts` — 13 tests) | `match-setup-route` SESSION-02 |
 | App build (partial) | `./tests/app/build/` (boot, codex, collection-view — verified; `composer.test.tsx` — residual, unverified, authored but never executed against a green build) | SESSION-07 checkpoints 1–2 + retry 1 residual |
 | App match | `./tests/app/match/` (57 new tests; store partitioning, drafts-not-on-MatchState structural asserts) | SESSION-08 |
 | Browser e2e (partial) | `./tests/e2e/build/*.spec.ts` (authored, unrun — includes residual `composer.spec.ts`); `./tests/e2e/match/` | SESSION-07 / 08 |
@@ -61,3 +62,5 @@ Subtrees present after SESSION-08:
 | 2026-08-28 | SESSION-07 checkpoints 1–2 shipped `./tests/app/build/` (boot / codex / collection-view) and authored (unrun) `./tests/e2e/build/*.spec.ts`. |
 | 2026-08-28 | SESSION-08 shipped `./tests/app/match/**` (57 new tests including structural asserts that human drafts never appear on `MatchState`). |
 | 2026-08-28 | SESSION-07 retry 1 (targeting checkpoint 3) returned no parseable handoff; residual `ed7b664` added `./tests/app/build/composer.test.tsx` and `./tests/e2e/build/composer.spec.ts` unverified — no run result was reported for this retry. |
+| 2026-08-28 | `match-setup-route` SESSION-01 shipped `./tests/app/core/flow-context.test.tsx` (provider/SSR coverage + structural no-storage asserts; part of an 8-test provider/core run). |
+| 2026-08-28 | `match-setup-route` SESSION-02 shipped `./tests/app/setup-generation/**` (`mapgen-client.test.ts` 7 tests + `setup-model.test.ts` 13 tests = 20; verified alongside 122 build/core consumer tests). |

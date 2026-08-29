@@ -2,7 +2,9 @@
 
 > **Path:** `./src/app/store/`, `./src/app/bridge/`
 > **Imports from:** M12, M14, M15
-> **Status:** core stores shipped and verified in SESSION-02; build stores shipped and verified through SESSION-07 checkpoints 1–2 of 5; AI-client bridge + match store shipped and verified in SESSION-08. A SESSION-07 retry landed an unverified composer draft store (`composer.ts`, `composer-context.ts`) — see Conventions below. The map-generation worker client (`./src/app/bridge/mapgen-client.ts`) and the setup/result stores remain fully unstarted, pending a further SESSION-07 retry.
+> **Status:** core stores shipped and verified in SESSION-02; the app-lifetime `FlowStoreProvider` seam over `createFlowStore()` shipped and verified in `match-setup-route` SESSION-01. Build stores shipped and verified through SESSION-07 checkpoints 1–2 of 5; AI-client bridge + match store shipped and verified in SESSION-08. A SESSION-07 retry landed an unverified composer draft store (`composer.ts`, `composer-context.ts`) — see Conventions below. The map-generation worker client (`./src/app/bridge/mapgen-client.ts`) and the deterministic setup-preparation service (`./src/app/store/build/setup-model.ts`) shipped and verified in `match-setup-route` SESSION-02. The atomic launch-contract extension (`MatchLaunchConfig` → `MatchStore.boot`) plus its match/result consumers remain unstarted: `match-setup-route` SESSION-03 was blocked at 0 checkpoints with no source committed, and its dependent routed setup screen (`match-setup-route` SESSION-04) was not launched.
+>
+> Session numbers restart per feature: bare `SESSION-0N` below refers to the original `full-v1` build; this cycle's sessions are written `match-setup-route` SESSION-0N.
 
 ## Public API
 
@@ -11,7 +13,12 @@
 - `createCollectionStore(repository)` — a Zustand vanilla store carrying loaded `PersistedStateV1`, `lastError`, boot flag, `persistenceUnavailable`, `corrupt` + `corruptRaw`. Actions: `boot`, `refresh`, `saveConstructCreate`, `saveConstructUpdate`, `saveRosterCreate`, `saveRosterUpdate`, `renameEntity`, `duplicateEntity`, `deleteEntity`, `savePreferences`, `resetCorruptStore`, `markExternallyChanged`. Every action returns a boolean success value; a failed write leaves state prior-version intact.
 - `createNavigationStore({initialPath?, requestNavigation?})` — `currentPath` + `navigationCount`; `navigate(path)` publishes via the callback and `hashChanged(path)` accepts inbound hash events.
 - `createPreferencesStore()` — mirror of `PersistedStateV1.preferences` plus a `resolvedReducedMotion` derived value that resolves persisted preference over the OS media query.
-- `createFlowStore()` — non-persisted `pendingLaunch: MatchLaunchConfig`, `lastResult: MatchResultPayload`, `requestedEntity`. `MatchLaunchConfig` and `MatchResultPayload` are handoff CONTRACTS between the setup/result flow (SESSION-07) and the match flow (SESSION-08); those sessions extend the union under their own store subpaths and MUST NOT persist them via `CollectionRepository` (they are transient by design).
+- `createFlowStore()` — non-persisted `pendingLaunch: MatchLaunchConfig`, `lastResult: MatchResultPayload`, `requestedEntity`. `MatchLaunchConfig` and `MatchResultPayload` are handoff CONTRACTS between the setup/result flow and the match flow; they are transient by design and MUST NOT be persisted via `CollectionRepository`. The backward-incompatible launch-field extension (adding the four generated AI rosters, generated map, and settings) is owned by `match-setup-route` SESSION-03 so it lands atomically with every match/result consumer; that session was blocked, so the contract shape is unchanged from `full-v1` today.
+- **App-lifetime flow provider seam** — `./src/app/store/core/flow-context.tsx` (`match-setup-route` SESSION-01) gives the existing transient `createFlowStore()` a single React owner, exported through the `./src/app/store/core/index.ts` facade (callers never deep-import the context path):
+  - `FlowStoreProvider(props: { children; store?: StoreApi<FlowStore> })` — mounts exactly one store per provider (lazy `useRef`) or adopts an injected `store` for tests. `./src/app/main.tsx` wraps `<App />` in it, below the root `ErrorBoundary` and inside `React.StrictMode`, so every hash route shares one transient instance across a hash transition. StrictMode's double render does not leak a second store — the ref guard retains one.
+  - `useFlowStore(selector, equal?)` — `useSyncExternalStore` selector hook mirroring `useMatchStore`; re-renders only when the selected slice changes by reference (or `equal`).
+  - `useFlowStoreApi()` — imperative store handle. Both hooks throw a named boundary error ("… outside FlowStoreProvider …") when called outside the provider rather than spinning up a second store.
+  - The provider touches no browser storage / `CollectionRepository` / migrations (structurally asserted in `./tests/app/core/flow-context.test.tsx`) and left the `FlowStore` shape and both handoff contracts unchanged.
 
 ### Build stores — `./src/app/store/build/` (SESSION-07 checkpoints 1–2 of 5)
 
@@ -100,54 +107,7 @@ everyConstructAccountedFor(state, squad, drafts): boolean;
 projectedPoolSpend(state, squad, drafts): { called, postures, total };
 ```
 
-## Internal Structure
-
-| Area | Path |
-|---|---|
-| Core stores | `./src/app/store/core/` (`collection-store.ts`, `flow-store.ts`, `navigation-store.ts`, `preferences-store.ts`, `index.ts`) |
-| Build stores (verified) | `./src/app/store/build/` (`catalog.ts`, `app-info.ts`, `squad-identity.ts`, `collection-model.ts`, `share.ts`, `collection-context.tsx`) |
-| Composer store (residual, unverified) | `./src/app/store/build/composer.ts`, `./src/app/store/build/composer-context.ts` |
-| Match store | `./src/app/store/match/` |
-| AI-client bridge | `./src/app/bridge/ai-client.ts` |
-| Map-generation client (pending) | `./src/app/bridge/mapgen-client.ts` — fully unstarted, pending a further SESSION-07 retry |
-
-## Conventions and Invariants
-
-- **Narrow Zustand selectors.** Private plots stay in human-local match state and never enter AI messages.
-- **Do not mirror engine rules in reducers; call the engine.** The build stores route legality through `validateRoster`; the match store routes commitment through `resolveMovementPhase` / `resolveAttackPhase`.
-- **Information contract (FR-24):** AI worker requests carry `PublicState` only. The match store's `resolveMovement` / `resolveAttack` build committed `SquadMovePlots` and `SquadAttackPlot` values from the human draft slice + the AI's `READY` slot payload. **Drafts NEVER appear as fields on `MatchState`** — structural asserts in `./tests/app/match/match-store.test.ts` prove the whitelist.
-- **Determinism (FR-29):** the AI worker client is a pure request/response passthrough. Two calls with identical `(seed, streamLabel, ...)` produce byte-identical request envelopes and, given the worker's determinism guarantee, byte-identical responses. Cancellation is a caller-side concern only; the eventual worker response is swallowed rather than dropped mid-flight.
-- **No timer / no wall clock on playback.** Every playback beat is a discrete engine `Event`. Beat durations are looked up from a static per-kind table scaled by a discrete speed multiplier (1× / 2× / 4×). The store carries no field named `timer`, `deadline`, `elapsed`, `msRemaining`, `startTs`, or `timeout` (asserted). Reduced-motion mode bypasses `setTimeout` entirely — the arrow keys advance the cursor.
-- **No engine mutation during playback.** The playback slice's `cursor` advances through the pre-committed event buffer; `engine` remains identically referentially equal (asserted). `playbackFinish` swaps `engine` for the pre-computed `afterSnapshot` in one `set`.
-- **Selector isolation.** Pointer-only slice writes (`hoverWaypoint`, `hoverTarget`, `selectConstruct` on the same id) do not touch the drafts, ai, or engine slice — asserted by identity comparisons on the whole match store.
-- **No network / no persistence in the match store.** The store writes NOTHING to `localStorage`. The result handoff is a single `signal-loss:match-result` DOM `CustomEvent` whose detail is the derived `MatchResultPayload`; the core flow store subscribes.
-- **Launch payload gap (temporary).** `boot(config, catalog, map)` currently seeds all five squads with the human roster because the pending SESSION-07 setup screen has not yet shipped AI-roster generation into the launch payload. The follow-up extends `MatchLaunchConfig` with `aiRosters: [Roster, Roster, Roster, Roster]` and threads through `boot()`.
-- **Shared worker factory.** The AI-worker client factory is a parameter — SESSION-07's pending setup screen should share the same factory with the match store to keep one worker pool.
-- **`preloadMigrationModule()` at app boot.** Must be called once at app boot before creating any `CollectionRepository` — the `CollectionProvider` awaits it.
-
-## Change History
-
-| Date | Change |
-|---|---|
-| 2026-08-28 | Genesis/Forge contract recorded; implementation pending. |
-| 2026-08-28 | SESSION-02 shipped `./src/app/store/core/**` (collection, navigation, preferences, and non-persisted flow store) with the `MatchLaunchConfig` / `MatchResultPayload` handoff contracts. |
-| 2026-08-28 | SESSION-07 checkpoints 1–2 shipped the build-store bridge (`catalog`, `squad-identity`, `collection-model`, `share`, `collection-context`). Composer / setup+mapgen / result stores remain pending checkpoints 3–5. |
-| 2026-08-28 | SESSION-08 shipped `./src/app/bridge/ai-client.ts` (typed multiplexed AI worker client) and `./src/app/store/match/**` (partitioned match store with drafts asserted off of `MatchState`, event-only playback with no wall-clock, and DOM `CustomEvent` result handoff). |
-| 2026-08-28 | SESSION-07 retry 1 (targeting checkpoint 3) returned no parseable handoff; residual `ed7b664` added `composer.ts` / `composer-context.ts` unverified. `mapgen-client.ts` and the setup/result stores remain fully unstarted. |
-
-<!-- SESSION-01 -->
-### Core stores — flow provider seam (`./src/app/store/core/flow-context.tsx`, SESSION-01)
-
-Adds the app-lifetime React owner for the existing non-persisted `createFlowStore()`; no change to the `FlowStore` shape or the `MatchLaunchConfig` / `MatchResultPayload` contracts. Exported through the `./src/app/store/core/index.ts` facade (callers never deep-import the context path):
-
-- `FlowStoreProvider(props: { children; store?: StoreApi<FlowStore> })` — mounts exactly one store per provider (lazy `useRef`), or adopts an injected `store` for tests. `./src/app/main.tsx` wraps `<App />` in it, below the root `ErrorBoundary` and inside `React.StrictMode`, so every hash route shares one transient instance across a hash transition. StrictMode's double render does not leak a second store — the ref guard retains one.
-- `useFlowStore(selector, equal?)` — `useSyncExternalStore` selector hook mirroring `useMatchStore`; re-renders only when the selected slice changes by reference (or `equal`).
-- `useFlowStoreApi()` — imperative store handle; both hooks throw a named boundary error ("… outside FlowStoreProvider …") when called outside the provider rather than spinning up a second store.
-
-Invariant: the provider touches no browser storage / `CollectionRepository` / migrations (structurally asserted in `./tests/app/core/flow-context.test.tsx`). The backward-incompatible launch-field extension of `MatchLaunchConfig` is deferred to SESSION-03 so it lands atomically with all consumers.
-
-<!-- SESSION-02 -->
-### Map-generation client — `./src/app/bridge/mapgen-client.ts` (SESSION-02)
+### Map-generation client — `./src/app/bridge/mapgen-client.ts` (`match-setup-route` SESSION-02)
 
 Typed, cancellable, request-id-multiplexed client over `./src/workers/mapgen.worker.ts`, mirroring `ai-client.ts` transport but with a map-specific surface. The worker's typed error is the product-visible truth — the client never retries or relaxes generation.
 
@@ -178,9 +138,9 @@ browserMapGenWorker(): MapWorkerTarget;      // Vite new Worker(new URL(..., imp
 - Cancellation swallows the eventual response (`cancelled`); `dispose()` drains outstanding calls as `WORKER_DOWN` and terminates without throwing.
 - Vite bundles `mapgen.worker-*.js` from the browser factory (verified in `npm run build`).
 
-### Setup-domain model — `./src/app/store/build/setup-model.ts` (SESSION-02)
+### Setup-preparation service — `./src/app/store/build/setup-model.ts` (`match-setup-route` SESSION-02)
 
-Headless, injected preparation service. From one displayed seed it derives ONE accepted map + FOUR legal AI rosters and returns a typed `PreparedSetup` for SESSION-04. No React, no route, no flow-store write, no persistence, no network. Reaches map generation ONLY through `MapGenClient` and AI roster generation ONLY through `AiClient` (`asRosterOk`) — no direct engine `generateMap` / `generateAiRoster` call.
+Headless, injected preparation service. From one displayed seed it derives ONE accepted map + FOUR legal AI rosters and returns a typed `PreparedSetup` for the pending routed setup screen (`match-setup-route` SESSION-04). No React, no route, no flow-store write, no persistence, no network. Reaches map generation ONLY through `MapGenClient` and AI roster generation ONLY through `AiClient` (`asRosterOk`) — no direct engine `generateMap` / `generateAiRoster` call.
 
 ```ts
 export interface SetupDraft { budget: Budget; aiTier: AiTier; selector: ArchetypeSelector; seed: string }
@@ -219,7 +179,46 @@ createSetupGenerationService(clients): SetupGenerationService;
 
 - Determinism: equal `(draft, catalog)` yields byte-identical prepared data; every MAP/AI request carries the same visible seed, budget, and catalog. Failure branch is checked map → squad1..4 in fixed order. No path retries with a derived or hidden seed.
 - Cancellation/race: `SetupGeneration.generationId` lets a screen disregard an earlier run; a late worker response for a cancelled generation resolves as `CANCELLED`, never as a newer result.
+- The `AI_ROSTER` worker request carries no tier field (roster generation is tier-independent), so `SetupDraft.aiTier` is preserved into `PreparedSetup` for match-config use, NOT threaded into roster generation.
 
-### Facade — `./src/app/store/build/index.ts` (SESSION-02)
+### Setup facade — `./src/app/store/build/index.ts` (`match-setup-route` SESSION-02)
 
 Additive re-exports only: all `setup-model` public constructors / validators / seed helper / service / result+error types, plus `createMapGenClient` + `browserMapGenWorker` and the map-client types from `../../bridge/mapgen-client`. Worker internals, pending-call maps, and test fakes are not exported. No existing export changed.
+
+## Internal Structure
+
+| Area | Path |
+|---|---|
+| Core stores | `./src/app/store/core/` (`collection-store.ts`, `flow-store.ts`, `flow-context.tsx`, `navigation-store.ts`, `preferences-store.ts`, `index.ts`) |
+| Build stores (verified) | `./src/app/store/build/` (`catalog.ts`, `app-info.ts`, `squad-identity.ts`, `collection-model.ts`, `share.ts`, `collection-context.tsx`, `setup-model.ts`, `index.ts` setup facade) |
+| Composer store (residual, unverified) | `./src/app/store/build/composer.ts`, `./src/app/store/build/composer-context.ts` |
+| Match store | `./src/app/store/match/` |
+| AI-client bridge | `./src/app/bridge/ai-client.ts` |
+| Map-generation client (verified) | `./src/app/bridge/mapgen-client.ts` (shipped in `match-setup-route` SESSION-02) |
+
+## Conventions and Invariants
+
+- **Narrow Zustand selectors.** Private plots stay in human-local match state and never enter AI messages.
+- **Do not mirror engine rules in reducers; call the engine.** The build stores route legality through `validateRoster`; the match store routes commitment through `resolveMovementPhase` / `resolveAttackPhase`.
+- **Information contract (FR-24):** AI worker requests carry `PublicState` only. The match store's `resolveMovement` / `resolveAttack` build committed `SquadMovePlots` and `SquadAttackPlot` values from the human draft slice + the AI's `READY` slot payload. **Drafts NEVER appear as fields on `MatchState`** — structural asserts in `./tests/app/match/match-store.test.ts` prove the whitelist.
+- **Determinism (FR-29):** the AI worker client is a pure request/response passthrough. Two calls with identical `(seed, streamLabel, ...)` produce byte-identical request envelopes and, given the worker's determinism guarantee, byte-identical responses. Cancellation is a caller-side concern only; the eventual worker response is swallowed rather than dropped mid-flight.
+- **No timer / no wall clock on playback.** Every playback beat is a discrete engine `Event`. Beat durations are looked up from a static per-kind table scaled by a discrete speed multiplier (1× / 2× / 4×). The store carries no field named `timer`, `deadline`, `elapsed`, `msRemaining`, `startTs`, or `timeout` (asserted). Reduced-motion mode bypasses `setTimeout` entirely — the arrow keys advance the cursor.
+- **No engine mutation during playback.** The playback slice's `cursor` advances through the pre-committed event buffer; `engine` remains identically referentially equal (asserted). `playbackFinish` swaps `engine` for the pre-computed `afterSnapshot` in one `set`.
+- **Selector isolation.** Pointer-only slice writes (`hoverWaypoint`, `hoverTarget`, `selectConstruct` on the same id) do not touch the drafts, ai, or engine slice — asserted by identity comparisons on the whole match store.
+- **No network / no persistence in the match store.** The store writes NOTHING to `localStorage`. The result handoff is a single `signal-loss:match-result` DOM `CustomEvent` whose detail is the derived `MatchResultPayload`; the core flow store subscribes.
+- **Launch payload gap (temporary).** `boot(config, catalog, map)` currently seeds all five squads with the human roster because the launch contract has not yet been extended with generated AI rosters. `match-setup-route` SESSION-02 shipped the preparation half — `createSetupGenerationService` produces four legal AI rosters plus one map — but the launch-contract half (extending `MatchLaunchConfig` with `aiRosters: [Roster, Roster, Roster, Roster]` and threading it through `boot()`) is owned by `match-setup-route` SESSION-03, which was blocked at 0 checkpoints. The gap remains until that session is retried.
+- **Shared worker factory.** The AI-worker client factory is a parameter — the pending routed setup screen (`match-setup-route` SESSION-04) should share the same AI-worker factory with the match store to keep one worker pool, and pass `browserMapGenWorker` as the map factory.
+- **`preloadMigrationModule()` at app boot.** Must be called once at app boot before creating any `CollectionRepository` — the `CollectionProvider` awaits it.
+
+## Change History
+
+| Date | Change |
+|---|---|
+| 2026-08-28 | Genesis/Forge contract recorded; implementation pending. |
+| 2026-08-28 | SESSION-02 shipped `./src/app/store/core/**` (collection, navigation, preferences, and non-persisted flow store) with the `MatchLaunchConfig` / `MatchResultPayload` handoff contracts. |
+| 2026-08-28 | SESSION-07 checkpoints 1–2 shipped the build-store bridge (`catalog`, `squad-identity`, `collection-model`, `share`, `collection-context`). Composer / setup+mapgen / result stores remain pending checkpoints 3–5. |
+| 2026-08-28 | SESSION-08 shipped `./src/app/bridge/ai-client.ts` (typed multiplexed AI worker client) and `./src/app/store/match/**` (partitioned match store with drafts asserted off of `MatchState`, event-only playback with no wall-clock, and DOM `CustomEvent` result handoff). |
+| 2026-08-28 | SESSION-07 retry 1 (targeting checkpoint 3) returned no parseable handoff; residual `ed7b664` added `composer.ts` / `composer-context.ts` unverified. `mapgen-client.ts` and the setup/result stores remain fully unstarted. |
+| 2026-08-28 | `match-setup-route` SESSION-01 added the app-lifetime `FlowStoreProvider` seam (`./src/app/store/core/flow-context.tsx`) over the existing transient `createFlowStore()`, with `useFlowStore` / `useFlowStoreApi` hooks and a `./src/app/main.tsx` mount below `ErrorBoundary` inside `StrictMode`. `FlowStore` shape and the `MatchLaunchConfig` / `MatchResultPayload` contracts unchanged. Verified: 8 provider/core tests, typecheck, lint, build. |
+| 2026-08-28 | `match-setup-route` SESSION-02 shipped the typed map-worker client (`./src/app/bridge/mapgen-client.ts`), the deterministic cancellable setup-preparation service (`./src/app/store/build/setup-model.ts`), and additive setup-facade re-exports from `./src/app/store/build/index.ts`. Map generation only via `MapGenClient`, AI rosters only via `AiClient`. Verified: 20 setup-generation tests, 122 build/core consumer tests, typecheck, lint, build. This supersedes the prior "`mapgen-client.ts` … fully unstarted" note above. |
+| 2026-08-28 | `match-setup-route` SESSION-03 (launch-contract extension of `MatchLaunchConfig` + match/result consumers) was blocked at 0 checkpoints with no parseable handoff and committed no source; its dependent `match-setup-route` SESSION-04 (routed setup screen) was not launched. The launch-payload gap and the shared-worker-factory follow-up remain open. |

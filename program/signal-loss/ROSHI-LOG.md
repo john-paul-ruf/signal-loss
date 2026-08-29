@@ -149,3 +149,52 @@ To be folded in by a human; Roshi does not edit `./FORGE.md`, `./MU.md`, `./ENSO
 ### Roshi entry
 
 Reconciled 4 arch files (M17, M19, M20, M22) to record SESSION-07 retry 1's residual composer files as explicitly unverified, non-checkpoint work distinct from the verified checkpoints 1–2 and SESSION-08 surfaces beside them; corrected an inherited path error in M20 (composer lands under `./src/app/screens/build/composer/`, not `./src/app/screens/composer/`) by resolving to what git actually shows. Module registry unchanged — no new module boundary shipped. Two framework observations (git-commit pathspec scoping; crash-vs-blocked classification) now cross the three-cycle mark but both target Robe files Roshi cannot edit, so nothing was folded into `./FORGE-CONFIG.md`; they are logged for a human to fold into `./JIKIJITSU.md` with higher confidence. One new observation queued at count-of-1: escalate retry strategy after two consecutive non-declarative failures on one session.
+
+---
+
+## 2026-08-28 — Cycle 4 · SIGNAL LOSS / match-setup-route
+
+First cycle of a new feature (`match-setup-route`) on the same program. Session numbers restart at 01, so this cycle's SESSION-01..04 are distinct from `full-v1`'s SESSION-01..08.
+
+### What ran
+
+Jikijitsu planned four sessions across three waves. Wave 1 ran `match-setup-route` SESSION-01 (app-level FlowStore provider seam) and SESSION-02 (deterministic map + AI setup preparation) concurrently on literally disjoint write sets — both completed 3/3. SESSION-03 (launch-contract extension + match/result consumers) rolled into the freed slot and returned a Zen transport error (`API Error: Server error mid-response`) with no parseable handoff JSON and 0/3 checkpoints; no source committed under its lease. Its dependent SESSION-04 (routed setup screen) was not launched. Program state at cycle close: 2 of 4 sessions done, SESSION-03 blocked at 0, SESSION-04 pending, 6 Mu checkpoint commits landed this cycle, working tree clean.
+
+### What I reconciled
+
+- Read: the Final Report (`./program/signal-loss/prompts/match-setup-route/FINAL-REPORT.md`), `STATE.md` in full, every file under `./program/signal-loss/arch/**`, `./program/signal-loss/FORGE-CONFIG.md`, and all three prior `ROSHI-LOG.md` entries. Grounded every claim against `git log --oneline -40`, `git diff --stat cf6f443..b20a0d7`, per-commit `git show`, and the on-disk `./src/app/**` / `./tests/app/**` tree.
+- Only `M17-app-state-bridge.md` carried Jikijitsu's mid-run appends this cycle (two stapled deltas: `<!-- SESSION-01 -->`, `<!-- SESSION-02 -->`). Rewrote M17 into one coherent description: folded the flow-provider seam into the Core-stores Public API, promoted the map-generation client / setup-preparation service / setup facade from stapled deltas into proper Public API subsections, and **removed a live contradiction** — the body previously called `./src/app/bridge/mapgen-client.ts` "fully unstarted, pending a further SESSION-07 retry," but git shows `match-setup-route` SESSION-02 shipped and verified it. Updated Status, Internal Structure, the launch-payload-gap and shared-worker-factory conventions, and Change History; deleted the now-folded staples. Added a short note flagging the cross-feature session-number collision so bare `SESSION-0N` (full-v1) reads distinctly from `match-setup-route` SESSION-0N.
+  - `./program/signal-loss/arch/M17-app-state-bridge.md`
+- Reconciled sibling files that this cycle's shipped work touched or re-attributed:
+  - `./program/signal-loss/arch/M22-verification-tests.md` — recorded the new verified `./tests/app/setup-generation/**` subtree (20 tests) and `./tests/app/core/flow-context.test.tsx`.
+  - `./program/signal-loss/arch/M21-app-bootstrap.md` — recorded the one sanctioned shell edit: SESSION-01's 5-line `FlowStoreProvider` mount in `./src/app/main.tsx` (git-verified), which M21's "never edit the shell" invariant had not anticipated.
+  - `./program/signal-loss/arch/M20-screens.md` — the `#/setup` route's M17 dependencies (mapgen client + preparation service) now exist, so its "needs the typed mapgen worker client … fully unstarted" line was stale; re-attributed the setup route from a "SESSION-07 retry" to its true owner, `match-setup-route` SESSION-04 (not launched; blocked behind SESSION-03). Left composer / `#/result` as full-v1 SESSION-07 territory.
+  - `./program/signal-loss/arch/M19-ui-components.md` — aligned the setup component subtree's ownership to `match-setup-route` SESSION-04 to match M20 (sibling consistency).
+- **Module registry** (in `./program/signal-loss/FORGE-CONFIG.md`): no update. Every file shipped this cycle falls inside an existing `Owns` contract — `./src/app/store/**` and `./src/app/bridge/**` under M17, `./src/app/main.tsx` under M21, tests under M22. No new module boundary shipped. The registry describes contract, not implementation status.
+
+### What I did NOT promote to a convention
+
+This cycle's Granularity feedback reports both completed sessions met their declared checkpoint counts, no context exhaustion, and no ownership overlap requiring a wave-plan correction — no Forge-granularity pattern to fold into `./FORGE-CONFIG.md`. The two recurring patterns that touched this cycle are both Robe (`./JIKIJITSU.md` / `./MU.md`) concerns Roshi cannot edit, so nothing was added to `./FORGE-CONFIG.md`:
+
+- **Scope `git commit` pathspec, not only `git add`.** Recurred: SESSION-02's transient first checkpoint (`00eafae`) briefly swept in `M17-app-state-bridge.md` (outside its lease) because SESSION-01's arch delta was staged in the shared index; Mu detected it and amended to `767575a`, keeping every surviving checkpoint lease-only. Same shared-index-contamination shape as full-v1 cycle 1's `cab5120`. Cycle count now **4** (full-v1 c1 failure, c2 + c3 preventive, `match-setup-route` failure-and-fix). Candidate home: `./JIKIJITSU.md` orchestration envelope or `./MU.md` checkpoint-commit protocol.
+- **Distinguish "session crashed with no parseable handoff" from "session declared itself blocked."** SESSION-03 crashed on a Zen transport error with 0 checkpoints and no handoff, yet the Final Report and `STATE.md` both label it "blocked" — the label/mechanism mismatch is exactly the ambiguity this observation names. Cycle count now **4** (full-v1 c1 crash, c2 declared block, c3 crash, `match-setup-route` crash). Candidate home: `./JIKIJITSU.md` spawn/await/result-classification.
+
+### New observation this cycle
+
+- **Feature-qualify session references in `arch/` once a program runs more than one feature.** `match-setup-route` restarts session numbering at 01, so `arch/` now holds two independent SESSION-01 / SESSION-02 identities (full-v1's and this feature's) that collide by number. I disambiguated inside M17 with an explicit feature-qualifier note and by writing this cycle's sessions as `` `match-setup-route` SESSION-0N ``, but the pattern will recur every new feature. Cycle count: **1**. Candidate home: an `arch/`-authoring convention (Roshi practice, and/or a Forge/Jikijitsu instruction to stamp the feature slug beside session numbers in mid-run arch appends).
+
+### Proposed for the framework
+
+To be folded in by a human; Roshi does not edit `./FORGE.md`, `./MU.md`, `./ENSO.md`, or `./JIKIJITSU.md`.
+
+- **Scope `git commit` pathspec, not only `git add`.** Cycles observed: **4**. Candidate home: `./JIKIJITSU.md` orchestration envelope or `./MU.md` checkpoint-commit protocol.
+- **Distinguish "session crashed" from "session declared blocked," and label the result accordingly.** Cycles observed: **4** (this cycle a crash mislabeled "blocked"). Candidate home: `./JIKIJITSU.md` spawn/await/result-classification.
+- **Route UI-dominant sessions to Enso at spawn time, not by mid-flight delegation.** Cycles observed: **1**. Candidate home: `./JIKIJITSU.md` spawn-time routing heuristic or Forge's per-session worker-mix hint.
+- **Cap combined visual working set per session at what one context can hold.** Cycles observed: **1**. Candidate home: `./FORGE.md` decomposition heuristics.
+- **Carve a shared-style owner before concurrent UI leases.** Cycles observed: **1**. Candidate home: `./FORGE.md` decomposition.
+- **Escalate retry strategy after two consecutive non-declarative failures on the same session.** Cycles observed: **1**. Candidate home: `./JIKIJITSU.md` retry policy.
+- **Feature-qualify session references in `arch/` for multi-feature programs.** Cycles observed: **1** (first multi-feature cycle). Candidate home: `arch/`-authoring convention / mid-run arch-append instruction.
+
+### Roshi entry
+
+First `match-setup-route` cycle: reconciled 5 arch files (M17, M19, M20, M21, M22). Folded M17's two mid-run staples into one coherent description and resolved a live contradiction — `mapgen-client.ts`, marked "fully unstarted, pending a SESSION-07 retry," is in fact shipped and verified by `match-setup-route` SESSION-02, per git. Re-attributed the `#/setup` route and setup component/test subtrees from stale "SESSION-07 retry" wording to their true owners (`match-setup-route` SESSION-03/04, blocked/not-launched), and recorded SESSION-01's sanctioned `main.tsx` provider-mount shell edit. Module registry unchanged — no new boundary. Two recurring Robe-targeted observations reached count-of-4 (git-commit pathspec scoping; crash-vs-blocked classification) but remain human-fold recommendations for `./JIKIJITSU.md` / `./MU.md`; nothing folded into `./FORGE-CONFIG.md`. One new count-of-1 observation: feature-qualify session references in `arch/` now that the program runs more than one feature.

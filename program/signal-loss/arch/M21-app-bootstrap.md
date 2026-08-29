@@ -2,7 +2,7 @@
 
 > **Path:** exact app-shell files
 > **Imports from:** M20 via route discovery
-> **Status:** shipped in SESSION-01. Later UI sessions add route modules only.
+> **Status:** shipped in SESSION-01. Later UI sessions add route modules only; the single shell exception since is `match-setup-route` SESSION-01's minimal `FlowStoreProvider` mount in `./src/app/main.tsx` (the provider itself is an M17 artifact).
 
 ## Public API
 
@@ -48,7 +48,7 @@ Duplicate ids or paths throw at module load. Routes are sorted by lexicographic 
 
 ## Conventions and Invariants
 
-- These files stabilize in Session 01; later UI sessions add route modules only, never edit the shell.
+- These files stabilize in Session 01; later UI sessions add route modules only, never edit the shell. The one sanctioned shell edit since is `match-setup-route` SESSION-01's `FlowStoreProvider` wrap of `<App />` in `./src/app/main.tsx` (below `ErrorBoundary`, inside `StrictMode`) — an app-lifetime state owner from M17, not a route, theme, or CSP change.
 - No CDN script, font, or runtime fetch.
 - CSP `connect-src` remains `none`.
 - Production HTML injects the strict CSP via a Vite build-only plugin (`./vite.config.ts` → `cspMetaPlugin`) so dev HMR keeps working while the shipped bundle carries `connect-src 'none'`.
@@ -60,3 +60,4 @@ Duplicate ids or paths throw at module load. Routes are sorted by lexicographic 
 |---|---|
 | 2026-08-28 | Genesis/Forge contract recorded; implementation pending. |
 | 2026-08-28 | SESSION-01 shipped `./index.html`, `./src/app/main.tsx`, `./src/app/route-registry.tsx`, `./src/app/styles.css`, `./public/icon.svg`, and the build-time CSP plugin; self-hosted Chakra Petch + IBM Plex Mono fonts. |
+| 2026-08-28 | `match-setup-route` SESSION-01 wrapped `<App />` in `FlowStoreProvider` inside `./src/app/main.tsx` (5-line additive mount below `ErrorBoundary`, within `StrictMode`); `./src/app/route-registry.tsx` and the rest of the shell unchanged. Provider defined in M17. |
