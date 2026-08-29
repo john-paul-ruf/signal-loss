@@ -667,3 +667,93 @@
   font-family: var(--font-mono);
   font-size: 12px;
 }
+
+/* ---- Deployment (design.md §5.5) ---- */
+
+.match-mode--deployment {
+  position: absolute;
+  inset: 0;
+  padding: 0;
+  display: block;
+}
+
+.deployment-hud {
+  position: absolute;
+  top: 16px;
+  right: 16px;
+  width: 260px;
+  z-index: 4;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 12px 14px;
+  background: var(--color-panel-2);
+  border: 1px solid var(--color-line-2);
+}
+.deployment-hud__count {
+  margin: 0;
+  font-family: var(--font-mono);
+  font-variant-numeric: tabular-nums;
+  font-size: 15px;
+  color: var(--color-vector);
+  letter-spacing: 0.04em;
+}
+.deployment-hud__instruction {
+  margin: 0;
+  font-family: var(--font-display);
+  font-size: 11px;
+  letter-spacing: var(--tracking-hlabel);
+  text-transform: uppercase;
+  color: var(--color-ink-2);
+}
+.deployment-hud__reason {
+  margin: 0;
+  font-family: var(--font-mono);
+  font-size: 11px;
+  color: var(--color-bad);
+  border: 1px solid var(--color-bad);
+  padding: 4px 8px;
+}
+.deployment-hud__list {
+  list-style: none;
+  padding: 0;
+  margin: 4px 0 0;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+.deployment-hud__item {
+  display: flex;
+  justify-content: space-between;
+  gap: 8px;
+  width: 100%;
+  padding: 6px 8px;
+  background: var(--color-panel);
+  border: 1px solid var(--color-line);
+  color: var(--color-ink-2);
+  font-family: var(--font-mono);
+  font-size: 11px;
+  text-align: left;
+  cursor: pointer;
+}
+.deployment-hud__item:focus-visible {
+  outline: none;
+  border-color: var(--color-sys);
+  box-shadow: 0 0 0 1px var(--color-sys) inset;
+}
+.deployment-hud__item--active {
+  border-color: var(--color-sys);
+}
+.deployment-hud__item--placed {
+  color: var(--color-ink);
+}
+.deployment-hud__code {
+  color: var(--color-ink);
+}
+.deployment-hud__item--placed .deployment-hud__slot {
+  color: var(--color-vector);
+  font-variant-numeric: tabular-nums;
+}
+.deployment-hud__item:not(.deployment-hud__item--placed) .deployment-hud__slot {
+  color: var(--color-ink-3);
+}
