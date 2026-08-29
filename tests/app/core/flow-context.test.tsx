@@ -6,14 +6,18 @@
  * DOM harness would be dead weight here.
  */
 
+import { readFileSync } from "node:fs";
+import { fileURLToPath } from "node:url";
 import * as React from "react";
 import { renderToStaticMarkup } from "react-dom/server";
+import type { StoreApi } from "zustand/vanilla";
 import { describe, expect, it } from "vitest";
 import {
   FlowStoreProvider,
   createFlowStore,
   useFlowStore,
   useFlowStoreApi,
+  type FlowStore,
   type MatchLaunchConfig,
 } from "../../../src/app/store/core/index";
 
@@ -36,6 +40,20 @@ function SeedProbe(): React.ReactElement {
   return <span data-seed={seed} />;
 }
 
+function IdentityProbe(props: {
+  readonly expected: StoreApi<FlowStore>;
+}): React.ReactElement {
+  const store = useFlowStoreApi();
+  return <span data-identity={store === props.expected ? "same" : "other"} />;
+}
+
+function InitialProbe(): React.ReactElement {
+  const pending = useFlowStore((state) => state.pendingLaunch);
+  const last = useFlowStore((state) => state.lastResult);
+  const requested = useFlowStore((state) => state.requestedEntity);
+  return <span data-initial={`${pending}:${last}:${requested}`} />;
+}
+
 describe("app/core/flow-context", () => {
   it("renders a consumer that reads the supplied store's value", () => {
     const store = createFlowStore();
@@ -54,6 +72,45 @@ describe("app/core/flow-context", () => {
     );
     expect(() => renderToStaticMarkup(<ApiProbe />)).toThrow(
       /outside FlowStoreProvider/,
+    );
+  });
+
+  it("shares the exact injected store with every consumer in one render", () => {
+    const store = createFlowStore();
+    store.getState().setPendingLaunch(launch);
+    const html = renderToStaticMarkup(
+      <FlowStoreProvider store={store}>
+        <SeedProbe />
+        <SeedProbe />
+        <IdentityProbe expected={store} />
+      </FlowStoreProvider>,
+    );
+    expect(html.match(/data-seed="seed-abc"/g)).toHaveLength(2);
+    expect(html).toContain('data-identity="same"');
+    expect(html).not.toContain('data-identity="other"');
+  });
+
+  it("creates a default store whose launch, result, and entity start null", () => {
+    const html = renderToStaticMarkup(
+      <FlowStoreProvider>
+        <InitialProbe />
+      </FlowStoreProvider>,
+    );
+    expect(html).toContain('data-initial="null:null:null"');
+  });
+
+  it("never reaches for browser storage or persistence in the provider file", () => {
+    const source = readFileSync(
+      fileURLToPath(
+        new URL(
+          "../../../src/app/store/core/flow-context.tsx",
+          import.meta.url,
+        ),
+      ),
+      "utf8",
+    );
+    expect(source).not.toMatch(
+      /localStorage|sessionStorage|CollectionRepository|migrations/,
     );
   });
 });

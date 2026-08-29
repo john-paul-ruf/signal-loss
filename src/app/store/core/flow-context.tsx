@@ -5,7 +5,7 @@
  * match added by later sessions — reads the same in-flight launch/result
  * value across a hash transition.
  *
- * The store is ephemeral by contract: it never writes to `localStorage`,
+ * The store is ephemeral by contract: it never writes to browser storage,
  * and this seam adds no launch fields — the backward-incompatible contract
  * change lands atomically with its consumers in a later session.
  */
