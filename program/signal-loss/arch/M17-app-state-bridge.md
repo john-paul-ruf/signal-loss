@@ -222,3 +222,10 @@ Additive re-exports only: all `setup-model` public constructors / validators / s
 | 2026-08-28 | `match-setup-route` SESSION-01 added the app-lifetime `FlowStoreProvider` seam (`./src/app/store/core/flow-context.tsx`) over the existing transient `createFlowStore()`, with `useFlowStore` / `useFlowStoreApi` hooks and a `./src/app/main.tsx` mount below `ErrorBoundary` inside `StrictMode`. `FlowStore` shape and the `MatchLaunchConfig` / `MatchResultPayload` contracts unchanged. Verified: 8 provider/core tests, typecheck, lint, build. |
 | 2026-08-28 | `match-setup-route` SESSION-02 shipped the typed map-worker client (`./src/app/bridge/mapgen-client.ts`), the deterministic cancellable setup-preparation service (`./src/app/store/build/setup-model.ts`), and additive setup-facade re-exports from `./src/app/store/build/index.ts`. Map generation only via `MapGenClient`, AI rosters only via `AiClient`. Verified: 20 setup-generation tests, 122 build/core consumer tests, typecheck, lint, build. This supersedes the prior "`mapgen-client.ts` … fully unstarted" note above. |
 | 2026-08-28 | `match-setup-route` SESSION-03 (launch-contract extension of `MatchLaunchConfig` + match/result consumers) was blocked at 0 checkpoints with no parseable handoff and committed no source; its dependent `match-setup-route` SESSION-04 (routed setup screen) was not launched. The launch-payload gap and the shared-worker-factory follow-up remain open. |
+
+<!-- SESSION-03 -->
+### SESSION-03 — Launch contract and match boot
+
+- `MatchLaunchConfig` now carries a transient complete setup payload: saved/prebuilt human source, engine-ready human and four AI rosters, their share strings, accepted `GameMap`, seed, budget, AI tier, selector, and resolved archetype id.
+- `MatchStore.boot` consumes that payload's map and roster tuple in squad order, stores a defensive launch snapshot, and `ResultMode` relays that captured input unchanged in `MatchResultPayload`.
+- `MatchScreen` consumes the app-lifetime flow store and boots exactly once after mount; absent or rejected payloads show the setup recovery path.
