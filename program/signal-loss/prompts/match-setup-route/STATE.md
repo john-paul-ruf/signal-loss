@@ -17,7 +17,7 @@
 |---|---|---|---|---|---|---|---|
 | 01 | App-Level Flow Provider | M17, M21, M22 | `./src/app/store/core/flow-context.tsx`<br>`./src/app/store/core/index.ts`<br>`./src/app/main.tsx`<br>`./tests/app/core/flow-context.test.tsx` | done | 3 | 2026-08-28 | Added app-lifetime FlowStoreProvider seam over the existing transient createFlowStore(); FlowStore shape and MatchLaunchConfig/MatchResultPayload contracts unchanged for SESSION-03 to extend atomically. |
 | 02 | Deterministic Setup Preparation | M02, M12, M15, M17, M22 | `./src/app/bridge/mapgen-client.ts`<br>`./src/app/store/build/setup-model.ts`<br>`./src/app/store/build/index.ts`<br>`./tests/app/setup-generation/**` | done | 3 | 2026-08-28 | Deterministic setup preparation: typed map-worker client (mapgen-client.ts), setup-domain model + cancellable createSetupGenerationService (setup-model.ts), narrow build facade re-exports. Map gen only via MapGenClient, AI rosters only via AiClient. 20 new tests. |
-| 03 | Launch Contract and Match Consumption | M12, M17, M20, M22 | `./src/app/store/core/flow-store.ts`<br>`./src/app/store/match/match-store.ts`<br>`./src/app/store/match/types.ts`<br>`./src/app/screens/match/MatchScreen.tsx`<br>`./src/app/screens/match/ResultMode.tsx`<br>`./tests/app/core/flow-store.test.ts`<br>`./tests/app/match/match-store.test.ts`<br>`./tests/app/match/match-launch.test.tsx` | blocked | 0 | 2026-08-28 | no handoff JSON; see `./.forge/results/SESSION-03.result.md` |
+| 03 | Launch Contract and Match Consumption | M12, M17, M20, M22 | `./src/app/store/core/flow-store.ts`<br>`./src/app/store/match/match-store.ts`<br>`./src/app/store/match/types.ts`<br>`./src/app/screens/match/MatchScreen.tsx`<br>`./src/app/screens/match/ResultMode.tsx`<br>`./tests/app/core/flow-store.test.ts`<br>`./tests/app/match/match-store.test.ts`<br>`./tests/app/match/match-launch.test.tsx` | in-progress | 0 | — | Human-authorized fresh retry after the prior API error; no feature checkpoint commit exists, so resume from checkpoint 1. |
 | 04 | Routed Match Setup Screen | M02, M07, M17, M19, M20, M22 | `./src/app/components/setup/**`<br>`./src/app/screens/setup/**`<br>`./tests/app/setup-screen/**`<br>`./tests/e2e/setup/**` | pending | — | — | Adds the self-registering route, controls, preview/reveal, launch action, and direct-link regression coverage. |
 
 ## Wave Plan
@@ -92,8 +92,13 @@ flowchart TD
 - **Follow-up:** Exact AI stream labels are ai.squad1.roster, ai.squad2.roster, ai.squad3.roster, ai.squad4.roster (AI_ROSTER_STREAM_LABELS const). Worker-protocol limitation for SESSION-04: the AI_ROSTER request carries no tier field — roster generation is tier-independent — so SetupDraft.aiTier is preserved into PreparedSetup for match-config use, NOT threaded into roster generation. MapGenRequest needs archetypes + tunables; the client forwards catalog.mapArchetypes/catalog.tunables. Deterministic fixture hash for one prepared result (fake transport: seed=deadbeefcafef00d, budget=100, aiTier=2, selector any, rosters of length 1/2/3/4): sha256 fa7a822dd1f352a0aa595470d484f291163de1c7395210448683d942d66582c3 over 793 bytes of JSON.stringify(SetupPreparationResult). SESSION-04 should share the AI worker factory with the match store (one pool) and pass browserMapGenWorker as the map factory. Arch delta written to .forge/signal/SESSION-02.arch.md (uncommitted, for Jikijitsu).
 - **Files touched:** `./src/app/bridge/mapgen-client.ts`, `./src/app/store/build/setup-model.ts`, `./src/app/store/build/index.ts`, `./tests/app/setup-generation/mapgen-client.test.ts`, `./tests/app/setup-generation/setup-model.test.ts`
 
-### SESSION-03 — blocked
+### SESSION-03 — prior blocked attempt
 
 - **Reason:** no handoff JSON; see `./.forge/results/SESSION-03.result.md`
 - **Last checkpoint:** 0 — no `match-setup-route SESSION-03` checkpoint commit exists under the lease; the listed lease history belongs to the prior `full-v1` feature.
 - **Runtime reply:** API Error: Server error mid-response. The response above may be incomplete.
+
+### SESSION-03 — retry authorized
+
+- **Authorization:** Human instruction: `unblock, go, retry`.
+- **Recovery:** Start a fresh worker at checkpoint 1. The prior attempt has no parseable handoff and no checkpoint commit under this feature lease.
