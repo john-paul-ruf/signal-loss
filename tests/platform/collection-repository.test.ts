@@ -1,9 +1,11 @@
 import { beforeAll, describe, expect, it, vi } from "vitest";
 import {
+  applyMigration001,
   createInitialStateV1,
   getStorageKey,
   getStorageSchemaVersion,
   preloadMigrationModule,
+  validatePersistedStateV1,
   type ConstructSnapshotV1,
   type PersistedStateV1,
 } from "../../src/platform/storage/migration-runtime";
@@ -26,6 +28,122 @@ let STORAGE_SCHEMA_VERSION: 1;
 beforeAll(() => {
   STORAGE_KEY = getStorageKey();
   STORAGE_SCHEMA_VERSION = getStorageSchemaVersion();
+});
+
+const CONSTRUCT_SNAPSHOT: ConstructSnapshotV1 = {
+  chassisCode: 10,
+  commanderCode: 1,
+  mounts: [{ hardpointIndex: 0, mountCode: 22 }],
+};
+
+const CANONICAL_EMPTY_STATE = {
+  schemaVersion: 1,
+  revision: 0,
+  nextEntityId: 1,
+  constructs: [],
+  rosters: [],
+  preferences: {
+    reducedMotion: "system",
+    highContrastSquads: false,
+  },
+} satisfies PersistedStateV1;
+
+const REPRESENTATIVE_VALID_STATE = {
+  schemaVersion: 1,
+  revision: 2,
+  nextEntityId: 3,
+  constructs: [
+    {
+      id: "construct:1",
+      name: "Alpha",
+      construct: CONSTRUCT_SNAPSHOT,
+    },
+  ],
+  rosters: [
+    {
+      id: "roster:2",
+      name: "Alpha Team",
+      budget: 50,
+      constructs: [CONSTRUCT_SNAPSHOT],
+    },
+  ],
+  preferences: {
+    reducedMotion: "reduced",
+    highContrastSquads: true,
+  },
+} satisfies PersistedStateV1;
+
+describe("platform/storage / bundled migration seam", () => {
+  it("keeps synchronous accessors behind the declared preload guard", async () => {
+    vi.resetModules();
+    const isolated = await import("../../src/platform/storage/migration-runtime");
+
+    expect(() => isolated.getStorageKey()).toThrowError(
+      "DB migration module not preloaded. Call `preloadMigrationModule()` at app boot before using CollectionRepository.",
+    );
+  });
+
+  it("preloads idempotently and exposes the actual bundled v1 exports", async () => {
+    vi.resetModules();
+    const isolated = await import("../../src/platform/storage/migration-runtime");
+    const first = await isolated.preloadMigrationModule();
+    const second = await isolated.preloadMigrationModule();
+
+    expect(second).toBe(first);
+    expect(Object.keys(first).sort()).toStrictEqual([
+      "STORAGE_KEY",
+      "STORAGE_SCHEMA_VERSION",
+      "createInitialStateV1",
+      "migration001",
+      "validatePersistedStateV1",
+    ]);
+    expect(first.STORAGE_KEY).toBe(isolated.getStorageKey());
+    expect(first.STORAGE_SCHEMA_VERSION).toBe(isolated.getStorageSchemaVersion());
+    expect(first.migration001.id).toBe("001_initial");
+  });
+
+  it("matches the database contract for initial state and migration apply", async () => {
+    const bundled = await preloadMigrationModule();
+    const expected = {
+      ok: true,
+      value: CANONICAL_EMPTY_STATE,
+      changed: true,
+    } as const;
+
+    expect(createInitialStateV1()).toStrictEqual(CANONICAL_EMPTY_STATE);
+    expect(bundled.createInitialStateV1()).toStrictEqual(CANONICAL_EMPTY_STATE);
+    expect(applyMigration001(null)).toStrictEqual(expected);
+    expect(bundled.migration001.apply(null)).toStrictEqual(expected);
+  });
+
+  it("is exactly equivalent for representative valid and invalid schema inputs", async () => {
+    const bundled = await preloadMigrationModule();
+    const invalid = {
+      ...CANONICAL_EMPTY_STATE,
+      preferences: {
+        reducedMotion: "loud",
+        highContrastSquads: false,
+      },
+    };
+    const validExpected = { ok: true, value: REPRESENTATIVE_VALID_STATE } as const;
+    const invalidExpected = {
+      ok: false,
+      issues: [
+        {
+          path: "$.preferences.reducedMotion",
+          code: "FORMAT",
+          message: "Reduced-motion preference must be system, reduced, or full.",
+        },
+      ],
+    } as const;
+
+    expect(validatePersistedStateV1(REPRESENTATIVE_VALID_STATE)).toStrictEqual(validExpected);
+    expect(bundled.validatePersistedStateV1(REPRESENTATIVE_VALID_STATE)).toStrictEqual(
+      validExpected,
+    );
+    expect(validatePersistedStateV1(invalid)).toStrictEqual(invalidExpected);
+    expect(bundled.validatePersistedStateV1(invalid)).toStrictEqual(invalidExpected);
+  });
 });
 
 /**
@@ -343,12 +461,6 @@ describe("platform/storage / migration safety", () => {
     }
   });
 });
-
-const CONSTRUCT_SNAPSHOT: ConstructSnapshotV1 = {
-  chassisCode: 10,
-  commanderCode: 1,
-  mounts: [{ hardpointIndex: 0, mountCode: 22 }],
-};
 
 describe("platform/storage / atomic mutations", () => {
   it("saveConstruct (create) allocates a fresh id and increments revision once", () => {
