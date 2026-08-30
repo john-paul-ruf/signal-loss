@@ -1,22 +1,10 @@
 /**
- * WORKAROUND for a Session-01 × DB coordination issue:
+ * Compile-time contract for the DB-owned v1 migration.
  *
- * `tsconfig.app.json` (Session-01 lease) enables
- * `noPropertyAccessFromIndexSignature`. The DB-owned
- * `./src/migrations/001_initial.ts` dot-accesses `Record<string, unknown>`
- * in its internal validator (line 225 onward), which the flag rejects with
- * ~35 TS4111 errors when any Session-02 file transitively imports the
- * migration.
- *
- * SESSION-02 cannot write to `./src/migrations/**` (permanently DB-owned per
- * Custom Rule 1) or to `./tsconfig.app.json` (Session-01 lease). The clean
- * fix belongs at one of those two seams; see the SESSION-02 handoff notes
- * for a follow-up ticket.
- *
- * As a strictly-local workaround, this `.d.ts` re-declares the migration
- * module through a repo-scoped module specifier. Callers import from that
- * specifier via `./migration-runtime.ts`, which uses a dynamic import so
- * TypeScript does not typecheck the migration source.
+ * App TypeScript excludes `./src/migrations/` and consumes this ambient
+ * surface through `./migration-runtime.ts`. Vite independently follows that
+ * runtime module's literal eager glob, so the existing DB implementation is
+ * bundled without a TypeScript static import or a second runtime schema.
  */
 
 declare module "signal-loss/db/migration-v1" {

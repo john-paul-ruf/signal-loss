@@ -1,26 +1,59 @@
 /**
  * Runtime shim over the DB-owned migration module. See `migration-shim.d.ts`
- * for the rationale — this file exists so consumers can call migration
- * symbols through a typed contract even while `tsconfig.app.json` refuses to
- * typecheck the migration source.
- *
- * A dynamic-specifier `import()` prevents TypeScript from statically
- * resolving the migration source into the compilation graph; the ambient
- * `signal-loss/db/migration-v1` module provides the API surface types.
+ * for the rationale. Vite discovers the literal eager glob for bundling while
+ * the ambient `signal-loss/db/migration-v1` module supplies app-facing types
+ * without adding the DB-owned source to the app TypeScript graph.
  */
 
 import type * as MigrationV1 from "signal-loss/db/migration-v1";
 
-const MIGRATION_SPECIFIER = "../../migrations/001_initial";
+const migrationModules = import.meta.glob<typeof MigrationV1>(
+  "../../migrations/001_initial.ts",
+  { eager: true },
+);
 
 let cached: typeof MigrationV1 | null = null;
 
+function assertMigrationModule(
+  modulePath: string,
+  value: unknown,
+): asserts value is typeof MigrationV1 {
+  if (typeof value !== "object" || value === null) {
+    throw new Error(`Bundled DB migration defect at ${modulePath}: expected a module object.`);
+  }
+
+  const candidate = value as Record<string, unknown>;
+  const migration = candidate["migration001"];
+  if (
+    candidate["STORAGE_KEY"] !== "signal-loss:state" ||
+    candidate["STORAGE_SCHEMA_VERSION"] !== 1 ||
+    typeof candidate["createInitialStateV1"] !== "function" ||
+    typeof candidate["validatePersistedStateV1"] !== "function" ||
+    typeof migration !== "object" ||
+    migration === null ||
+    typeof (migration as Record<string, unknown>)["apply"] !== "function"
+  ) {
+    throw new Error(
+      `Bundled DB migration defect at ${modulePath}: required v1 migration exports are missing or invalid.`,
+    );
+  }
+}
+
 async function loadMigration(): Promise<typeof MigrationV1> {
   if (cached !== null) return cached;
-  // Non-literal specifier — TypeScript can't statically follow this and so
-  // does not typecheck the migration source.
-  const dynamicSpecifier: string = MIGRATION_SPECIFIER;
-  const module = (await import(/* @vite-ignore */ dynamicSpecifier)) as unknown as typeof MigrationV1;
+
+  const entries = Object.entries(migrationModules);
+  if (entries.length !== 1) {
+    throw new Error(
+      `Bundled DB migration defect: expected exactly one v1 module, found ${entries.length}.`,
+    );
+  }
+  const entry = entries[0];
+  if (entry === undefined) {
+    throw new Error("Bundled DB migration defect: the discovered v1 module entry is missing.");
+  }
+  const [modulePath, module] = entry;
+  assertMigrationModule(modulePath, module);
   cached = module;
   return module;
 }
