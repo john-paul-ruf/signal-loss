@@ -1,24 +1,33 @@
 import { defineConfig, devices } from "@playwright/test";
 
-/**
- * Session-specific artifact directories under /tmp keep concurrent Playwright
- * runs from colliding (FORGE-CONFIG session defaults).
- */
-const ARTIFACT_ROOT = "/tmp/signal-loss-e2e";
+const DEFAULT_PORT = 5173;
+const rawPort = process.env.PORT;
+const port = rawPort === undefined ? DEFAULT_PORT : Number(rawPort);
+
+if (!Number.isInteger(port) || port < 1 || port > 65_535) {
+  throw new Error(
+    `Invalid PORT ${JSON.stringify(rawPort)}: expected an integer from 1 to 65535.`,
+  );
+}
+
+const serverUrl = `http://127.0.0.1:${port}`;
+const artifactRoot =
+  process.env.E2E_ARTIFACT_ROOT ?? "/tmp/signal-loss-e2e";
+const isCi = process.env.CI !== undefined;
 
 export default defineConfig({
   testDir: "./tests/e2e",
-  outputDir: `${ARTIFACT_ROOT}/results`,
+  outputDir: `${artifactRoot}/results`,
   fullyParallel: true,
-  forbidOnly: process.env.CI !== undefined,
-  retries: process.env.CI !== undefined ? 1 : 0,
-  ...(process.env.CI !== undefined ? { workers: 2 } : {}),
+  forbidOnly: isCi,
+  retries: isCi ? 1 : 0,
+  ...(isCi ? { workers: 2 } : {}),
   reporter: [
     ["list"],
-    ["html", { outputFolder: `${ARTIFACT_ROOT}/report`, open: "never" }],
+    ["html", { outputFolder: `${artifactRoot}/report`, open: "never" }],
   ],
   use: {
-    baseURL: "http://127.0.0.1:5173",
+    baseURL: serverUrl,
     trace: "retain-on-failure",
     screenshot: "only-on-failure",
     video: "retain-on-failure",
@@ -29,9 +38,9 @@ export default defineConfig({
     { name: "webkit", use: { ...devices["Desktop Safari"] } },
   ],
   webServer: {
-    command: "npm run preview -- --host 127.0.0.1 --port 5173",
-    url: "http://127.0.0.1:5173",
-    reuseExistingServer: process.env.CI === undefined,
+    command: `npm run preview -- --host 127.0.0.1 --port ${port} --strictPort`,
+    url: serverUrl,
+    reuseExistingServer: !isCi && rawPort === undefined,
     timeout: 120_000,
   },
 });
