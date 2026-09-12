@@ -59,10 +59,32 @@ async function waitForActiveServiceWorker(page: Page): Promise<void> {
     if (registration === null) {
       return { ok: false, reason: "Service worker activation timed out." };
     }
-    if (registration.active?.state !== "activated") {
+
+    const activeWorker = registration.active;
+    if (activeWorker === null) {
+      return { ok: false, reason: "Service worker registration has no active worker." };
+    }
+    if (activeWorker.state !== "activated") {
+      const activated = await new Promise<boolean>((resolve) => {
+        const finish = (didActivate: boolean): void => {
+          window.clearTimeout(timeoutId);
+          activeWorker.removeEventListener("statechange", handleStateChange);
+          resolve(didActivate);
+        };
+        const handleStateChange = (): void => {
+          if (activeWorker.state === "activated") finish(true);
+          else if (activeWorker.state === "redundant") finish(false);
+        };
+        const timeoutId = window.setTimeout(() => finish(false), 15_000);
+
+        activeWorker.addEventListener("statechange", handleStateChange);
+        handleStateChange();
+      });
+      if (activated) return { ok: true, reason: "" };
+
       return {
         ok: false,
-        reason: `Service worker is not active (${registration.active?.state ?? "missing"}).`,
+        reason: `Service worker did not activate (${activeWorker.state}).`,
       };
     }
     return { ok: true, reason: "" };
