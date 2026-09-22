@@ -21,7 +21,8 @@ yarn-error.log*
 /playwright-report/
 
 # demiurge
+/.program/
 /program-agents/
-/program/shard-breaker/prompts/
-/program/shard-breaker/demiurge.yaml
+/program/signal-loss/prompts/
+/program/signal-loss/demiurge.yaml
 /program/signal-loss/img-source/
