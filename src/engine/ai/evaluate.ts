@@ -374,8 +374,14 @@ function pickCurrentTraceStep(state: PublicState): readonly Vec2[] | null {
   return latest;
 }
 
-/** Next scheduled trace safe region strictly AFTER `state.round`, or null. */
-function pickNextTraceStep(state: PublicState): readonly Vec2[] | null {
+/**
+ * Next scheduled trace safe region strictly AFTER `state.round`, or null.
+ *
+ * Internal shared helper: `scoreMoveEndpoint` consumes it for the
+ * anticipation term; `policy.ts` consumes it for the deterministic
+ * trace-aware movement tie-break. Not re-exported by the module facade.
+ */
+export function pickNextTraceStep(state: PublicState): readonly Vec2[] | null {
   const schedule = state.map.traceSchedule;
   for (let i = 0; i < schedule.length; i = i + 1) {
     const step = schedule[i];

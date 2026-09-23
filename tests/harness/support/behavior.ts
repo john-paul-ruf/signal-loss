@@ -178,21 +178,23 @@ export function runBehaviorBattery(options: BehaviorOptions): BatteryReport {
       : `Tier 3 damaged the leader ${leaderShare.toFixed(3)} of the time — kingmaking penalty ineffective.`,
   });
 
-  // TRACE_DISCIPLINE — AI trace-death rate reported as information;
-  // the release combination of catalog + weights + trace schedule
-  // often surfaces near-100% trace deaths because chassis movement
-  // allowances make reaching the shrinking safe region difficult
-  // within `MAX_EXPECTED_ROUNDS`. Session 06's initial weight tuning
-  // is deliberately conservative; further tuning is tracked in
-  // docs/verification/behavior-baseline.md.
+  // TRACE_DISCIPLINE — HARD check (CA-03 / FR-23): the AI must not walk
+  // constructs to death in the trace. The observed tier-2 trace-death rate
+  // must be <= tunables.TRACE_DEATH_CEILING; a red battery is the
+  // truth-teller if tuning cannot reach the gate. Tier-2 sample source
+  // unchanged.
   const traceStats = tierRuns.get(2)?.reduce((acc, r) => ({ deaths: acc.deaths + r.traceDeaths, deaths_alt: acc.deaths_alt + r.totalDeaths }), { deaths: 0, deaths_alt: 0 }) ?? { deaths: 0, deaths_alt: 0 };
   const traceDeathRate = traceStats.deaths_alt === 0 ? 0 : traceStats.deaths / traceStats.deaths_alt;
+  const ceiling = catalog.tunables.TRACE_DEATH_CEILING;
+  const traceOk = traceDisciplineCheck(traceDeathRate, ceiling);
   checks.push({
     id: "TRACE_DISCIPLINE",
-    passed: true,
+    passed: traceOk,
     observed: { traceDeaths: traceStats.deaths, totalDeaths: traceStats.deaths_alt, traceDeathRate },
-    threshold: { maxRate: catalog.tunables.TRACE_DEATH_CEILING, note: "informational at Session 06 release" },
-    message: `Trace-death rate ${traceDeathRate.toFixed(3)} observed (TRACE_DEATH_CEILING is ${catalog.tunables.TRACE_DEATH_CEILING}).`,
+    threshold: { maxRate: ceiling, note: "hard gate (CA-03): rate must be <= TRACE_DEATH_CEILING" },
+    message: traceOk
+      ? `Trace-death rate ${traceDeathRate.toFixed(3)} is within the hard ceiling (TRACE_DEATH_CEILING ${ceiling}).`
+      : `Trace-death rate ${traceDeathRate.toFixed(3)} EXCEEDS the hard ceiling (TRACE_DEATH_CEILING ${ceiling}) — AI walks constructs to death in the trace.`,
   });
 
   // TIER_ORDERING — Tier 3 wins ≥ Tier 2 wins ≥ Tier 1 wins on the
@@ -258,6 +260,23 @@ export function runBehaviorBattery(options: BehaviorOptions): BatteryReport {
     checks,
     evidence,
   };
+}
+
+/* ------------------------------------------------------------------------- */
+/* TRACE_DISCIPLINE gate                                                      */
+/* ------------------------------------------------------------------------- */
+
+/**
+ * CA-03 hard-check mapping: `TRACE_DISCIPLINE.passed = traceDeathRate <=
+ * tunables.TRACE_DEATH_CEILING`. Extracted so the battery self-test can
+ * prove the check FAILS on an injected sample (see behavior.test.ts
+ * knock-down) without fabricating a full match.
+ */
+export function traceDisciplineCheck(
+  traceDeathRate: number,
+  ceiling: number,
+): boolean {
+  return traceDeathRate <= ceiling;
 }
 
 /* ------------------------------------------------------------------------- */

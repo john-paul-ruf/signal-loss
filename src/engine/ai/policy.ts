@@ -21,6 +21,7 @@
 import type { Catalog } from "../catalog/index";
 import type { Rng } from "../rng/index";
 import { nextRange } from "../rng/index";
+import { FX_ONE } from "../fx/index";
 import type { PublicState } from "../view/index";
 import type {
   AttackPlot,
@@ -32,11 +33,13 @@ import type {
   ConstructId,
 } from "../match/index";
 import {
+  currentDialStateOf,
   generateAttackCandidates,
   generateMoveCandidates,
 } from "./candidates";
 import {
   buildSquadContext,
+  pickNextTraceStep,
   scoreAttackCandidate,
   scoreMoveEndpoint,
 } from "./evaluate";
@@ -159,6 +162,7 @@ function tier1MovePlot(
       selectedIds.push(own.base.id as number);
       continue;
     }
+    const ownAllowance = currentDialStateOf(own, catalog)?.movementAllowance as number ?? 0;
     let bestScore = Number.NEGATIVE_INFINITY;
     let bestIndex = -1;
     for (let i = 0; i < candidates.length; i = i + 1) {
@@ -171,7 +175,13 @@ function tier1MovePlot(
       // reproducibly across runs (rng advances).
       const [nonce, r2] = nextRange(currentRng, 0, 1024);
       currentRng = r2;
-      const compositeScore = scored.score * 1024 + nonce;
+      // Composite: primary score (unit MOVE_COMPOSITE_UNIT) + deterministic
+      // trace-aware tie-break (band [1, TRACE_TIEBREAK_UNIT]) + seeded nonce
+      // (range [0, 1024)). The secondary band stays strictly below the
+      // primary unit — the tie-break reorders equally-scored candidates and
+      // its meaningful gaps dominate the nonce, but can never outrank a
+      // higher primary score.
+      const compositeScore = scored.score * MOVE_COMPOSITE_UNIT + nextSafeRegionTiebreak(state, ownAllowance, c.endPosition) + nonce;
       if (compositeScore > bestScore) {
         bestScore = compositeScore;
         bestIndex = i;
@@ -859,6 +869,7 @@ function tier3MovePlot(
       selectedIds.push(own.base.id as number);
       continue;
     }
+    const ownAllowance = currentDialStateOf(own, catalog)?.movementAllowance as number ?? 0;
     let bestScore = Number.NEGATIVE_INFINITY;
     let bestIndex = -1;
     for (let i = 0; i < candidates.length; i = i + 1) {
@@ -881,7 +892,9 @@ function tier3MovePlot(
         }
       }
       const totalScore = baseScored.score + lookaheadBonus;
-      const composite = totalScore * 1024 + nonce;
+      // Same composite shape as tier 1: trace-aware tie-break below the
+      // primary unit, above the nonce.
+      const composite = totalScore * MOVE_COMPOSITE_UNIT + nextSafeRegionTiebreak(state, ownAllowance, c.endPosition) + nonce;
       if (composite > bestScore) {
         bestScore = composite;
         bestIndex = i;
@@ -943,6 +956,78 @@ function collectFutureSafeRegions(
     out.push(step.safeRegion.map((v) => ({ x: v.x as unknown as number, y: v.y as unknown as number })));
   }
   return out;
+}
+
+/**
+ * Composite-scale constants for movement selection. Structural selection
+ * arithmetic (same class as the historical `score * 1024 + nonce` shape),
+ * not rule-affecting coefficients — R4 reads no numeric literal for a
+ * decision term from these.
+ *
+ *   - `TRACE_TIEBREAK_UNIT` (= 4 fx units): the secondary rank an endpoint
+ *     AT the next safe region earns; the rank band [1, UNIT] plus the nonce
+ *     range stays strictly below one primary-score unit.
+ *   - `MOVE_COMPOSITE_UNIT` (= 8 fx units): primary-score unit.
+ */
+const TRACE_TIEBREAK_UNIT = 4 * FX_ONE;
+const MOVE_COMPOSITE_UNIT = 2 * TRACE_TIEBREAK_UNIT;
+
+/**
+ * Deterministic, rng-free secondary rank for a movement endpoint, used to
+ * break ties the primary score leaves equal.
+ *
+ * Why it exists: on archetypes whose walls block the direct diagonals
+ * (e.g. long avenues), every candidate an AI construct can legally reach
+ * can share one primary score — typically inside the CURRENT safe region
+ * (`traceSafety` bonus) while outside the NEXT one (`traceAnticipation`
+ * penalty). Weights scale every term uniformly, so no weight value can
+ * separate that tie, and the seeded nonce then chose among safe-looking
+ * and trace-doomed candidates with equal probability. This rank orders
+ * candidates by Manhattan bbox distance to the NEXT scheduled safe region
+ * (public from round 1, FR-24): inside ranks highest, nearer-outside
+ * ranks above farther. It consumes no rng (R6) and no new weight key.
+ *
+ * Progress measure: `floor((distance × TRACE_TIEBREAK_UNIT) / allowance)`
+ * — the fixed-point fraction of one movement allowance still separating
+ * the endpoint from the region. Inside/on the boundary → distance 0 →
+ * full rank; a full allowance away → rank ~1; two allowances away → also
+ * ~1 (progress saturates) because beyond one move of reach every
+ * candidate is equally unable to make the region this round and their
+ * fine order is left to the seeded nonce. The rank gap between
+ * meaningfully different endpoints always exceeds the nonce range, so
+ * the tie-break — not the nonce — decides inward vs outward. Float-free
+ * (integer fixed-point, R6); no next step → 0 (pure nonce ordering, as
+ * before this term).
+ */
+function nextSafeRegionTiebreak(
+  state: PublicState,
+  allowance: number,
+  endpoint: { readonly x: unknown; readonly y: unknown },
+): number {
+  if (allowance <= 0) return 0;
+  const next = pickNextTraceStep(state);
+  if (next === null) return 0;
+  let minX = Number.MAX_SAFE_INTEGER;
+  let maxX = -Number.MAX_SAFE_INTEGER;
+  let minY = Number.MAX_SAFE_INTEGER;
+  let maxY = -Number.MAX_SAFE_INTEGER;
+  for (let i = 0; i < next.length; i = i + 1) {
+    const v = next[i];
+    if (v === undefined) continue;
+    const x = v.x as number;
+    const y = v.y as number;
+    if (x < minX) minX = x;
+    if (x > maxX) maxX = x;
+    if (y < minY) minY = y;
+    if (y > maxY) maxY = y;
+  }
+  const px = endpoint.x as number;
+  const py = endpoint.y as number;
+  const dx = px < minX ? minX - px : px > maxX ? px - maxX : 0;
+  const dy = py < minY ? minY - py : py > maxY ? py - maxY : 0;
+  const distance = dx + dy;
+  const progress = Math.min(TRACE_TIEBREAK_UNIT - 1, Math.floor((distance * TRACE_TIEBREAK_UNIT) / allowance));
+  return TRACE_TIEBREAK_UNIT - progress;
 }
 
 function pointInPolyLocal(
