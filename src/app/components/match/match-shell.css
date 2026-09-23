@@ -8,7 +8,8 @@
 .match-shell {
   display: flex;
   flex-direction: column;
-  min-height: 100vh;
+  height: 100vh;
+  min-height: 720px; /* matches mock `min-h-[720px]` + boot's MIN_VIEWPORT_HEIGHT gate */
   background: var(--color-void);
   color: var(--color-ink);
   font-family: var(--font-display);
@@ -200,6 +201,7 @@
 .match-shell__body {
   display: grid;
   grid-template-columns: 280px 1fr 320px;
+  grid-template-rows: minmax(0, 1fr);
   flex: 1;
   min-height: 0;
 }
@@ -422,6 +424,7 @@
   border-top: 1px solid var(--color-line);
   overflow-y: auto;
   flex: 1;
+  min-height: 0;
 }
 .round-log__header {
   font-size: 11px;
@@ -671,6 +674,21 @@
   font-family: var(--font-mono);
   font-size: 11px;
   color: var(--color-ink-2);
+}
+
+/* Movement/playback slots fill the board cell (CA-01 height chain); their
+ * HUD overlays position against `.match-shell__board`. */
+.match-mode--movement,
+.match-mode--playback {
+  height: 100%;
+  padding: 0;
+}
+
+.movement-hud {
+  position: absolute;
+  top: 16px;
+  right: 16px;
+  z-index: 4;
 }
 
 .match-empty {

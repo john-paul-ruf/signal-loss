@@ -11,6 +11,8 @@
  */
 
 import { describe, expect, it } from "vitest";
+import { readFileSync } from "node:fs";
+import { fileURLToPath } from "node:url";
 import * as React from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 void React; // JSX transform requires it
@@ -93,5 +95,79 @@ describe("MatchShell — persistent chrome", () => {
   it("shows NO TIMER — COMMIT WHEN READY during deployment", () => {
     const { html } = bootedShell();
     expect(html).toContain("NO TIMER — COMMIT WHEN READY");
+  });
+});
+
+describe("MatchShell — CA-01 height chain", () => {
+  /**
+   * Required proof shape (replan R-01): this file runs under
+   * `@vitest-environment node` via renderToStaticMarkup — no jsdom, so
+   * computed styles are NOT available. The style rules are asserted by
+   * reading the stylesheet text from disk; structure comes from the render.
+   * Scrollability itself (scrollHeight > clientHeight) is proved at
+   * checkpoint 3 in the e2e suite.
+   */
+  const cssPath = fileURLToPath(
+    new URL("../../../src/app/components/match/match-shell.css", import.meta.url),
+  );
+  const css = readFileSync(cssPath, "utf8");
+
+  function ruleBody(selector: string): string | null {
+    const start = css.indexOf(selector);
+    if (start === -1) return null;
+    const open = css.indexOf("{", start);
+    if (open === -1) return null;
+    const body = css.slice(open + 1, css.indexOf("}", open));
+    return body.replace(/\s+/g, " ");
+  }
+
+  it("renders the viewport-fit shell structure", () => {
+    const { html } = bootedShell();
+    expect(html).toContain('class="match-shell"');
+    expect(html).toContain('class="match-shell__body');
+    expect(html).toContain('class="match-shell__inspector"');
+    // Round log lives inside the inspector column (the scroll rail).
+    expect(html).toMatch(
+      /<aside class="match-shell__inspector"[\s\S]*?<section class="round-log /,
+    );
+  });
+
+  it("pins the shell to the viewport (mock 06 h-screen + min-h-[720px])", () => {
+    const body = ruleBody(".match-shell {");
+    expect(body).not.toBeNull();
+    expect(body).toContain("height: 100vh");
+    expect(body).toContain("min-height: 720px");
+    expect(body).not.toContain("min-height: 100vh");
+  });
+
+  it("bounds the body grid to a single fr row", () => {
+    const body = ruleBody(".match-shell__body {");
+    expect(body).not.toBeNull();
+    expect(body).toContain("grid-template-rows: minmax(0, 1fr)");
+    expect(body).toContain("flex: 1");
+    expect(body).toContain("min-height: 0");
+  });
+
+  it("lets the round log shrink below content so it owns the scroll", () => {
+    const body = ruleBody(".round-log {");
+    expect(body).not.toBeNull();
+    expect(body).toContain("min-height: 0");
+    expect(body).toContain("overflow-y: auto");
+    expect(body).toContain("flex: 1");
+  });
+
+  it("fills movement and playback mode slots and floats the movement hud", () => {
+    const slot = ruleBody(".match-mode--movement");
+    expect(slot).not.toBeNull();
+    expect(slot).toContain("height: 100%");
+    expect(slot).toContain("padding: 0");
+    // The playback modifier shares the grouped slot rule.
+    expect(css).toMatch(/\.match-mode--movement,\s*\.match-mode--playback \{/);
+    const hud = ruleBody(".movement-hud");
+    expect(hud).not.toBeNull();
+    expect(hud).toContain("position: absolute");
+    expect(hud).toContain("top: 16px");
+    expect(hud).toContain("right: 16px");
+    expect(hud).toContain("z-index: 4");
   });
 });
