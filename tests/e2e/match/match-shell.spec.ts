@@ -18,7 +18,7 @@ test.describe("match shell — visits /match without a launch payload", () => {
     const app = page.locator("#app-root");
     await expect(app).toBeVisible();
     // Fallback text appears when no launch payload is present.
-    const empty = page.getByText("Waiting for launch payload");
+    const empty = page.getByText("Missing launch payload.");
     await expect(empty).toBeVisible();
   });
 
