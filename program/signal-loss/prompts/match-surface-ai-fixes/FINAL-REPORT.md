@@ -233,12 +233,14 @@ shared `e2e-preview` resource was declared and serialized per the plan's own not
   environment/pre-existing; F-1/F-2/F-6 and the two owner corrections are planning defects; the
   CAP-03 escalation is a product decision working as designed.
 - **Run-end commit note (environment):** `program/signal-loss/prompts/**` is gitignored in this
-  repo (`.gitignore:26`), so FINAL-REPORT.md, STATE.md, MASTER.md, SESSION files, and
-  ARCHIVIST-LOG.md cannot be committed by any role without a repo-configuration change the human
-  owns. The report exists on disk in the required run-folder location; the durable committed
-  record of this run is the 12 lease/owner commits in git history (all lease-verified). A future
-  program-config change (un-ignoring `program/signal-loss/prompts/` or a dedicated reports
-  location) would make the run-end commit contract executable.
+  repo (`.gitignore:26`), so the required `git add` of FINAL-REPORT.md was refused by git. The
+  report is the one artifact that must be published to end the run, so it was added with an
+  explicit `git add -f -- <the single report path>` (never `-A`/`.`; no other path was force-added;
+  the prompts tree remains ignored for everything else) and committed as `5f0c7e5`. STATE.md,
+  MASTER.md, SESSION files, and ARCHIVIST-LOG.md remain on disk only (uncommitted by design of
+  the repo's ignore rule). Recommendation for the human: move the run-end report target out of
+  the ignored prompts tree (or un-ignore `program/signal-loss/prompts/`) in a future
+  program-config pass so the run-end contract does not require a force-add.
 
 ### Capability completion
 
