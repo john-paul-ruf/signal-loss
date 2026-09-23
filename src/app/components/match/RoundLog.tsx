@@ -21,11 +21,15 @@ export function RoundLog(): React.ReactElement {
     ],
     [history, mode, playback.events, playback.cursor],
   );
-  const listRef = React.useRef<HTMLOListElement | null>(null);
+  // The scroll container is the .round-log section (bounded by the shell
+  // height chain) — the <ol> never overflows. Stick-to-newest: instant
+  // scrollTop assignment on new events only, no animation (FR-26).
+  const logRef = React.useRef<HTMLElement | null>(null);
   React.useEffect(() => {
-    const list = listRef.current;
-    if (list !== null) list.scrollTop = list.scrollHeight;
-  }, [events.length]);
+    const el = logRef.current;
+    if (el === null || events.length === 0) return;
+    el.scrollTop = el.scrollHeight;
+  }, [events]);
   if (events.length === 0) {
     return (
       <section className="round-log round-log--empty" aria-label="Round log">
@@ -35,9 +39,9 @@ export function RoundLog(): React.ReactElement {
     );
   }
   return (
-    <section className="round-log" aria-label="Round log">
+    <section className="round-log" aria-label="Round log" ref={logRef}>
       <header className="round-log__header">ROUND LOG</header>
-      <ol className="round-log__list" role="log" ref={listRef}>
+      <ol className="round-log__list" role="log">
         {events.map((e, i) => (
           <li key={`${i}-${e.kind}`} className="round-log__item" data-kind={e.kind}>
             {describeEvent(e)}
