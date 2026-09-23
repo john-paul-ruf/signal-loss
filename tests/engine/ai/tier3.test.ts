@@ -3,7 +3,9 @@ import {
   aiAttackPlot,
   aiMovePlot,
   emptyOpponentModel,
+  generateMoveCandidates,
   nodeBudget,
+  scoreMoveEndpoint,
 } from "../../../src/engine/ai/index";
 import { rngFromSeed, stream } from "../../../src/engine/rng/index";
 import {
@@ -11,9 +13,10 @@ import {
   legalMovePlot,
   squadId,
 } from "../../../src/engine/match/index";
-import type { MatchState } from "../../../src/engine/match/index";
+import type { ConstructId, MatchState } from "../../../src/engine/match/index";
 import { publicView, updateKnownPositions } from "../../../src/engine/view/index";
-import type { Fx } from "../../../src/engine/fx/index";
+import { pointInPoly, type Fx, type Vec2 } from "../../../src/engine/fx/index";
+import type { TraceStep } from "../../../src/engine/map/index";
 import { makeCloseSoloMatch, pairMatchConfig, soloMatchConfig } from "../../fixtures/matches/simple-match";
 import { testAiWeights } from "../../fixtures/ai/tunables";
 
@@ -196,5 +199,108 @@ describe("ai/policy tier consistency (fairness invariants)", () => {
         r.value.choice.postures.filter((p) => p.posture === "POSTURE").length);
       expect(spent).toBeLessThanOrEqual(3);
     }
+  });
+});
+
+/** Board-unit vector — fixture maps use 1024 fx per board unit. */
+function v(unitX: number, unitY: number): Vec2 {
+  return { x: unitX * 1024 as Fx, y: unitY * 1024 as Fx };
+}
+
+/** Axis-aligned square region centered on (cx, cy), half-extent in board units. */
+function boxRegion(centerX: number, centerY: number, halfSize: number): readonly Vec2[] {
+  return [
+    v(centerX - halfSize, centerY - halfSize),
+    v(centerX + halfSize, centerY - halfSize),
+    v(centerX + halfSize, centerY + halfSize),
+    v(centerX - halfSize, centerY + halfSize),
+  ];
+}
+
+/** Synthetic trace schedule: [round, halfExtent] steps, squares centered on the origin. */
+function scheduleOf(steps: readonly (readonly [number, number])[]): readonly TraceStep[] {
+  return steps.map(([round, half], i) => ({
+    round,
+    safeRegion: boxRegion(0, 0, half),
+    damage: 2 + 2 * i,
+  }));
+}
+
+/** MatchState variant with a synthetic trace schedule and a forced round. */
+function withSchedule(state: MatchState, schedule: readonly TraceStep[], round: number): MatchState {
+  return { ...state, round, map: { ...state.map, traceSchedule: schedule } };
+}
+
+/**
+ * Expected tier-3 lookahead aggregate under the strictly-future rule: every
+ * candidate endpoint is scored against exactly the FIRST FUTURE step (index 0)
+ * at discount 1 — current and past schedule entries contribute nothing.
+ */
+function expectedLookaheadBonus(
+  view: ReturnType<typeof publicView>,
+  ownId: number,
+  catalog: ReturnType<typeof soloMatchConfig>["catalog"],
+  nextRegion: readonly Vec2[],
+): number {
+  const weights = testAiWeights;
+  let sum = 0;
+  for (const c of generateMoveCandidates(view, ownId as unknown as ConstructId, catalog)) {
+    sum = sum + (pointInPoly(c.endPosition, nextRegion)
+      ? Math.floor(weights.traceSafetyBonus / 1)
+      : -Math.floor(weights.traceExposurePenalty / 1));
+  }
+  return sum;
+}
+
+describe("ai/policy Tier 3 / strictly-future lookahead (replan R-01)", () => {
+  it("with exactly one future step in the beamDepth window, that step is scored at discount 1", () => {
+    // Round 2: the only schedule entry (R4) is strictly future and inside the
+    // window (rounds 3..4). An index-1 skip would drop it entirely; a deeper
+    // default discount would halve it. The aggregate must equal the
+    // full-strength (discount-1) classification of every candidate endpoint.
+    const state = withPos(makeCloseSoloMatch(), 0, 2 * 1024, 5 * 1024);
+    const config = soloMatchConfig();
+    const scheduled = withSchedule(state, scheduleOf([[4, 6]]), 2);
+    const view = publicView(scheduled, squadId(0), config.catalog);
+    const own = view.constructs.find((k) => (k.base.squadId as number) === 0);
+    if (own === undefined) throw new Error("no own");
+    const rng = stream(rngFromSeed("tier3-future-one"), "ai.squad0.move");
+    const r = aiMovePlot(view, squadId(0), config.catalog, rng, testAiWeights, nodeBudget(1000), 3);
+    expect(r.ok).toBe(true);
+    if (!r.ok) return;
+    const expected = expectedLookaheadBonus(view, own.base.id as number, config.catalog, boxRegion(0, 0, 6));
+    expect(expected).not.toBe(0);
+    expect(r.value.diagnostics.scoreTerms["lookaheadBonus"]).toBe(expected);
+  });
+
+  it("current and past steps are excluded — only step.round > state.round is scored", () => {
+    // Round 7 with schedule [R4(half 6), R7(half 3), R9(half 2)]: the R4 region
+    // is past, the R7 region is the CURRENT active step (owned by the base
+    // scorer's traceSafety term), and only R9 is strictly future and inside
+    // the beamDepth-2 window (rounds 8..9). The aggregate must classify every
+    // candidate against R9 ONLY — a past-step recount or current-step
+    // double-count changes the sum.
+    const state = withPos(makeCloseSoloMatch(), 0, 2 * 1024, 5 * 1024);
+    const config = soloMatchConfig();
+    const scheduled = withSchedule(state, scheduleOf([[4, 6], [7, 3], [9, 2]]), 7);
+    const view = publicView(scheduled, squadId(0), config.catalog);
+    const own = view.constructs.find((k) => (k.base.squadId as number) === 0);
+    if (own === undefined) throw new Error("no own");
+    // From (2,5) at least one candidate endpoint lands inside R9 (half 2) and
+    // the majority land outside it — the sum must reflect that mix.
+    const expected = expectedLookaheadBonus(view, own.base.id as number, config.catalog, boxRegion(0, 0, 2));
+    expect(expected).not.toBe(0);
+    const rng = stream(rngFromSeed("tier3-future-window"), "ai.squad0.move");
+    const r = aiMovePlot(view, squadId(0), config.catalog, rng, testAiWeights, nodeBudget(1000), 3);
+    expect(r.ok).toBe(true);
+    if (!r.ok) return;
+    expect(r.value.diagnostics.scoreTerms["lookaheadBonus"]).toBe(expected);
+    // Base-scorer ownership: an endpoint inside the CURRENT region but outside
+    // the NEXT one earns the active-step bonus (traceSafety) and the next-step
+    // penalty (traceAnticipation) — the lookahead layer adds neither again.
+    const currentOnly: Vec2 = { x: 2.5 * 1024 as Fx, y: 2.5 * 1024 as Fx };
+    const scored = scoreMoveEndpoint(view, own, currentOnly, config.catalog, testAiWeights);
+    expect(scored.terms.traceSafety).toBe(testAiWeights.traceSafetyBonus);
+    expect(scored.terms.traceAnticipation).toBe(-testAiWeights.traceExposurePenalty);
   });
 });

@@ -179,6 +179,7 @@ function tier1MovePlot(
       // Accumulate diagnostic terms (aggregate).
       scoreTerms["exposure"] = (scoreTerms["exposure"] ?? 0) + scored.terms.exposure;
       scoreTerms["traceSafety"] = (scoreTerms["traceSafety"] ?? 0) + scored.terms.traceSafety;
+      scoreTerms["traceAnticipation"] = (scoreTerms["traceAnticipation"] ?? 0) + scored.terms.traceAnticipation;
       scoreTerms["positionUtility"] = (scoreTerms["positionUtility"] ?? 0) + scored.terms.positionUtility;
     }
     const chosen = candidates[bestIndex] ?? candidates[0];
@@ -916,8 +917,16 @@ function tier3MovePlot(
 }
 
 /**
- * Collect safe regions for the current + next `lookaheadRounds` upcoming
- * schedule entries whose round <= state.round + lookaheadRounds.
+ * Collect safe regions for the STRICTLY FUTURE schedule entries within
+ * `lookaheadRounds` of the current round: `state.round < step.round <=
+ * state.round + lookaheadRounds`, ordered soonest-first. Entries already
+ * active (step.round <= state.round) are excluded — the base scorer
+ * (`scoreMoveEndpoint`) owns current-step and next-step containment, so
+ * including them here would double-count the current region and recount
+ * past ones.
+ *
+ * Index 0 is therefore always the FIRST FUTURE step; `tier3MovePlot`
+ * scores index k at discount `k + 1` (first future step discount 1).
  */
 function collectFutureSafeRegions(
   state: PublicState,
@@ -930,6 +939,7 @@ function collectFutureSafeRegions(
     const step = schedule[i];
     if (step === undefined) continue;
     if (step.round > untilRound) break;
+    if (step.round <= state.round) continue;
     out.push(step.safeRegion.map((v) => ({ x: v.x as unknown as number, y: v.y as unknown as number })));
   }
   return out;

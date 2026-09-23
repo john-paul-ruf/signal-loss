@@ -19,7 +19,8 @@ import type {
 } from "../../../src/engine/match/index";
 import { publicView, updateKnownPositions } from "../../../src/engine/view/index";
 import type { KnownConstruct } from "../../../src/engine/view/index";
-import type { Fx, Vec2 } from "../../../src/engine/fx/index";
+import { pointInPoly, type Fx, type Vec2 } from "../../../src/engine/fx/index";
+import type { TraceStep } from "../../../src/engine/map/index";
 import type { Catalog } from "../../../src/engine/catalog/index";
 import {
   makeCloseSoloMatch,
@@ -314,5 +315,90 @@ describe("ai/policy Tier 1 / information boundary", () => {
     }
     const own = constructsOfSquad(state, squadId(0));
     expect(own.length).toBeGreaterThan(0);
+  });
+});
+
+/** Board-unit vector — fixture maps use 1024 fx per board unit. */
+function v(unitX: number, unitY: number): Vec2 {
+  return { x: unitX * 1024 as Fx, y: unitY * 1024 as Fx };
+}
+
+/** Axis-aligned square region centered on (cx, cy), half-extent in board units. */
+function boxRegion(centerX: number, centerY: number, halfSize: number): readonly Vec2[] {
+  return [
+    v(centerX - halfSize, centerY - halfSize),
+    v(centerX + halfSize, centerY - halfSize),
+    v(centerX + halfSize, centerY + halfSize),
+    v(centerX - halfSize, centerY + halfSize),
+  ];
+}
+
+/** Synthetic trace schedule: [round, halfExtent] steps, squares centered on the origin. */
+function scheduleOf(steps: readonly (readonly [number, number])[]): readonly TraceStep[] {
+  return steps.map(([round, half], i) => ({
+    round,
+    safeRegion: boxRegion(0, 0, half),
+    damage: 2 + 2 * i,
+  }));
+}
+
+/** MatchState variant with a synthetic trace schedule and a forced round. */
+function withSchedule(state: MatchState, schedule: readonly TraceStep[], round: number): MatchState {
+  return { ...state, round, map: { ...state.map, traceSchedule: schedule } };
+}
+
+describe("ai/policy Tier 1 / trace anticipation (FR-23)", () => {
+  it("next-contraction containment outscores the identical endpoint outside it, with no enemy in range", () => {
+    const state = makeDeployedSoloMatch();
+    const config = soloMatchConfig();
+    // Round 2: no active trace step (first contraction is R4), so traceSafety
+    // is 0 and the anticipation term is the only differentiator. Enemies sit
+    // at their spawn anchors; (0,0) and (-10,0) are both beyond every enemy's
+    // attack range (11 board units), so exposure and position utility are 0
+    // for both endpoints — the score gap is purely the anticipation term.
+    const scheduled = withSchedule(state, scheduleOf([[4, 6]]), 2);
+    const view = publicView(scheduled, squadId(0), config.catalog);
+    const own = view.constructs.find((k) => (k.base.squadId as number) === 0);
+    if (own === undefined) throw new Error("no own");
+    const inside = scoreMoveEndpoint(view, own, v(0, 0), config.catalog, testAiWeights);
+    const outside = scoreMoveEndpoint(view, own, v(-10, 0), config.catalog, testAiWeights);
+    expect(inside.terms.traceSafety).toBe(0);
+    expect(inside.terms.traceAnticipation).toBe(testAiWeights.traceSafetyBonus);
+    expect(outside.terms.traceAnticipation).toBe(-testAiWeights.traceExposurePenalty);
+    expect(inside.score).toBe(testAiWeights.traceSafetyBonus);
+    expect(outside.score).toBe(-testAiWeights.traceExposurePenalty);
+    expect(inside.score).toBeGreaterThan(outside.score);
+  });
+
+  it("pre-contact candidates no longer all tie at 0 — the seeded nonce no longer decides movement", () => {
+    // From (2,5) at round 2 with the next contraction at R4 (half-extent 6),
+    // every candidate endpoint inside the region scores 15 and every endpoint
+    // outside scores -20 (testAiWeights), so the nonce (≤ 1023) cannot
+    // overcome a 35-point gap: the chosen move must end inside the region.
+    const state = withPos(makeDeployedSoloMatch(), 0, 2 * 1024, 5 * 1024);
+    const config = soloMatchConfig();
+    const scheduled = withSchedule(state, scheduleOf([[4, 6]]), 2);
+    const view = publicView(scheduled, squadId(0), config.catalog);
+    const rng1 = stream(rngFromSeed("anticipation-tie"), "ai.squad0.move");
+    const rng2 = stream(rngFromSeed("anticipation-tie"), "ai.squad0.move");
+    const a = aiMovePlot(view, squadId(0), config.catalog, rng1, testAiWeights, nodeBudget(200), 1);
+    const b = aiMovePlot(view, squadId(0), config.catalog, rng2, testAiWeights, nodeBudget(200), 1);
+    expect(a.ok && b.ok).toBe(true);
+    if (!a.ok || !b.ok) return;
+    // The nonce tie-break remains the ONLY rng consumer (R6): same seed →
+    // same choice, same advanced rng.
+    expect(JSON.stringify(a.value.choice)).toBe(JSON.stringify(b.value.choice));
+    expect(a.value.rng).toEqual(b.value.rng);
+    const own = view.constructs.find((k) => (k.base.squadId as number) === 0);
+    if (own === undefined) throw new Error("no own");
+    const chosenMove = a.value.choice.moves.find(
+      (m) => (m.constructId as number) === (own.base.id as number),
+    );
+    if (chosenMove === undefined) throw new Error("no move for own construct");
+    const end = chosenMove.path.length > 0
+      ? chosenMove.path[chosenMove.path.length - 1]
+      : own.position;
+    if (end === undefined) throw new Error("no end position");
+    expect(pointInPoly(end, boxRegion(0, 0, 6))).toBe(true);
   });
 });

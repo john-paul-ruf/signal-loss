@@ -140,6 +140,7 @@ export interface MoveTerms {
   readonly exposure: number;             // sum of enemy retaliation power reachable at endpoint
   readonly exposurePenalty: number;      // exposurePenalty applied
   readonly traceSafety: number;          // reward for being inside safe region
+  readonly traceAnticipation: number;    // reward/penalty for the NEXT scheduled contraction
   readonly positionUtility: number;      // reward for being within own attack range of a target
   readonly commanderProtection: number;  // penalty if own commander lands in an exposed position
 }
@@ -194,6 +195,23 @@ export function scoreMoveEndpoint(
     else traceSafety = -weights.traceExposurePenalty;
   }
 
+  // Trace anticipation: reward/penalty for the NEXT SCHEDULED contraction
+  // (strictly after the current round). The full schedule is public from
+  // round 1 (FR-24), so acting on it uses only public facts — this is the
+  // FR-23 trace-awareness term that lets every tier vacate the trace
+  // ahead of contraction instead of reactively. Structural depth: the base
+  // scorer looks exactly ONE scheduled step ahead (the immediate next
+  // step), so the coefficient applies at full strength with no divisor —
+  // tier-3's deeper lookahead applies its own (k+1) loop-index discounts
+  // on top of this term.
+  const nextStep = pickNextTraceStep(state);
+  let traceAnticipation = 0;
+  if (nextStep !== null) {
+    traceAnticipation = pointInPoly(endpoint, nextStep)
+      ? weights.traceSafetyBonus
+      : -weights.traceExposurePenalty;
+  }
+
   // Position utility: reward for being within own attack range of any enemy
   // with clear LOS from the endpoint.
   const ownRange = effectiveAttackRangeOf(mover, catalog) as number;
@@ -220,13 +238,14 @@ export function scoreMoveEndpoint(
     commanderProtection = -exposure * weights.commanderProtection;
   }
 
-  const score = -exposurePenalty + traceSafety + positionUtility + commanderProtection;
+  const score = -exposurePenalty + traceSafety + traceAnticipation + positionUtility + commanderProtection;
   return {
     score,
     terms: {
       exposure,
       exposurePenalty,
       traceSafety,
+      traceAnticipation,
       positionUtility,
       commanderProtection,
     },
@@ -353,6 +372,17 @@ function pickCurrentTraceStep(state: PublicState): readonly Vec2[] | null {
     else break;
   }
   return latest;
+}
+
+/** Next scheduled trace safe region strictly AFTER `state.round`, or null. */
+function pickNextTraceStep(state: PublicState): readonly Vec2[] | null {
+  const schedule = state.map.traceSchedule;
+  for (let i = 0; i < schedule.length; i = i + 1) {
+    const step = schedule[i];
+    if (step === undefined) continue;
+    if (step.round > state.round) return step.safeRegion;
+  }
+  return null;
 }
 
 /**
