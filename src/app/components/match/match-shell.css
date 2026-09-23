@@ -689,6 +689,11 @@
   top: 16px;
   right: 16px;
   z-index: 4;
+  /* Read-only status text floating over the board: pointer events must
+   * reach the canvas beneath (plotting clicks), as with the attack mode's
+   * target-pick/feedback overlays. The HUD is full-width when its hint
+   * line wraps long, so transparency is required, not a smaller box. */
+  pointer-events: none;
 }
 
 .match-empty {
