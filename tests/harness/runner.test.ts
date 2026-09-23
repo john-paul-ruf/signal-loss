@@ -2,7 +2,12 @@ import { describe, expect, it } from "vitest";
 import { loadReleaseCatalog } from "./support/release-loader";
 import { releaseAiWeights } from "./support/ai-weights";
 import { runMatch } from "./support/runner";
-import { foldMatchLog, hashState } from "../../src/engine/index";
+import {
+  type EliminatedEvent,
+  type MatchCompleteEvent,
+  foldMatchLog,
+  hashState,
+} from "../../src/engine/index";
 
 const catalog = (() => {
   const result = loadReleaseCatalog();
@@ -38,11 +43,39 @@ describe("headless match runner", () => {
     expect(a.perRoundHashes).toEqual(b.perRoundHashes);
   });
 
-  it("terminates within max rounds and records winner exactly when phase is COMPLETE", () => {
+  it("terminates within max rounds and records a winner exactly when the completion reason produces one", () => {
     const result = runMatch({ seed: "runner-cap", budget: 75, aiTier: 3, catalog, weights: releaseAiWeights });
     expect(["COMPLETE", "ROUND_CAP", "NO_LEGAL_DECISION"]).toContain(result.termination);
-    if (result.termination === "COMPLETE") {
+    if (result.termination !== "COMPLETE") return;
+
+    // COMPLETE does not imply a winner: end-round.ts leaves winner null on
+    // HUMAN_ELIMINATED endings when multiple AI squads outlive the human.
+    // The reason is carried only by the MATCH_COMPLETE event, so derive it
+    // from the final round's canonical events.
+    const complete = result.perRoundEvents
+      .at(-1)
+      ?.find((event): event is MatchCompleteEvent => event.kind === "MATCH_COMPLETE");
+    expect(complete).toBeDefined();
+    if (complete === undefined) return;
+
+    if (complete.reason !== "HUMAN_ELIMINATED") {
+      // LAST_STANDING / SIMULTANEOUS: the rank-1 squad (AD-4) is recorded.
       expect(result.winner).not.toBe(null);
+      expect(result.winner).toBe(complete.winner);
+      return;
     }
+    if (result.winner !== null) {
+      expect(result.winner).toBe(complete.winner);
+      return;
+    }
+    // Winner-null HUMAN_ELIMINATED: the human squad's elimination entry —
+    // its placement — must still be recorded in the log.
+    expect(complete.winner).toBe(null);
+    const humanEliminated = result.perRoundEvents
+      .flat()
+      .find((event): event is EliminatedEvent => event.kind === "ELIMINATED" && (event.squadId as number) === 0);
+    expect(humanEliminated).toBeDefined();
+    expect(humanEliminated?.round).toBe(complete.round);
+    expect(humanEliminated?.placement).toBeGreaterThanOrEqual(2);
   });
 });
